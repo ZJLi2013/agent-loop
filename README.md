@@ -10,9 +10,11 @@
 my_skills/
 ├── .cursor/
 │   ├── skills/                              # Cursor Agent Skills
+│   │   ├── agent-heartbeat/                 # 长任务心跳防超时
 │   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试
-│   │   ├── dockerfile_generator/            # Python Dockerfile 生成
 │   │   ├── experiment-driven-doc/           # 实验驱动文档追踪
+│   │   ├── gpu-cluster-resource-manager/    # 多节点 GPU 资源调度
+│   │   ├── rocm-lib-compat/                  # ROCm 库替换表 + AITER FA3
 │   │   ├── remote-ssh-github-auto/          # 远端 SSH + GitHub 认证
 │   │   └── local-push-remote-pull-test/     # 本地 push + 远端 pull/test
 │   ├── agents/                              # Cursor Agent 定义
@@ -30,9 +32,11 @@ my_skills/
 
 | skill | 描述 |
 |-------|------|
+| `agent-heartbeat` | 长任务（训练/编译/推理）心跳输出，防止用户误判卡死 |
 | `cursor-overnight-task-manager` | 批量夜间测试：读取 repo 列表 → SSH 到远端 AMD GPU → headless run → 报告 |
 | `experiment-driven-doc` | 实验驱动文档：假设 → 设计 → 执行 → 结果 → 分析 → next step 全流程追踪 |
-| `dockerfile_generator` | 为 Python 生成生产级 Dockerfile |
+| `gpu-cluster-resource-manager` | 多节点 GPU 集群资源管理：探测 → 亲和性打分 → 节点选择 → 存储治理 |
+| `rocm-lib-compat` | ROCm 库替换表 (xformers/gsplat/pytorch3d/flash-attn) + AITER CK 集成 |
 | `remote-ssh-github-auto` | SSH Agent Forwarding + 远端 GitHub 认证修复 |
 | `local-push-remote-pull-test` | 本地 push → 远端 pull → 远端测试完整工作流 |
 

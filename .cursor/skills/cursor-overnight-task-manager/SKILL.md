@@ -42,26 +42,27 @@ https://github.com/openai/whisper
 
 ### 节点配置
 
-远端节点从共享配置读取（与其他 skill 共享）：
+远端节点配置有两种格式（与其他 skill 共享）：
 
-- 路径：`.cursor/configs/gpu_nodes.list`
-- 格式：每行 `user@host`，支持 `#` 注释
+- **推荐**：`.cursor/configs/node_inventory.yaml` — 含 GPU 类型、磁盘、数据/模型标签（`gpu-cluster-resource-manager` skill 管理）
+- **回退**：`.cursor/configs/gpu_nodes.list` — 仅主机名列表，每行一个
 
 ---
 
 ## 工作流（逐步执行）
 
-### Phase 0: 环境预检
+### Phase 0: 节点探测与亲和性调度
 
-```bash
-# 读取节点列表
-nodes=$(grep -v '^\s*#' .cursor/configs/gpu_nodes.list | grep -v '^\s*$')
+> **委托 `gpu-cluster-resource-manager` skill 执行。** 详细流程见该 skill。
 
-# 对每个节点执行预检
-for node in $nodes; do
-  ssh -A $node "rocminfo | head -20 && python3 --version && pip3 --version && df -h /tmp"
-done
-```
+核心步骤：
+1. 读取 `node_inventory.yaml` → 候选节点 + 静态标签（已缓存的 models/datasets）
+2. 并行 SSH 探测：GPU 空闲度、磁盘剩余、缓存状态
+3. 解析本批 repo 的依赖需求（需要哪些 models/datasets）
+4. 亲和性打分：数据命中(+10) + GPU 空闲(+5) + 磁盘充足(+5) − 负载惩罚(−2)
+5. 输出节点分配方案（score 最高 → 优先分配）
+
+磁盘硬约束：< 20G 直接排除，< 50G 仅分配轻量任务。
 
 预检失败则停止并报告，不浪费时间。
 
@@ -215,6 +216,84 @@ done
 python3 scripts/analyze-results.py "$LOCAL_RESULTS" --output "$LOCAL_RESULTS/report.md"
 ```
 
+### Phase 7: 自动 Fork & PR（可选）
+
+当测试中发现需要给上游提交修复（如 ROCm 兼容性），自动 fork 并创建 PR branch：
+
+```bash
+# ---- 配置 ----
+UPSTREAM_URL="$REPO_URL"                          # e.g. https://github.com/H-EmbodVis/HyDRA.git
+UPSTREAM_OWNER=$(echo "$UPSTREAM_URL" | sed -n 's|.*github\.com/\([^/]*\)/.*|\1|p')
+UPSTREAM_REPO=$(basename "$UPSTREAM_URL" .git)
+GH_USER="ZJLi2013"                                # 你的 GitHub 用户名
+GH_TOKEN="${GITHUB_TOKEN}"                         # PAT (需要 repo scope)
+LOCAL_FORK_DIR="${LOCAL_FORK_ROOT:-$HOME/github/3D_World}/$UPSTREAM_REPO"
+PR_BRANCH="feat/rocm-compat"                       # PR 分支名，按实际改
+
+# ---- Step 1: GitHub API 创建 Fork ----
+echo ">>> Forking $UPSTREAM_OWNER/$UPSTREAM_REPO → $GH_USER/$UPSTREAM_REPO"
+curl -sf -X POST \
+  -H "Authorization: token $GH_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/$UPSTREAM_OWNER/$UPSTREAM_REPO/forks" \
+  -d "{\"default_branch_only\": true}" \
+  -o /dev/null && echo "Fork created (or already exists)" || echo "Fork API call failed"
+
+# GitHub fork 是异步的，等待最多 30 秒
+for i in $(seq 1 6); do
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+    "https://api.github.com/repos/$GH_USER/$UPSTREAM_REPO")
+  [ "$HTTP_CODE" = "200" ] && break
+  echo "  waiting for fork to be ready... ($i/6)"
+  sleep 5
+done
+
+# ---- Step 2: 本地 Clone（如果不存在）并添加 remote ----
+if [ ! -d "$LOCAL_FORK_DIR/.git" ]; then
+  echo ">>> Cloning upstream to $LOCAL_FORK_DIR"
+  git clone "$UPSTREAM_URL" "$LOCAL_FORK_DIR"
+fi
+cd "$LOCAL_FORK_DIR"
+
+# 确保 upstream 和 myfork 两个 remote 都存在
+git remote get-url upstream 2>/dev/null || git remote add upstream "$UPSTREAM_URL"
+git remote get-url myfork   2>/dev/null || git remote add myfork "https://github.com/$GH_USER/$UPSTREAM_REPO.git"
+
+git fetch upstream
+git fetch myfork 2>/dev/null || true
+
+# ---- Step 3: 创建 PR branch（基于 upstream/main）----
+git checkout -B "$PR_BRANCH" upstream/main
+
+# >>> 在这里做代码改动（通常由 agent 完成）<<<
+
+# ---- Step 4: Push PR branch 到 fork ----
+git push -u myfork "$PR_BRANCH"
+
+# ---- Step 5: GitHub API 创建 Pull Request ----
+PR_TITLE="Add AMD ROCm support"
+PR_BODY="## Summary\n- Improve attention backend robustness\n- Add ROCm installation docs\n\nTested on AMD MI300X + ROCm 6.4."
+
+PR_RESPONSE=$(curl -sf -X POST \
+  -H "Authorization: token $GH_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/$UPSTREAM_OWNER/$UPSTREAM_REPO/pulls" \
+  -d "{
+    \"title\": \"$PR_TITLE\",
+    \"body\": \"$PR_BODY\",
+    \"head\": \"$GH_USER:$PR_BRANCH\",
+    \"base\": \"main\"
+  }")
+
+PR_URL=$(echo "$PR_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('html_url','PR creation failed'))" 2>/dev/null)
+echo ">>> PR created: $PR_URL"
+```
+
+**前提条件**：
+- 环境变量 `GITHUB_TOKEN` 需要设置（Personal Access Token，需 `repo` scope）
+- 如果在 Windows PowerShell 中执行，建议写成 `.sh` 脚本 SCP 到远端或用 WSL 执行
+- Fork 仅包含代码/文档改动，实验记录（`experiments.md`、`overnight-results/`）不进入 PR branch
+
 ---
 
 ## AMD GPU 常见问题速查
@@ -264,8 +343,17 @@ python3 scripts/analyze-results.py "$LOCAL_RESULTS" --output "$LOCAL_RESULTS/rep
 - `scripts/overnight-runner.sh` — 主批量执行脚本（一键启动）
 - `scripts/analyze-results.py` — 日志解析与报告生成
 
+### Phase 完成后: 更新节点标签
+
+每次 overnight batch 完成后，调用 `gpu-cluster-resource-manager` 的探测脚本更新 `node_inventory.yaml` 中的 labels（新下载的 models/datasets）。
+
+---
+
 ## 与其他 Skill 的协作
 
+- **gpu-cluster-resource-manager**：Phase 0 委托执行节点探测 + 亲和性调度 + 存储治理；Phase 完成后更新标签
 - **remote-ssh-github-auto**：SSH 连接与 GitHub 认证（Phase 0 依赖）
+- **rocm-lib-compat**：ROCm 库替换表，flash-attn / triton / aiter 等安装方式（Phase 3 依赖）
 - **local-push-remote-pull-test**：如果需要测试自己的 fork，先 push 再 pull
-- **experiment-driven-doc**：对复杂实验结果做假设-验证追踪
+- **experiment-driven-doc**：对复杂实验结果做假设-验证追踪（Phase 6 → Phase 7 衔接）
+- **agent-heartbeat**：长任务执行时的心跳提示
