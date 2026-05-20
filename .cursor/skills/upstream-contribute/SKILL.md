@@ -38,6 +38,7 @@ description: >-
 |------|--------|----------|
 | 有 fork 分支 + ≥2 处有意义的修复 + 端到端验证通过 | **PR** | 工作量值得 reviewer 花时间看 |
 | 有 fork 分支 + 仅 1 处 trivial 修复（如改 flag）| **Issue** with patch | 太小不值得 PR 流程 |
+| **无 fork** + 修复已验证 | **Issue** with inline diff/patch | 在 Issue body 中贴 diff，让维护者自己合入 |
 | 发现 bug 但修复在第三方库 | **Issue** on upstream | 无法直接提 PR |
 | 改动太 hacky / 仅适用特定环境 | **不做** | 记录在 experiments.md 即可 |
 | 改动跨多个 repo | **拆分** | 每个 repo 独立评估 |
