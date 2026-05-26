@@ -6,7 +6,9 @@ description: >-
   在远端 GPU 节点用 tmux 托管长任务，使本地 Cursor/终端可安全断开或关机。
   自动创建命名 session、日志持久化、断线恢复、批量状态检查。
   Use when running overnight tasks, long training, inference, compilation on
-  remote nodes and wanting to disconnect the local machine safely.
+  remote nodes and wanting to disconnect the local machine safely. This skill
+  owns remote process persistence; use long-running-agent-harness for the
+  larger task plan and handoff.
 allowed-tools: [Shell]
 ---
 
@@ -14,6 +16,12 @@ allowed-tools: [Shell]
 
 在远端 GPU 节点用 tmux 包裹长任务，Cursor 提交作业后本地可安全关机，
 下次上线 `tmux attach` 即可恢复。
+
+## 与 long-running-agent-harness 的边界
+
+- `tmux-remote-detach` 负责让远端进程在断线后继续运行，并提供日志/attach/清理命令。
+- `long-running-agent-harness` 负责记录为什么运行、属于哪个 task、如何验证、下一位 agent 如何接手。
+- 使用 tmux 托管 harness task 时，把 session 名、日志路径和恢复命令写入 `.cursor/harness/progress.md`。
 
 ---
 
@@ -264,6 +272,7 @@ ssh user@gpu-node "tmux new-session -d -s mysession 'bash -c ""source /tmp/run.s
 |-------|---------|
 | **cursor-overnight-task-manager** | Phase 5 的 headless 运行改为 tmux session 内执行 |
 | **agent-heartbeat** | 轮询 `tmux capture-pane` 或 `tail log` 输出心跳 |
+| **long-running-agent-harness** | 记录 tmux session、log path、verification 和 handoff |
 | **gpu-cluster-resource-manager** | 节点选择后，在选中节点上创建 tmux session |
 | **remote-ssh-github-auto** | `ssh -A` 保证 tmux 内可 git pull（注意: agent forwarding 仅在 SSH 连接存活时有效） |
 | **experiment-driven-doc** | 从 tmux 日志中提取结果写回 experiments.md |

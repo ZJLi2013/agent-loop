@@ -4,12 +4,19 @@ description: >-
   AI 助手在执行耗时任务（远端 GPU 训练、推理、编译、大规模测试等）时，自动输出
   心跳消息防止用户误判为卡死。Use when running long SSH commands, remote GPU
   tasks, training, inference, compilation, overnight tests, or any command
-  expected to take more than 60 seconds.
+  expected to take more than 60 seconds. This skill owns user-visible runtime
+  status updates, not task planning or experiment documentation.
 ---
 
 # Agent Heartbeat — 长任务活跃提示
 
 当你正在执行可能超过 60 秒的操作时，**必须**遵循以下心跳协议，让用户知道你仍在正常工作。
+
+## 职责边界
+
+- `agent-heartbeat` 只负责长命令执行期间的状态提示。
+- `long-running-agent-harness` 负责跨会话任务规划、progress log 和 handoff。
+- `experiment-driven-doc` 负责实验设计和结果文档。
 
 ## 核心规则
 
@@ -91,5 +98,6 @@ Step 3/5: Running training...
 ## 与其他 Skill 的协作
 
 - **cursor-overnight-task-manager**：批量测试时，在 Phase 切换和单 repo 执行期间输出心跳
+- **long-running-agent-harness**：按 runbook 执行长步骤时，在用户可见进度中引用当前 task id
 - **local-push-remote-pull-test**：远端 pull + 测试时，报告每一步状态
 - **experiment-driven-doc**：长实验运行期间，心跳中包含关键指标变化

@@ -14,9 +14,11 @@ my_skills/
 │   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试
 │   │   ├── experiment-driven-doc/           # 实验驱动文档追踪
 │   │   ├── gpu-cluster-resource-manager/    # 多节点 GPU 资源调度
-│   │   ├── rocm-lib-compat/                  # ROCm 库替换表 + AITER FA3
+│   │   ├── long-running-agent-harness/       # 长任务编排与跨会话交接
+│   │   ├── local-push-remote-pull-test/      # 本地 push + 远端 pull/test
 │   │   ├── remote-ssh-github-auto/          # 远端 SSH + GitHub 认证
-│   │   └── local-push-remote-pull-test/     # 本地 push + 远端 pull/test
+│   │   ├── tmux-remote-detach/              # 远端 tmux 托管长任务
+│   │   └── upstream-contribute/             # 实验后评估上游贡献
 │   ├── agents/                              # Cursor Agent 定义
 │   │   ├── replan.md                        # 实验 review & 优先级调整
 │   │   └── code_run_plan.md                 # 代码执行 & 实验闭环
@@ -36,9 +38,21 @@ my_skills/
 | `cursor-overnight-task-manager` | 批量夜间测试：读取 repo 列表 → SSH 到远端 AMD GPU → headless run → 报告 |
 | `experiment-driven-doc` | 实验驱动文档：假设 → 设计 → 执行 → 结果 → 分析 → next step 全流程追踪 |
 | `gpu-cluster-resource-manager` | 多节点 GPU 集群资源管理：探测 → 亲和性打分 → 节点选择 → 存储治理 |
-| `rocm-lib-compat` | ROCm 库替换表 (xformers/gsplat/pytorch3d/flash-attn) + AITER CK 集成 |
-| `remote-ssh-github-auto` | SSH Agent Forwarding + 远端 GitHub 认证修复 |
+| `long-running-agent-harness` | 长任务总控：initializer → task loop → verification gates → durable handoff |
 | `local-push-remote-pull-test` | 本地 push → 远端 pull → 远端测试完整工作流 |
+| `remote-ssh-github-auto` | SSH Agent Forwarding + 远端 GitHub 认证修复 |
+| `tmux-remote-detach` | 远端 tmux 托管长任务，支持断线恢复、日志持久化、批量状态检查 |
+| `upstream-contribute` | 实验完成后评估是否值得向上游提交 PR / Issue，并生成草稿 |
+
+### 长任务 Skill 边界
+
+| 场景 | 首选 skill | 职责边界 |
+|------|------------|----------|
+| 长任务跨会话、需要 runbook / progress / handoff | `long-running-agent-harness` | 外层编排，不负责具体远端执行细节 |
+| 假设验证、ablation、debug 实验记录 | `experiment-driven-doc` | 写实验设计、结果、分析和 next step |
+| 批量夜间测试多个 repo | `cursor-overnight-task-manager` | 执行 overnight batch workflow |
+| 单个长命令需要用户可见进度 | `agent-heartbeat` | 输出心跳和阶段进度 |
+| 远端任务需要本地断开后继续跑 | `tmux-remote-detach` | 创建/恢复 tmux session 和日志 |
 
 ### Agents
 

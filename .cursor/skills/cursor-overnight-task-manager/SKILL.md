@@ -6,13 +6,21 @@ description: >-
   批量夜间自动测试开源 GitHub 仓库的工作流。读取 input-list.txt 中的 repo 地址，
   SSH 到远端 AMD GPU 节点，自动完成 clone、依赖安装、数据集/checkpoint 下载、
   headless 运行、结果收集与分析。Use when user mentions overnight testing,
-  batch repo testing, AMD GPU testing, input-list, or headless run.
+  batch repo testing, AMD GPU testing, input-list, or headless run. This skill
+  owns the concrete batch execution workflow; use long-running-agent-harness
+  for multi-session planning, progress tracking, and handoff.
 allowed-tools: [Shell]
 ---
 
 # Cursor Overnight Task Manager
 
 批量挂任务过夜：读取 repo 列表 → SSH 到远端 AMD GPU → clone → setup → run → 收集结果 → 生成报告。
+
+## 与 long-running-agent-harness 的边界
+
+- `cursor-overnight-task-manager` 负责实际批量执行：读取 `input-list.txt`、选节点、远端 setup、headless run、收集结果。
+- `long-running-agent-harness` 负责长期任务总控：任务拆解、runbook、进度日志、验证门槛和交接。
+- 如果 overnight run 是一个更大任务的一部分，先用 harness 建立 `.cursor/harness/`，再按本 skill 执行批量测试。
 
 ## 先决条件
 
@@ -356,4 +364,5 @@ echo ">>> PR created: $PR_URL"
 - **rocm-lib-compat**：ROCm 库替换表，flash-attn / triton / aiter 等安装方式（Phase 3 依赖）
 - **local-push-remote-pull-test**：如果需要测试自己的 fork，先 push 再 pull
 - **experiment-driven-doc**：对复杂实验结果做假设-验证追踪（Phase 6 → Phase 7 衔接）
+- **long-running-agent-harness**：负责 overnight 工作外层的任务拆解、runbook、进度日志和 handoff
 - **agent-heartbeat**：长任务执行时的心跳提示

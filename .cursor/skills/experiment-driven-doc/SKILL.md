@@ -4,13 +4,21 @@ description: >-
   实验驱动的文档追溯流程。在设计假设验证实验前，先将假设、实验方案、预期结果写入文档；
   实验/测试完成后，将实际结果、分析、结论、next-step 写回文档。确保每一轮实验可追溯。
   Use when running hypothesis-driven experiments, ablation studies, debugging
-  investigations, or any iterative test-analyze-iterate workflow.
+  investigations, or any iterative test-analyze-iterate workflow. This skill
+  owns experiment records; use long-running-agent-harness separately for
+  multi-session task orchestration and handoff state.
 ---
 
 # Experiment-Driven Documentation
 
 将"假设 → 实验设计 → 执行 → 结果 → 分析 → 下一步"全流程记录到项目文档中，
 做到任何人（包括未来的自己）都能复现思路和决策依据。
+
+## 与 long-running-agent-harness 的边界
+
+- `experiment-driven-doc` 负责实验假设、设计、结果、分析和结论。
+- `long-running-agent-harness` 负责跨会话任务拆解、runbook、进度日志和交接状态。
+- 对长实验：先用 harness 建立 `.cursor/harness/`，再用本 skill 维护正式实验文档。
 
 ## Workflow
 
