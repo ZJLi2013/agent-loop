@@ -197,3 +197,4 @@ git pull origin main   # 获取最新版
 - [claude code skills (官方)](https://github.com/anthropics/skills)
 - [awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills)
 - [cowork-skills](https://github.com/ZhangHanDong/cowork-skills)
+- [AI-Infra-Auto-Driven-SKILLS](https://github.com/BBuf/AI-Infra-Auto-Driven-SKILLS)

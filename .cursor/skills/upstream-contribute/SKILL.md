@@ -5,6 +5,7 @@ description: >-
   修复列表、commit 记录，自主判断贡献类型，生成 PR/Issue body 供用户审查后手动提交。
   Use after experiment completion (experiments.md status changes to ✅),
   or when discussing contribution back to upstream repos.
+disable-model-invocation: true
 ---
 
 # Upstream Contribute — 实验结果 → GitHub PR / Issue

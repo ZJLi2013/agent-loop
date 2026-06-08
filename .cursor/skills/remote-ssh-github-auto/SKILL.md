@@ -2,67 +2,96 @@
 name: remote-ssh-github-auto
 version: 1.0.0
 author: ZJLi2013
-description: 通用远端 SSH 与 GitHub 认证修复流程。优先使用 SSH Agent Forwarding（本地私钥不落地远端）实现远端 GitHub 拉取；也支持远端独立 key 方案与 pull 故障修复。
+description: 通用远端 SSH 与 GitHub 认证修复流程。先稳定本机到远端的 SSH 登录；再按需使用 SSH Agent Forwarding 或远端独立 key 修复 GitHub 拉取。
 allowed-tools: [Shell]
 ---
 
-# 远端 SSH + GitHub 认证修复（通用版）
+# 远端 SSH + GitHub 认证修复
 
 ## 适用场景
 
-- 需要从本机 SSH 到远端 Linux 机器执行命令
-- 远端 `git pull` 失败（常见于 HTTPS 凭证问题）
-- 希望统一改为 `git@github.com:...` 方式拉取
-- 需要在多个远端节点复用同一套 GitHub 身份（推荐 agent forwarding）
+- Agent 需要从本机连接远端 Linux / GPU 节点执行非交互命令。
+- 远端 `git pull` 需要 GitHub SSH 认证。
+- Windows OpenSSH 在 Conductor GPU 节点 publickey 阶段卡住。
 
-## 先决条件（最少）
+## 连接策略
 
-- 本机可 SSH 到远端：`ssh <user>@<host>`
-- 远端可访问 GitHub
-- GitHub 账号对目标仓库有读取权限
+### 1. 普通 Linux 节点
 
-## 节点清单与仓库路径（通用化建议）
+优先使用 OpenSSH，并显式指定 user/key：
 
-- 节点清单统一存放于项目级配置目录（git-ignored，不入库）：
-  - 项目级：`.cursor/configs/gpu_nodes.list`（首选，多 skill 共享）
-  - 全局备选：`~/.cursor/configs/gpu_nodes.list`
-- 首次使用：从模板复制并填入真实主机名：
-  ```bash
-  cp .cursor/configs/gpu_nodes.list.example .cursor/configs/gpu_nodes.list
-  ```
-- 读取节点列表示例（跳过注释行）：
-  ```bash
-  nodes=$(grep -v '^\s*#' .cursor/configs/gpu_nodes.list | grep -v '^\s*$')
-  for host in $nodes; do
-    ssh -A <user>@$host "<command>"
-  done
-  ```
+```powershell
+ssh -o BatchMode=yes -o ForwardAgent=no `
+  -i "C:\Users\<you>\ssh_keys\id_ed25519_new" `
+  <user>@<host> "hostname; whoami"
+```
 
----
+验证要求：10 秒内返回。超过 10 秒视为不可用，不继续等待。
 
-## 推荐方案：SSH Agent Forwarding（默认优先）
+### 2. Windows Agent + Conductor GPU 节点
 
-### Step A：本地启动并装载 SSH key
+如果 OpenSSH 在 publickey/auth 阶段卡住，改用本 skill 附带的 Paramiko runner。不要使用
+ControlMaster / ControlPath / socket 预热方案。
+
+```powershell
+python "c:\Users\zhengjli\Documents\github\ai_agents\my_skills\.cursor\skills\remote-ssh-github-auto\scripts\ssh_paramiko.py" `
+  --host <host> `
+  --user <user> `
+  --key "C:\Users\<you>\ssh_keys\id_ed25519_new" `
+  --timeout 10 `
+  --cmd "hostname; whoami"
+```
+
+验证要求：10 秒内返回 exit code 和 stdout。后续 agent 侧远端短命令都使用该 runner。
+
+如果 Conductor publickey 偶发 `Authentication timeout`，不要切回 OpenSSH；直接让
+Paramiko runner 自动重试，或显式增加重试次数：
+
+```powershell
+python "c:\Users\zhengjli\Documents\github\ai_agents\my_skills\.cursor\skills\remote-ssh-github-auto\scripts\ssh_paramiko.py" `
+  --host <host> `
+  --user <user> `
+  --key "C:\Users\<you>\ssh_keys\id_ed25519_new" `
+  --timeout 15 `
+  --retries 2 `
+  --cmd "docker ps"
+```
+
+## 长任务规则
+
+不要让 SSH 连接承载长任务日志。远端长任务必须 detach：
+
+```bash
+docker run -d --name <job_name> ... <image> bash -lc '<command>'
+```
+
+然后用短命令轮询：
+
+```bash
+docker ps -a --filter name=<job_name>
+docker logs --tail 80 <job_name>
+docker inspect -f '{{.State.ExitCode}}' <job_name>
+```
+
+输出、视频、summary 必须写到 host-mounted output 目录，便于任务结束后回传。
+
+## GitHub 认证
+
+Agent forwarding 只用于远端访问 GitHub，不用于修复节点登录。
 
 ```powershell
 ssh-add C:\Users\<you>\ssh_keys\id_ed25519
-ssh-add -l
-```
-
-### Step B：启用转发并登录远端
-
-```bash
 ssh -A <user>@<host>
 ```
 
-### Step C：远端验证 agent 与 GitHub
+远端验证：
 
 ```bash
 ssh-add -l
 ssh -T git@github.com
 ```
 
-若验证通过，再在远端仓库执行：
+通过后再执行：
 
 ```bash
 cd <repo_dir>
