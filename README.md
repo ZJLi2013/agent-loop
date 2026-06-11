@@ -1,6 +1,6 @@
 # my_skills
 
-个人 Agent Skills 库，面向 **Cursor** 的可复用工作流集合。
+个人 Agent Skills 库，面向 **Cursor** 的可复用工作流集合。部分高风险/长任务 Skills 默认不自动启用，需显式点名调用。
 
 ---
 
@@ -11,14 +11,14 @@ my_skills/
 ├── .cursor/
 │   ├── skills/                              # Cursor Agent Skills
 │   │   ├── agent-heartbeat/                 # 长任务心跳防超时
-│   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试
+│   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试（显式调用）
 │   │   ├── experiment-driven-doc/           # 实验驱动文档追踪
 │   │   ├── gpu-cluster-resource-manager/    # 多节点 GPU 资源调度
 │   │   ├── long-running-agent-harness/       # 长任务编排与跨会话交接
 │   │   ├── local-push-remote-pull-test/      # 本地 push + 远端 pull/test
 │   │   ├── remote-ssh-github-auto/          # 远端 SSH + GitHub 认证
-│   │   ├── tmux-remote-detach/              # 远端 tmux 托管长任务
-│   │   └── upstream-contribute/             # 实验后评估上游贡献
+│   │   ├── tmux-remote-detach/              # 远端 tmux 托管长任务（显式调用）
+│   │   └── upstream-contribute/             # 实验后评估上游贡献（显式调用）
 │   ├── agents/                              # Cursor Agent 定义
 │   │   ├── replan.md                        # 实验 review & 优先级调整
 │   │   └── code_run_plan.md                 # 代码执行 & 实验闭环
@@ -32,17 +32,17 @@ my_skills/
 
 ## Skills 列表
 
-| skill | 描述 |
-|-------|------|
-| `agent-heartbeat` | 长任务（训练/编译/推理）心跳输出，防止用户误判卡死 |
-| `cursor-overnight-task-manager` | 批量夜间测试：读取 repo 列表 → SSH 到远端 AMD GPU → headless run → 报告 |
-| `experiment-driven-doc` | 实验驱动文档：假设 → 设计 → 执行 → 结果 → 分析 → next step 全流程追踪 |
-| `gpu-cluster-resource-manager` | 多节点 GPU 集群资源管理：探测 → 亲和性打分 → 节点选择 → 存储治理 |
-| `long-running-agent-harness` | 长任务总控：initializer → task loop → verification gates → durable handoff |
-| `local-push-remote-pull-test` | 本地 push → 远端 pull → 远端测试完整工作流 |
-| `remote-ssh-github-auto` | SSH Agent Forwarding + 远端 GitHub 认证修复 |
-| `tmux-remote-detach` | 远端 tmux 托管长任务，支持断线恢复、日志持久化、批量状态检查 |
-| `upstream-contribute` | 实验完成后评估是否值得向上游提交 PR / Issue，并生成草稿 |
+| skill | 启用方式 | 描述 |
+|-------|----------|------|
+| `agent-heartbeat` | 自动触发 | 长任务（训练/编译/推理）心跳输出，防止用户误判卡死 |
+| `cursor-overnight-task-manager` | 显式调用 | 批量夜间测试：读取 repo 列表 → SSH 到远端 AMD GPU → headless run → 报告 |
+| `experiment-driven-doc` | 自动触发 | 实验驱动文档：假设 → 设计 → 执行 → 结果 → 分析 → next step 全流程追踪 |
+| `gpu-cluster-resource-manager` | 条件触发 | 多节点 GPU 集群资源管理：探测 → 亲和性打分 → 节点选择 → 存储治理 |
+| `long-running-agent-harness` | 自动触发 | 长任务总控：initializer → task loop → verification gates → durable handoff |
+| `local-push-remote-pull-test` | 条件触发 | 本地 push → 远端 pull → 远端测试完整工作流 |
+| `remote-ssh-github-auto` | 条件触发 | SSH Agent Forwarding + 远端 GitHub 认证修复 |
+| `tmux-remote-detach` | 显式调用 | 远端 tmux 托管长任务，支持断线恢复、日志持久化、批量状态检查 |
+| `upstream-contribute` | 显式调用 | 实验完成后评估是否值得向上游提交 PR / Issue，并生成草稿 |
 
 ### 长任务 Skill 边界
 

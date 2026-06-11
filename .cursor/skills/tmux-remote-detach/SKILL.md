@@ -9,6 +9,7 @@ description: >-
   remote nodes and wanting to disconnect the local machine safely. This skill
   owns remote process persistence; use long-running-agent-harness for the
   larger task plan and handoff.
+disable-model-invocation: true
 allowed-tools: [Shell]
 ---
 

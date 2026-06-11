@@ -9,6 +9,7 @@ description: >-
   batch repo testing, AMD GPU testing, input-list, or headless run. This skill
   owns the concrete batch execution workflow; use long-running-agent-harness
   for multi-session planning, progress tracking, and handoff.
+disable-model-invocation: true
 allowed-tools: [Shell]
 ---
 
