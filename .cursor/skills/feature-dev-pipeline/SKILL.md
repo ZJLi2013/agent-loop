@@ -12,13 +12,16 @@ description: >-
 
 把「大 feature → 子任务 → 设计 → 实现+实验 → 回填 → 下一个子任务」的循环固化成可复现流程。本 skill 是**编排者**，具体环节委派给其它 skill，不重复它们的内容。它对仓库、语言、文档目录无任何假设——下文用占位符，首次使用时与 user 约定实际路径并固定下来。
 
-## 文档三件套（pipeline 的 seam）
+## pipeline 文档（seam）
 
 | 文件（占位符） | 角色 | 谁维护 |
 |---|---|---|
 | `<backlog>.md`（如 `docs/overall_todo.md`） | 优先级 backlog（P0/P1/P2）+ 现状基线 + 已完成 feature | Phase 1 / Phase 4 |
 | `<design-dir>/featureN_<slug>.md` | 单个子任务的设计文档（实现后转 as-built） | Phase 2 / Phase 3 |
-| `<exp-dir>/partN-exp.md` | 单个子任务的实验记录（多轮调试可追溯） | Phase 3 |
+| `<exp-dir>/partN-exp.md` | 单个子任务的实验记录（多轮调试可追溯，**留详细数据**） | Phase 3 |
+| `<conclusions-log>`（如项目 `readme.md`/概览文档的「结论速查」区） | **跨 feature 关键结论汇总**（可检索的单一真相来源，**留提炼结论**） | Phase 4 |
+
+> **两层文档分离**：`partN-exp.md` 留详细数据/调试过程（易被埋没）；`<conclusions-log>` 只留"被数据证实、影响后续决策"的提炼结论 + 证据 + 影响 + 指回 partN 的链接。每完成一个 feature 回填一行（见 Phase 4）。首次使用时与 user 约定 `<conclusions-log>` 的位置（无则可省，但推荐有，避免结论散落）。
 
 约定（首次使用时确认）：
 - 三个路径前缀（backlog / design-dir / exp-dir）由 user 给定，之后整段开发沿用同一套。
@@ -53,6 +56,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 ### Phase 4 — Close（回填并拆下一个）
 - 更新 backlog：把完成项移入「现状基线/已完成」、刷新可扩展性复盘表、重排剩余优先级。
+- **回填结论速查**：把本 feature「被数据证实、影响后续决策」的结论，从 `partN-exp.md` 提炼**一行**到 `<conclusions-log>`（结论 + 关键证据 + 对后续的影响 + 指回 partN 链接）；同时标注"待验证/存疑"项。`partN` 留详细数据，`<conclusions-log>` 留可检索结论——避免结论被埋在 partN 里。
 - 清理实验临时产物（本地 + 远端：一次性脚本、构建/运行日志），保留实验输出与结论。
 - 拆解下一个子任务 → 回到 Phase 2。
 
