@@ -17,7 +17,7 @@ description: >-
 | 文件（占位符） | 角色 | 谁维护 |
 |---|---|---|
 | `<backlog>.md`（如 `docs/overall_todo.md`） | 优先级 backlog（P0/P1/P2）+ 现状基线 + 已完成 feature | Phase 1 / Phase 4 |
-| `<design-dir>/featureN_<slug>.md` | 单个子任务的设计文档（实现后转 as-built） | Phase 2 / Phase 3 |
+| `<design-dir>/featureN_<slug>.md` | 单个子任务的**设计文档 = 定义系统**（数据流 pipeline + 提炼后的关键结论；实现后转 as-built）。**不是实验总结** | Phase 2 / Phase 3 |
 | `<exp-dir>/partN-exp.md` | 单个子任务的实验记录（多轮调试可追溯，**留详细数据**） | Phase 3 |
 | `<conclusions-log>`（如项目 `readme.md`/概览文档的「结论速查」区） | **跨 feature 关键结论汇总**（可检索的单一真相来源，**留提炼结论**） | Phase 4 |
 
@@ -44,6 +44,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 ### Phase 2 — Design（子任务设计文档）
 - 取最高优先级子任务，写 `featureN_<slug>.md`：`核心判断 / Scope（做·不做）/ Problem / Design / 影响范围 / Tests / 边界`。
+- **文档开头先定义系统，不要一上来就贴实验**：用一节「数据流 / Pipeline」把这个 feature 的实际路径串清楚（一句话定义 + 分步表：步骤/做什么/脚本/产物/issue + 关键可视化 checkpoint），让 user 不读实验记录也能看懂系统长什么样、卡点在哪一步。抽象路线图（若有）落到本 feature 的真实脚本与产物上。
 - 现状代码用 **markdown 文件链接**引用（见下「文档约定」）。
 - 若存在多个有显著权衡的方案，列出并让 user 选；否则按 KISS 选最简方案并记录理由。
 
@@ -52,7 +53,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - 实验记录遵循 `experiment-driven-doc` skill：先写假设/方案/预期到 `partN-exp.md`，长跑前先 smoke，多轮调试用表格追踪，跑完回填结果/分析/结论。
 - 远端 / 跨会话 / GPU 长跑遵循 `long-running-agent-harness` skill。
 - 这一阶段**多轮调试由 agent 自主完成**（默认选最推荐方案继续，每轮回到文档开头防跑偏，详见 experiment-driven-doc）。
-- 拿到结果后：回填 `partN-exp.md`，并把 `featureN_<slug>.md` 从「设计中」转为 **as-built**（状态、端到端验证结论）。
+- 拿到结果后：回填 `partN-exp.md`，并把 `featureN_<slug>.md` 从「设计中」转为 **as-built**——除状态/端到端验证结论外，把实验里**被数据证实、改变了对本 feature 认知**的关键结论**提炼**进 feature 文档（highlight 区），并同步更新开头的 pipeline（哪步通了、卡点移到哪）。feature.md 留提炼结论，`partN-exp.md` 留详细数据/调试过程，两者别互相复制。
 
 ### Phase 4 — Close（回填并拆下一个）
 - 更新 backlog：把完成项移入「现状基线/已完成」、刷新可扩展性复盘表、重排剩余优先级。
@@ -63,6 +64,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 ## 文档约定（项目沉淀）
 
 - **as-built 文档用 markdown 链接引用实现**，例如 ``[`pkg/specs.py` L109-L146](../../pkg/specs.py)``。**不要**用 ```a:b:path 这种聊天专用代码引用语法——它只在 Cursor 对话里渲染成卡片，写进 `.md` 会退化成粘贴的裸代码块。proposed（尚未实现）代码才用普通 ```python 块。
+- **feature.md 是「定义系统」不是「实验总结」**：开头放数据流 pipeline + 提炼后的关键结论（帮 user 快速理解系统与卡点）；详细实验数据/调试过程留在 `partN-exp.md`。若发现 feature.md 正在退化成实验流水账，把过程性内容挪回 partN，只在 feature.md 保留提炼结论。
 - **实验完结后精简文档**：只留可复现要点（环境/命令/关键参数）+ 核心结果表 + 结论/Next Step，删掉假设推演、预期等设计草稿。
 - **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。
 - **总览表**：每个 `partN-exp.md` 顶部维护一行摘要表（Exp / 目标 / 状态 / 结论）。
