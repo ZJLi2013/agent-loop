@@ -66,6 +66,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - **as-built 文档用 markdown 链接引用实现**，例如 ``[`pkg/specs.py` L109-L146](../../pkg/specs.py)``。**不要**用 ```a:b:path 这种聊天专用代码引用语法——它只在 Cursor 对话里渲染成卡片，写进 `.md` 会退化成粘贴的裸代码块。proposed（尚未实现）代码才用普通 ```python 块。
 - **feature.md 是「定义系统」不是「实验总结」**：开头放数据流 pipeline + 提炼后的关键结论（帮 user 快速理解系统与卡点）；详细实验数据/调试过程留在 `partN-exp.md`。若发现 feature.md 正在退化成实验流水账，把过程性内容挪回 partN，只在 feature.md 保留提炼结论。
 - **实验完结后精简文档**：只留可复现要点（环境/命令/关键参数）+ 核心结果表 + 结论/Next Step，删掉假设推演、预期等设计草稿。
+- **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称，不写「原先以为 X、其实是 Y」这类对文档自己旧措辞的修订说明（git 里有）。语态细则与自检 grep 见 `experiment-driven-doc` 的「文档语态」段。
 - **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。
 - **总览表**：每个 `partN-exp.md` 顶部维护一行摘要表（Exp / 目标 / 状态 / 结论）。
 
