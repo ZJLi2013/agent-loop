@@ -17,6 +17,7 @@ These are common workflow/orchestration skills. They should remain discoverable 
 - `feature-dev-pipeline`: Orchestrates the large-feature → subtask → design → build+experiment → backfill loop over a backlog + design doc + experiment record.
 - `experiment-driven-doc`: Hypothesis-driven experiment records and iterative test/analyze loops.
 - `agent-heartbeat`: User-visible progress updates for long-running commands.
+- `code-to-kernel-diagram`: Module source → per-kernel dataflow diagram, kernel sequence table, and diff against a known baseline.
 
 ## Conditional Execution Skills
 
@@ -37,6 +38,7 @@ These should usually include `disable-model-invocation: true` and be invoked by 
 
 ## Maintenance Rules
 
+- **Writing/updating a `SKILL.md`: follow `.cursor/rules/skill-authoring.mdc`** (auto-attaches on `SKILL.md`). It owns the size budget and anti-bloat constraints; don't restate them here.
 - Keep each `SKILL.md` concise. Move long runbooks to `reference.md` and reusable commands to `scripts/`.
 - Prefer precise descriptions with explicit trigger phrases.
 - Add `disable-model-invocation: true` for domain trackers, one-off research workflows, and sensitive external publishing workflows.

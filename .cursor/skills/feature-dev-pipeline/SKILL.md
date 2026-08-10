@@ -2,10 +2,12 @@
 name: feature-dev-pipeline
 description: >-
   通用「大 feature → 子任务 → 设计 → 实现+实验 → 回填 → 下一个子任务」开发流水线的编排者：
-  从一个 backlog 文档排优先级、为每个子任务写设计文档、实现并用实验记录驱动调试、把结果回填成
-  as-built、再回到 backlog 拆下一个子任务。Use when iteratively developing a large/multi-subtask
-  feature with a backlog + per-subtask design doc + experiment record, maintaining a priority todo
-  (P0/P1/P2), or when the user says "实现下一个 sub-task / 设计 feature / 拆解 todo / 推进这个大 feature".
+  从一个 backlog 文档排优先级、为每个子任务先定 Goal 再写设计文档、实现并用实验记录驱动调试、把结果
+  回填成 as-built、再回到 backlog 拆下一个子任务。强制 Goal-first：feature 文档开头两节固定为「要解决
+  什么问题」和「解没解决」，每个实验开跑前先写下它回答 Goal 的哪一问与预期。Use when iteratively
+  developing a large/multi-subtask feature with a backlog + per-subtask design doc + experiment record,
+  maintaining a priority todo (P0/P1/P2), defining a feature's goal or scope before experimenting, or
+  when the user says "实现下一个 sub-task / 设计 feature / 拆解 todo / 推进这个大 feature".
 ---
 
 # Feature Dev Pipeline
@@ -17,7 +19,7 @@ description: >-
 | 文件（占位符） | 角色 | 谁维护 |
 |---|---|---|
 | `<backlog>.md`（如 `docs/overall_todo.md`） | 优先级 backlog（P0/P1/P2）+ 现状基线 + 已完成 feature | Phase 1 / Phase 4 |
-| `<design-dir>/featureN_<slug>.md` | 单个子任务的**设计文档 = 定义系统**（数据流 pipeline + 提炼后的关键结论；实现后转 as-built）。**不是实验总结** | Phase 2 / Phase 3 |
+| `<design-dir>/featureN_<slug>.md` | 单个子任务的**设计文档 = Goal + 结论 + 定义系统**（开头两节 Goal / 结论，然后数据流 pipeline；实现后转 as-built）。**不是实验总结** | Phase 2 / Phase 3 |
 | `<exp-dir>/partN-exp.md` | 单个子任务的实验记录（多轮调试可追溯，**留详细数据**） | Phase 3 |
 | `<conclusions-log>`（如项目 `readme.md`/概览文档的「结论速查」区） | **跨 feature 关键结论汇总**（可检索的单一真相来源，**留提炼结论**） | Phase 4 |
 
@@ -43,12 +45,17 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - 输出：backlog 有清晰的下一个子任务 + 现状基线。
 
 ### Phase 2 — Design（子任务设计文档）
-- 取最高优先级子任务，写 `featureN_<slug>.md`：`核心判断 / Scope（做·不做）/ Problem / Design / 影响范围 / Tests / 边界`。
-- **文档开头先定义系统，不要一上来就贴实验**：用一节「数据流 / Pipeline」把这个 feature 的实际路径串清楚（一句话定义 + 分步表：步骤/做什么/脚本/产物/issue + 关键可视化 checkpoint），让 user 不读实验记录也能看懂系统长什么样、卡点在哪一步。抽象路线图（若有）落到本 feature 的真实脚本与产物上。
+- 取最高优先级子任务，写 `featureN_<slug>.md`：**开头两节固定为 `Goal` 和 `结论`**，其后 `Design / 影响范围 / Tests / 边界`。
+- **`Goal` 只描述要解决什么问题**：一句话，用 user 的语言而不是实现的语言（「把 X 迁到 Y 值不值」，不是「测 KV 复用的曲线」），加必要的现状交代。**不写判据表、不写 scope 清单、不写推演**——那些是流程自嗨，读者不看。
+- **`结论` 只回答这个 feature 解没解决它**，附最小证据。
+- **写不出 Goal 就不要往下写设计，更不要开跑实验。** 每个子任务都要能指回 Goal；指不回去的就是跑偏。
+- **这两节之后再定义系统，不要一上来就贴实验**：用一节「数据流 / Pipeline」把这个 feature 的实际路径串清楚（一句话定义 + 分步表：步骤/做什么/脚本/产物/issue + 关键可视化 checkpoint），让 user 不读实验记录也能看懂系统长什么样、卡点在哪一步。抽象路线图（若有）落到本 feature 的真实脚本与产物上。
 - 现状代码用 **markdown 文件链接**引用（见下「文档约定」）。
 - 若存在多个有显著权衡的方案，列出并让 user 选；否则按 KISS 选最简方案并记录理由。
 
 ### Phase 3 — Build + Experiment（实现并实验）
+- **开跑前先声明，但不必等确认。** 每次实验开跑前，在 `partN-exp.md` 里写下它回答 Goal 的哪一问 + 假设与预期（几行即可），然后自己跑。中途冒出新对照臂 / 新变量 / 新工作点也一样——补一条再跑，**不用停下问 user**。这不是审批流程，是给自己留一个可对照的预测：**没有预期，拿到数也判不出是发现还是跑偏**；顺带 user 随时能看出你在测什么。
+- **写预期的同时过决策价值门**：结果为否定时 Goal 的答案或 backlog 的优先级会变吗？不会就不跑。**子任务的量级也要配得上 backlog 上的主线瓶颈**——判别方法见 `experiment-driven-doc` 的「决策价值门」。
 - 实现遵循**最小必要改动**原则：只改达成目标所必需的部分，顺手清理被替换掉的过期逻辑（若项目内有 `minimal-necessary-code` 类 skill 则沿用）。
 - 实验记录遵循 `experiment-driven-doc` skill：先写假设/方案/预期到 `partN-exp.md`，长跑前先 smoke，多轮调试用表格追踪，跑完回填结果/分析/结论。
 - 远端 / 跨会话 / GPU 长跑遵循 `long-running-agent-harness` skill。
@@ -64,19 +71,20 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 ## 文档约定（项目沉淀）
 
 - **as-built 文档用 markdown 链接引用实现**，例如 ``[`pkg/specs.py` L109-L146](../../pkg/specs.py)``。**不要**用 ```a:b:path 这种聊天专用代码引用语法——它只在 Cursor 对话里渲染成卡片，写进 `.md` 会退化成粘贴的裸代码块。proposed（尚未实现）代码才用普通 ```python 块。
+- **文档是给人看的，不是给流程看的。** 自检：读前 10 行能否答出「要解决什么问题、解决了没有」？做不到就是 Goal/结论 没写清。**判据表、scope 清单、假设推演、分析过程一律不进 feature.md**，需要就留在 `partN-exp.md`。每加一节先问：读者会因为这节改变行动吗？不会就删。
 - **feature.md 是「定义系统」不是「实验总结」**：开头放数据流 pipeline + 提炼后的关键结论（帮 user 快速理解系统与卡点）；详细实验数据/调试过程留在 `partN-exp.md`。若发现 feature.md 正在退化成实验流水账，把过程性内容挪回 partN，只在 feature.md 保留提炼结论。
 - **实验完结后精简文档**：只留可复现要点（环境/命令/关键参数）+ 核心结果表 + 结论/Next Step，删掉假设推演、预期等设计草稿。
 - **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称，不写「原先以为 X、其实是 Y」这类对文档自己旧措辞的修订说明（git 里有）。语态细则与自检 grep 见 `experiment-driven-doc` 的「文档语态」段。
-- **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。
+- **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。**验收判据落在 Goal 的语言上**（任务指标 / user 可感知的量），不是「理论上完美一致」；选法见 `experiment-driven-doc` 的「验收判据阶梯」。
 - **总览表**：每个 `partN-exp.md` 顶部维护一行摘要表（Exp / 目标 / 状态 / 结论）。
 
 ## Human-in-the-loop 检查点
 
 默认自主推进；仅在这些点停下等 user：
-- Phase 1 的优先级与子任务 scope 拍板。
+- Phase 1 的优先级与子任务 scope、以及 Phase 2 的 Goal——**「要解决什么问题」由 user 定**，agent 不自行替 user 定义。
 - Phase 2 有多个显著权衡方案时的选型。
 - 破坏性 / 资源敏感操作（删数据、覆盖 checkpoint、强推分支、GPU 长占用）。
-- experiment-driven-doc 的硬性中止条件（连续无改善、重复环境错误、Phase 0 假设可能不成立）。
+- experiment-driven-doc 的硬性中止条件（连续无改善、重复环境错误、Phase 0 假设可能不成立、连续 2 轮结果不改变主线决策）。
 
 ## 组合的其它 skill
 

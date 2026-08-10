@@ -11,6 +11,7 @@ my_skills/
 ├── .cursor/
 │   ├── skills/                              # Cursor Agent Skills
 │   │   ├── agent-heartbeat/                 # 长任务心跳防超时
+│   │   ├── code-to-kernel-diagram/          # 模块源码 → 逐 kernel 数据流图
 │   │   ├── cross-agent-contract/            # 双 agent 经共享 md 对齐集成契约
 │   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试（显式调用）
 │   │   ├── experiment-driven-doc/           # 实验驱动文档追踪
@@ -37,6 +38,7 @@ my_skills/
 | skill | 启用方式 | 描述 |
 |-------|----------|------|
 | `agent-heartbeat` | 自动触发 | 长任务（训练/编译/推理）心跳输出，防止用户误判卡死 |
+| `code-to-kernel-diagram` | 自动触发 | 读 `nn.Module` 的 `forward()` → Mermaid 逐 kernel 数据流图 + kernel 序列表 + 与已知基线的差异；标注 all-reduce 次数、有无 KV cache、可融合 elementwise |
 | `cross-agent-contract` | 显式调用 | 两个互相依赖的 agent/repo（消费方 A + 组件方 B）经单一共享 md 契约文档对齐：gaps 表 + 消费方驱动的 API 建议 + 钉死契约 + dated 双向握手 + 各 repo dated recheck 便条 |
 | `cursor-overnight-task-manager` | 显式调用 | 批量夜间测试：读取 repo 列表 → SSH 到远端 AMD GPU → headless run → 报告 |
 | `experiment-driven-doc` | 自动触发 | 实验驱动文档：假设 → 设计 → 执行 → 结果 → 分析 → next step 全流程追踪 |
