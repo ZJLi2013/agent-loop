@@ -6,8 +6,10 @@ description: >-
   回填成 as-built、再回到 backlog 拆下一个子任务。强制 Goal-first：feature 文档开头两节固定为「要解决
   什么问题」和「解没解决」，每个实验开跑前先写下它回答 Goal 的哪一问与预期。Use when iteratively
   developing a large/multi-subtask feature with a backlog + per-subtask design doc + experiment record,
-  maintaining a priority todo (P0/P1/P2), defining a feature's goal or scope before experimenting, or
-  when the user says "实现下一个 sub-task / 设计 feature / 拆解 todo / 推进这个大 feature".
+  maintaining a priority todo (P0/P1/P2), running a backlog-driven autonomous loop where the agent keeps
+  pulling the next task from the backlog without asking each round, defining a feature's goal or scope
+  before experimenting, or when the user says "实现下一个 sub-task / 设计 feature / 拆解 todo /
+  推进这个大 feature / 从 task.md 取下一个任务 / 按 backlog 一直做下去".
 ---
 
 # Feature Dev Pipeline
@@ -41,7 +43,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 ### Phase 1 — Plan（排优先级）
 - 与 user 一起把大 feature 拆成子任务，写进 backlog，按「杠杆高 / 风险低」排 P0/P1/P2。
-- agent 主动给出推荐排序与理由；**优先级和 scope 由 user 拍板**（这是主要的 human-in-the-loop 点）。
+- agent 主动给出推荐排序与理由；**首次拆解时优先级和 scope 由 user 拍板**（这是主要的 human-in-the-loop 点）。队列排好之后按「持续模式」自主取，不必每轮回来问。
 - 输出：backlog 有清晰的下一个子任务 + 现状基线。
 
 ### Phase 2 — Design（子任务设计文档）
@@ -68,6 +70,18 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - 清理实验临时产物（本地 + 远端：一次性脚本、构建/运行日志），保留实验输出与结论。
 - 拆解下一个子任务 → 回到 Phase 2。
 
+## 持续模式：backlog 作为唯一入口
+
+默认按这个模式跑：agent 从 backlog 取一条 → 走完四阶段 → 回填 → 再取下一条，不必每轮问 user。三条约束让它可靠：
+
+**一、backlog 行是索引，不是内容。** 一行 = 一个子任务，只放「事 + 指向 `featureN` / `partN-exp` 的链接 + 状态」。范围、判据、基线选择、边界一律写在 `featureN` 里。自检：**一行需要换行才读得完，就是细节没下沉**——backlog 每轮都被完整读一遍，塞细节等于每轮为过期上下文付一次税。
+
+**二、自主取任务，三种情况才停。** backlog 上已有 P0、且它的 `featureN` 已有 Goal → 直接进 Phase 2/3 不问。只在这三种情况停下等 user：要**新增** backlog 行、要**改优先级**、P0 **清空**了。（这覆盖 Phase 1 「优先级由 user 拍板」那条——那条针对首次拆解，不针对已排好的队列。）
+
+**三、backlog 是任务状态的唯一真相源。** 与 `long-running-agent-harness` 组合时**不要**再建 `.cursor/harness/tasks.json`：backlog 承担它的职责，harness 那边只留 `progress.md` 作为跨 session 的活动笔记与交接。两份任务状态必然漂移。
+
+每轮循环：读 backlog → 取最高优先级未完成项 → 读它的 `featureN`（没有就先写 Goal，见 Phase 2）→ Phase 3 → 回填 `featureN` 与 backlog 的状态列 → 取下一条。
+
 ## 文档约定（项目沉淀）
 
 - **as-built 文档用 markdown 链接引用实现**，例如 ``[`pkg/specs.py` L109-L146](../../pkg/specs.py)``。**不要**用 ```a:b:path 这种聊天专用代码引用语法——它只在 Cursor 对话里渲染成卡片，写进 `.md` 会退化成粘贴的裸代码块。proposed（尚未实现）代码才用普通 ```python 块。
@@ -81,7 +95,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 ## Human-in-the-loop 检查点
 
 默认自主推进；仅在这些点停下等 user：
-- Phase 1 的优先级与子任务 scope、以及 Phase 2 的 Goal——**「要解决什么问题」由 user 定**，agent 不自行替 user 定义。
+- Phase 1 的优先级与子任务 scope、以及 Phase 2 的 Goal——**「要解决什么问题」由 user 定**，agent 不自行替 user 定义。队列已排好时的例外见「持续模式」第二条。
 - Phase 2 有多个显著权衡方案时的选型。
 - 破坏性 / 资源敏感操作（删数据、覆盖 checkpoint、强推分支、GPU 长占用）。
 - experiment-driven-doc 的硬性中止条件（连续无改善、重复环境错误、Phase 0 假设可能不成立、连续 2 轮结果不改变主线决策）。

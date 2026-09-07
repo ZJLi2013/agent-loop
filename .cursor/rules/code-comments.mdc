@@ -1,0 +1,60 @@
+---
+description: 代码注释跟邻码一致、只写 WHY、禁止 agent 式 narration 与说明性段落
+alwaysApply: true
+---
+
+# Code Comments
+
+写或改代码时，注释风格**以当前文件已有写法为准**，不要比周围更啰嗦。
+
+## 先读再写
+
+改某个函数/模块前，先看同文件上下 20–40 行：注释密度、语言、是否用 docstring。新注释应**融入**，不要引入另一种风格。
+
+## 行内 / 块注释
+
+**只写**读者从代码本身推不出的东西：
+
+- 非显而易见的 **WHY**、业务约束、协议怪癖
+- 上游 bug / issue 引用（`# See #1234:`）
+- 刻意违反常规的理由（`# Intentionally not cached:`）
+
+**不要写**：
+
+- 逐步 narrate（`# Step 1: load` / `# Initialize variables`）
+- 复述函数名、参数名、类型（`# Set the user ID` above `user_id = ...`）
+- 为刚写的逻辑写「说明性段落」或多行块注释
+- 变更日志式注释（`# Added in refactor` / `# Now we use X instead of Y`）
+- 用注释代替清晰命名
+
+```python
+# BAD — narrates the obvious
+# Loop through each environment and reset it
+for env_id in env_ids:
+    self.reset(env_id)
+
+# GOOD — only the non-obvious
+# diffsynth draws one noise sample per batch; mixed seeds are unsupported.
+if len(set(seeds)) > 1:
+    raise NotImplementedError(...)
+```
+
+## Docstring
+
+- 默认**不写**；先看邻码有没有、多长。
+- 邻码有一行 summary → 最多跟一行，不扩成多段。
+- 邻码普遍有完整 docstring → 跟同文件格式与密度，不另起一种风格。
+- 私有 helper、局部逻辑：即使公开 API 邻码有 docstring，也不要比邻码更密。
+
+## 收尾自检（每次改完必做）
+
+扫 diff 里**你新增**的每一行注释：
+
+1. 删掉「读代码就能看懂」的。
+2. 多行块能否压成一行或零行？
+3. 是否比同文件旧代码更密、更教学？是则删或改短。
+
+默认倾向：**少注释、跟邻码**；有疑问就不加。
+---
+alwaysApply: true
+---
