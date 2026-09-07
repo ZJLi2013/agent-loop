@@ -3,6 +3,7 @@ name: local-push-remote-pull-test
 version: 1.0.0
 author: ZJLi2013
 description: 本地开发后推送到 GitHub，再登录远端拉取并执行测试的通用工作流。用于"本地改代码+git push+远端 git pull+远端测试"场景，并包含远端本地改动导致 pull 失败时的 stash 处理。
+disable-model-invocation: true
 allowed-tools: [Shell]
 ---
 

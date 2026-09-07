@@ -8,6 +8,7 @@ description: >-
   article, writing a technical explainer for外部读者, polishing an AI-drafted
   post to remove "AI 味", separating internal study notes from a public blog,
   or when the user mentions 自媒体 / 公众号 / 博客 / 科普 / 对外发布.
+disable-model-invocation: true
 ---
 
 # Research → Blog（文献调研到自媒体）

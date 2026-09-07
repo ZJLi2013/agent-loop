@@ -7,6 +7,7 @@ description: >-
   在分配 repo 测试任务到远端 GPU 节点前，自动选择最优节点。
   Use when probing GPU nodes, selecting nodes for tasks, checking disk space,
   managing cached datasets/models, or cleaning up storage on remote nodes.
+disable-model-invocation: true
 allowed-tools: [Shell]
 ---
 

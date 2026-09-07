@@ -10,18 +10,21 @@
 my_skills/
 ├── .cursor/
 │   ├── skills/                              # Cursor Agent Skills
-│   │   ├── agent-heartbeat/                 # 长任务心跳防超时
-│   │   ├── code-to-kernel-diagram/          # 模块源码 → 逐 kernel 数据流图
-│   │   ├── cross-agent-contract/            # 双 agent 经共享 md 对齐集成契约
-│   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试（显式调用）
-│   │   ├── experiment-driven-doc/           # 实验驱动文档追踪
+│   │   ├── agent-heartbeat/                 # 长任务心跳（自动）
+│   │   ├── experiment-driven-doc/           # 实验记录（自动）
+│   │   ├── feature-dev-pipeline/            # feature backlog 编排（自动）
+│   │   ├── long-running-agent-harness/       # 跨会话编排（自动）
+│   │   ├── code-to-kernel-diagram/          # 模块源码 → kernel 数据流图
+│   │   ├── cross-agent-contract/            # 双 agent 经共享 md 对齐契约
+│   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试
 │   │   ├── gpu-cluster-resource-manager/    # 多节点 GPU 资源调度
-│   │   ├── long-running-agent-harness/       # 长任务编排与跨会话交接
 │   │   ├── local-push-remote-pull-test/      # 本地 push + 远端 pull/test
+│   │   ├── nv_physical_ai_tracker/          # NVIDIA Physical AI 追踪
 │   │   ├── remote-ssh-github-auto/          # 远端 SSH + GitHub 认证
-│   │   ├── research-to-blog/                # 文献调研 → 自媒体/公众号成品
-│   │   ├── tmux-remote-detach/              # 远端 tmux 托管长任务（显式调用）
-│   │   └── upstream-contribute/             # 实验后评估上游贡献（显式调用）
+│   │   ├── research-to-blog/                # 文献调研 → 自媒体
+│   │   ├── tmux-remote-detach/              # 远端 tmux 托管长任务
+│   │   ├── upstream-contribute/             # 实验后评估上游贡献
+│   │   └── video-frame-analysis/            # 视频抽帧目视调试
 │   ├── agents/                              # Cursor Agent 定义
 │   │   ├── replan.md                        # 实验 review & 优先级调整
 │   │   └── code_run_plan.md                 # 代码执行 & 实验闭环
@@ -37,18 +40,21 @@ my_skills/
 
 | skill | 启用方式 | 描述 |
 |-------|----------|------|
-| `agent-heartbeat` | 自动触发 | 长任务（训练/编译/推理）心跳输出，防止用户误判卡死 |
-| `code-to-kernel-diagram` | 自动触发 | 读 `nn.Module` 的 `forward()` → Mermaid 逐 kernel 数据流图 + kernel 序列表 + 与已知基线的差异；标注 all-reduce 次数、有无 KV cache、可融合 elementwise |
-| `cross-agent-contract` | 显式调用 | 两个互相依赖的 agent/repo（消费方 A + 组件方 B）经单一共享 md 契约文档对齐：gaps 表 + 消费方驱动的 API 建议 + 钉死契约 + dated 双向握手 + 各 repo dated recheck 便条 |
-| `cursor-overnight-task-manager` | 显式调用 | 批量夜间测试：读取 repo 列表 → SSH 到远端 AMD GPU → headless run → 报告 |
-| `experiment-driven-doc` | 自动触发 | 实验驱动文档：假设 → 设计 → 执行 → 结果 → 分析 → next step 全流程追踪 |
-| `gpu-cluster-resource-manager` | 条件触发 | 多节点 GPU 集群资源管理：探测 → 亲和性打分 → 节点选择 → 存储治理 |
-| `long-running-agent-harness` | 自动触发 | 长任务总控：initializer → task loop → verification gates → durable handoff |
-| `local-push-remote-pull-test` | 条件触发 | 本地 push → 远端 pull → 远端测试完整工作流 |
-| `remote-ssh-github-auto` | 条件触发 | SSH Agent Forwarding + 远端 GitHub 认证修复 |
-| `research-to-blog` | 条件触发 | 文献调研 → 事实核实 → 内部消化 → 谋篇去重 → 客观化去 AI 味 → 标题/配图/References → 内外分离，产出对外博客/公众号 |
-| `tmux-remote-detach` | 显式调用 | 远端 tmux 托管长任务，支持断线恢复、日志持久化、批量状态检查 |
-| `upstream-contribute` | 显式调用 | 实验完成后评估是否值得向上游提交 PR / Issue，并生成草稿 |
+| `feature-dev-pipeline` | 自动触发 | 大 feature → 子任务 → 设计 → 实现+实验 → 回填 |
+| `experiment-driven-doc` | 自动触发 | 实验驱动文档：假设 → 设计 → 结果 → 结论 |
+| `long-running-agent-harness` | 自动触发 | 长任务总控：initializer → loop → gates → handoff |
+| `agent-heartbeat` | 自动触发 | 长命令心跳，防止用户误判卡死 |
+| `code-to-kernel-diagram` | 显式调用 | `nn.Module` forward → 逐 kernel 数据流图 |
+| `cross-agent-contract` | 显式调用 | 两 repo 经共享 md 对齐集成契约 |
+| `cursor-overnight-task-manager` | 显式调用 | 批量夜间远端 GPU 测试 |
+| `gpu-cluster-resource-manager` | 显式调用 | 探测节点、选机、管缓存与磁盘 |
+| `local-push-remote-pull-test` | 显式调用 | 本地 push → 远端 pull → 远端测试 |
+| `nv-physical-ai-tracker` | 显式调用 | NVIDIA Physical AI / 机器人研究进展追踪 |
+| `remote-ssh-github-auto` | 显式调用 | SSH 登录 + 远端 GitHub 认证修复 |
+| `research-to-blog` | 显式调用 | 文献调研 → 对外博客 / 公众号 |
+| `tmux-remote-detach` | 显式调用 | 远端 tmux 托管长任务 |
+| `upstream-contribute` | 显式调用 | 实验后评估是否提上游 PR / Issue |
+| `video-frame-analysis` | 显式调用 | 从 mp4 抽帧目视，落成可追溯结论 |
 
 ### 长任务 Skill 边界
 
@@ -150,13 +156,13 @@ ls -la ~/.cursor/skills-cursor/
 `available_skills` 列表中。使用方式示例：
 
 ```
-# 在 lerobot 项目中
-"通过 ssh david@ip_address 登录远端GPU节点，执行训练脚本"
-→ Agent 自动调用 remote-ssh-github-auto Skill
+# 在 lerobot 项目中（点名冷 skill）
+"用 remote-ssh-github-auto，ssh 到 david@ip 修 GitHub 认证"
+→ Agent 读取该 skill 后执行
 
-# 在任意 Python 项目中
-"为这个 Python 项目生成 Dockerfile"
-→ Agent 自动调用 dockerfile_generator Skill
+# 推进大 feature（自动 skill）
+"按 backlog 做下一个 sub-task"
+→ Agent 使用 feature-dev-pipeline
 ```
 
 不需要在每个项目的 `.cursor/` 下放置 Skill 文件。
@@ -200,7 +206,8 @@ git pull origin main   # 获取最新版
 
 ## 参考资源
 
-- [claude code skills (官方)](https://github.com/anthropics/skills)
+- [skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — Anthropic 官方：怎么写 skill、progressive disclosure、eval 循环、description 触发优化。本库在 Cursor 里写 skill 走内置 `create-skill`；体量约束在 [`.cursor/rules/skill-authoring.mdc`](.cursor/rules/skill-authoring.mdc)。
+- [claude code skills (官方仓库)](https://github.com/anthropics/skills)
 - [awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills)
 - [cowork-skills](https://github.com/ZhangHanDong/cowork-skills)
 - [AI-Infra-Auto-Driven-SKILLS](https://github.com/BBuf/AI-Infra-Auto-Driven-SKILLS)

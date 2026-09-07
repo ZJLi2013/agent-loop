@@ -12,6 +12,7 @@ description: >-
   explaining an unfamiliar model architecture from its source file. This skill
   owns kernel-granularity dataflow of a single module; it is not for system-level
   architecture diagrams of services, databases, and queues.
+disable-model-invocation: true
 ---
 
 # Code → Kernel Diagram

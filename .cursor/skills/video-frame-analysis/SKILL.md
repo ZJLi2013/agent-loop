@@ -7,6 +7,7 @@ description: >-
   is the evidence and you need to inspect it frame-by-frame, compare two videos
   (e.g. real-overlay vs sim-replay) at matched timestamps, or diagnose spatial /
   temporal misalignment from footage instead of guessing.
+disable-model-invocation: true
 ---
 
 # Video Frame Analysis

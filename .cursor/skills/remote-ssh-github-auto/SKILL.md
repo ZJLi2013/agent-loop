@@ -3,6 +3,7 @@ name: remote-ssh-github-auto
 version: 1.0.0
 author: ZJLi2013
 description: 通用远端 SSH 与 GitHub 认证修复流程。先稳定本机到远端的 SSH 登录；再按需使用 SSH Agent Forwarding 或远端独立 key 修复 GitHub 拉取。
+disable-model-invocation: true
 allowed-tools: [Shell]
 ---
 
