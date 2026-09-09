@@ -31,6 +31,10 @@ disable-model-invocation: true
 3. Docker image tag、ROCm 版本号不受影响
 4. 如果遇到未知的大陆型号，警告用户确认对应的北美型号
 
+## ⚠️ 强制风险规避：AI 披露
+
+见 `.cursor/rules/upstream-ai-disclosure.mdc`（always-applied）。与型号脱敏并列，同在跨出仓库边界那一刻生效。
+
 ## Step 1: 自动判断 — PR vs Issue vs 不做
 
 实验结束后（experiments.md 状态 → ✅），agent **自主评估**：

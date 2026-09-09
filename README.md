@@ -66,6 +66,16 @@ my_skills/
 | 单个长命令需要用户可见进度 | `agent-heartbeat` | 输出心跳和阶段进度 |
 | 远端任务需要本地断开后继续跑 | `tmux-remote-detach` | 创建/恢复 tmux session 和日志 |
 
+### Rules（`.cursor/rules/`，always-applied）
+
+| rule | 管什么 |
+|-------|--------|
+| `reply-conclusion-first` | 对话回复：结论先行、肯定句、只答被问到的对象 |
+| `code-comments` | 注释跟邻码一致、只写 WHY |
+| `experiment-budget-gate` | 实验执行期止损：每轮先指出会改变哪条命令，超预算停 |
+| `upstream-ai-disclosure` | 对外贡献的 AI 披露与质量底线（取自 [Ghostty AI Policy](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md)） |
+| `skill-authoring` | 写 `SKILL.md` 时的体量与内容约束（按 glob 挂载） |
+
 ### Agents
 
 | agent | 描述 |
