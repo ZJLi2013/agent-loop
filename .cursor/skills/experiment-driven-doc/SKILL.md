@@ -11,7 +11,7 @@ description: >-
   task metrics) for a numerical, performance, or refactoring change; and when writing or
   updating experiment/feature/design docs. Owns the two gates and the experiment record template;
   writing voice belongs to narrative-spine, stop/continue conditions to experiment-budget-gate,
-  and multi-session orchestration to long-running-agent-harness.
+  and multi-session orchestration to task-loop.
 ---
 
 # Experiment-Driven Documentation
@@ -21,7 +21,7 @@ description: >-
 
 **边界**：本 skill 管实验的两道门与文档章节模板。语态归 `narrative-spine`；
 「什么情况才停下来问人」归 `experiment-budget-gate`；跨会话拆解、runbook、进度与交接归
-`long-running-agent-harness`。长实验先用 harness 建状态文件，再用本 skill 维护正式文档。
+`task-loop`。长实验先用 `task-loop` 建 `task.md`，再用本 skill 维护正式的实验文档。
 
 ---
 

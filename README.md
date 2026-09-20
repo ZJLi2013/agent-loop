@@ -10,9 +10,9 @@
 my_skills/
 ├── .cursor/
 │   ├── skills/                          # Cursor Agent Skills
-│   │   ├── feature-dev-pipeline/        # feature backlog 编排（自动）
+│   │   ├── feature-dev-pipeline/        # 大 feature 拆子任务（自动）
 │   │   ├── experiment-driven-doc/       # 实验两道门 + 记录模板（自动）
-│   │   ├── long-running-agent-harness/  # 跨会话编排（自动）
+│   │   ├── task-loop/                   # task.md、验收检查点、交接（自动）
 │   │   ├── agent-heartbeat/             # 长任务心跳（自动）
 │   │   ├── remote-exec/                 # 远端 GPU 执行、存活、自修、存储
 │   │   ├── code-review/                 # PR/diff 评审的四段输出
@@ -33,8 +33,8 @@ my_skills/
 | skill | 启用方式 | 描述 |
 |-------|----------|------|
 | `feature-dev-pipeline` | 自动触发 | 大 feature → 子任务 → 设计 → 实现+实验 → 回填 |
+| `task-loop` | 自动触发 | `task.md` schema、验收检查点（含失败去向）、失败计数、跨会话交接 |
 | `experiment-driven-doc` | 自动触发 | 决策价值门 + 验收判据阶梯 + 实验记录模板 |
-| `long-running-agent-harness` | 自动触发 | 长任务总控：initializer → loop → gates → handoff |
 | `agent-heartbeat` | 自动触发 | 长命令心跳，防止用户误判卡死 |
 | `remote-exec` | 显式调用 | SSH/认证、选节点、tmux detach、存储治理、远端失败自修表 |
 | `code-review` | 显式调用 | 审 PR/diff 的四段输出与 vibe-coding 识别；标准从被审 repo 取，取不到才回落 [P0-P4](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32) |
@@ -46,6 +46,7 @@ my_skills/
 
 | rule | 管什么 |
 |-------|--------|
+| `agent-loop` | **循环的调度器**：定位当前在哪一格 → 点名去读哪个 skill；失败按类别自修，用尽才问人 |
 | `narrative-spine` | 一条能被复述的主线；不为解释而膨胀；直接陈述当前为真的内容（语态的唯一归属处） |
 | `reply-conclusion-first` | 对话回复：第一句即结论、只答被问到的对象、说「做不到」前先查 |
 | `experiment-budget-gate` | 什么先自修、什么才停下来问人（中止清单的唯一归属处）、预算、每轮报改变哪条命令 |
@@ -67,15 +68,36 @@ my_skills/
 也不读 Skills。** 要让某条标准在 PR 阶段生效，只能写进那两处。分阶段的完整对照表见
 [`.cursor/skills/README.md`](.cursor/skills/README.md)。
 
-### 方向：从会规划的 Chat Agent 到持续运行的 Agentic Loop
+### 闭环：调度器是 rule，不是 skill
 
-目标控制结构是 `Goal → Plan → Execute → Observe → Evaluate → Diagnose → Repair/Re-plan →
-Verify → Continue → Done`，关键约束是**「遇到非预期情况」不等于「问人」**。
+控制结构是 `Goal → Plan → Select → Design → Execute → Evaluate →（pass）Close /（fail）
+Diagnose → Repair → 下一个 task → Ship`，关键约束是**「遇到非预期情况」不等于「问人」**。
 
-当前的落点：`experiment-budget-gate` 的「先自修，再中止」持有这条分流判据——环境错误与契约
-不匹配由 agent 自己处置到重试上限，假设被推翻算结果不算故障，只有不可逆操作、Goal 说不清、
-超预算、以及硬性中止五条才交还给人。`remote-exec` 的「失败处置表」是执行层的自修实现。
-`long-running-agent-harness` 目前仍是会话检查点协议，把它改写成真正的控制环是下一步。
+调度这件事由 [`agent-loop`](.cursor/rules/agent-loop.mdc) 这条**常驻 rule** 承担，而不是某个
+skill。原因是机制层面的：rule（`alwaysApply: true`）每轮都在上下文里，skill 只有 name 与
+description 在上下文、正文要被语义匹配命中才加载。**一个需要先被匹配命中才能开始调度的
+调度器，本身就会经常匹配不上。** 之前的编排 skill 明明是自动触发却仍需反复提醒，就是这个原因。
+
+各格的分工：
+
+```text
+Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─┬─ pass ─► CLOSE ─┐
+         │        │          │          │                │                │
+         │        │          │          │                └─ fail ─► DIAGNOSE
+  feature-dev  task-loop  experiment- remote-exec                     │
+   -pipeline              driven-doc                          按类别自修，用尽才问人
+         │                                                            │
+         └──────────────── 下一个 task ◄──────────────────────────────┘
+                                  │
+                         全部通过 ─► SHIP: code-review → upstream-contribute
+```
+
+失败分流是闭环的关键，四类去向：环境/瞬时错误走 `remote-exec` 的失败处置表自修；契约不匹配走
+`experiment-driven-doc` 的层 0 复现样例；**假设被推翻算结果不算故障**，回填后重排优先级继续；
+判据失效就沿验收判据阶梯往任务指标退。四类都用尽重试上限，才查 `experiment-budget-gate`
+的中止清单——到这一步才轮到停下问人。
+
+`task.md` 是任务状态的唯一真相源，schema 与验收检查点的写法归 `task-loop`。
 
 ---
 

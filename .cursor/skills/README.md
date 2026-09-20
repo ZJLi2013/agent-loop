@@ -9,13 +9,36 @@ This directory stores project-level Cursor skills. Keep the directory layout fla
 
 Use this index to decide which skills should auto-trigger and which should be invoked explicitly.
 
+## The loop
+
+`agent-loop` (an always-applied **rule**, not a skill) is the scheduler: every turn it locates
+which cell of the loop the work is in and names the skill to read. It has to be a rule — a
+scheduler that must first be matched by description is not a scheduler, which is why the previous
+orchestration *skill* kept failing to fire.
+
+```text
+Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─┬─ pass ─► CLOSE ─┐
+         │        │          │          │                │                │
+         │        │          │          │                └─ fail ─► DIAGNOSE
+  feature-dev  task-loop  experiment- remote-exec                     │
+   -pipeline              driven-doc                          按类别自修，用尽才问人
+         │                                                            │
+         └──────────────── 下一个 task ◄──────────────────────────────┘
+                                  │
+                         全部通过 ─► SHIP: code-review → upstream-contribute
+```
+
+Cold skills are reached by the rule naming them; `disable-model-invocation: true` only stops the
+model from firing them on its own, which is what we want — deterministic routing, no random
+triggering.
+
 ## Auto-Trigger
 
-Daily path plus long-running orchestration. Descriptions stay in context; bodies load when the task matches.
+Descriptions stay in context; bodies load when the task matches.
 
-- `feature-dev-pipeline`: Backlog → Goal → design → build+experiment → backfill.
-- `experiment-driven-doc`: The two gates (decision value, acceptance ladder) and the experiment record template.
-- `long-running-agent-harness`: Multi-session runbook, progress, verification, handoff.
+- `feature-dev-pipeline`: Large feature → prioritized task.md rows + per-subtask design doc.
+- `task-loop`: task.md schema, acceptance checkpoints, failure counter, cross-session handoff.
+- `experiment-driven-doc`: The two gates (decision value, acceptance ladder) and the record template.
 - `agent-heartbeat`: User-visible progress for commands expected to run longer than 60s.
 
 ## Manual / Cold Skills
@@ -52,6 +75,7 @@ only one of them getting updated. Before adding a section, find its owner below 
 
 | 知识点 | 唯一归属 |
 |---|---|
+| 循环的状态机、路由到哪个 skill、失败按类别分流 | `agent-loop` (rule) |
 | 主线、解释性膨胀、标题写问题本身、清单不写段落、肯定式陈述、陈述当前为真 | `narrative-spine` (rule) |
 | 对话专属：第一句即结论、只答被问到的对象、说「做不到」前先查 | `reply-conclusion-first` (rule) |
 | 什么先自修、什么才停下来问人、预算、硬性中止 | `experiment-budget-gate` (rule) |
@@ -60,12 +84,11 @@ only one of them getting updated. Before adding a section, find its owner below 
 | 注释密度、WHY-only、commit message | `code-hygiene` (rule) |
 | review 的四段输出、严重度轴、vibe-coding 识别 | `code-review` |
 | 决策价值门判别法、验收判据阶梯、Phase 0、exp 文档章节模板 | `experiment-driven-doc` |
-| backlog 排序、Goal-first、四阶段循环、持续模式 | `feature-dev-pipeline` |
-| 跨会话状态、runbook、handoff | `long-running-agent-harness` |
+| 大 feature 拆子任务、Goal-first、四阶段、设计文档 | `feature-dev-pipeline` |
+| `task.md` schema、验收检查点、失败计数、跨会话交接 | `task-loop` |
 | SSH / 选节点 / detach / 存储 / 远端失败自修表 | `remote-exec` |
 
-**任务状态只有一个真相源**：走 `feature-dev-pipeline` 时是它的 backlog 文档，harness 不再建
-`tasks.json`；没有 backlog 的长任务才用 `tasks.json`。
+**任务状态只有一个真相源：`task.md`。** 不建 `tasks.json`，不维护第二份 backlog。
 
 ## Maintenance Rules
 
