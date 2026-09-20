@@ -71,7 +71,7 @@ my_skills/
 ### 闭环：调度器是 rule，不是 skill
 
 控制结构是 `Goal → Plan → Select → Design → Execute → Evaluate →（pass）Close /（fail）
-Diagnose → Repair → 下一个 task → Ship`，关键约束是**「遇到非预期情况」不等于「问人」**。
+Diagnose → Repair → 下一个 task → Done`，关键约束是**「遇到非预期情况」不等于「问人」**。
 
 调度这件事由 [`agent-loop`](.cursor/rules/agent-loop.mdc) 这条**常驻 rule** 承担，而不是某个
 skill。原因是机制层面的：rule（`alwaysApply: true`）每轮都在上下文里，skill 只有 name 与
@@ -89,8 +89,12 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
          │                                                            │
          └──────────────── 下一个 task ◄──────────────────────────────┘
                                   │
-                         全部通过 ─► SHIP: code-review → upstream-contribute
+                         全部通过 ─► DONE（报告并停）
 ```
+
+循环内每一格的触发条件都是机械可判的。`code-review`、`upstream-contribute`、
+`research-to-blog`、`code-to-kernel-diagram` **在循环之外**,只有你明确要了才走——
+`task.md` 清空意味着 DONE,不意味着该去开 PR。
 
 失败分流是闭环的关键，四类去向：环境/瞬时错误走 `remote-exec` 的失败处置表自修；契约不匹配走
 `experiment-driven-doc` 的层 0 复现样例；**假设被推翻算结果不算故障**，回填后重排优先级继续；
@@ -206,7 +210,7 @@ find ~/.cursor/skills-cursor -maxdepth 1 -type l ! -exec test -e {} \; -print   
 → Agent 读取该 skill 后执行
 
 # 推进大 feature（自动 skill）
-"按 backlog 做下一个 sub-task"
+"按 task.md 做下一个 sub-task"
 → Agent 使用 feature-dev-pipeline
 ```
 

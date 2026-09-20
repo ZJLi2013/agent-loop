@@ -94,4 +94,5 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 结论已收口到 feature 文档（见 `experiment-driven-doc`）；
 新 agent 只读这些文件就能接手，不需要翻聊天记录。
 
-然后按 `agent-loop` 走 SHIP：`code-review` → `upstream-contribute`。
+**满足这四条就是 DONE：报告结果然后停。** 评审、提上游、写博客都是 user 要了才做的岔出项，
+不是循环的出口（见 `agent-loop` 的「岔出」）。

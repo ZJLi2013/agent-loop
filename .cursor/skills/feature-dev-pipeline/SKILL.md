@@ -15,9 +15,9 @@ description: >-
 
 ## pipeline 文档（seam）
 
-| 文件（占位符） | 角色 | 谁维护 |
+| 文件 | 角色 | 谁维护 |
 |---|---|---|
-| `task.md`（如 `docs/overall_todo.md`） | 优先级 task.md（P0/P1/P2）+ 现状基线 + 已完成 feature | Phase 1 / Phase 4 |
+| `task.md` | 任务状态的唯一真相源：P0/P1/P2 + 验收检查点 + 状态 + 失败计数。**schema 归 `task-loop`** | Phase 1 / Phase 4 |
 | `<design-dir>/featureN_<slug>.md` | 单个子任务的**设计文档 = Goal + 结论 + 定义系统**（开头两节 Goal / 结论，然后数据流 pipeline；实现后转 as-built）。**不是实验总结** | Phase 2 / Phase 3 |
 | `<exp-dir>/partN-exp.md` | 单个子任务的实验记录（多轮调试可追溯，**留详细数据**） | Phase 3 |
 | `<conclusions-log>`（如项目 `readme.md`/概览文档的「结论速查」区） | **跨 feature 关键结论汇总**（可检索的单一真相来源，**留提炼结论**） | Phase 4 |
@@ -25,10 +25,10 @@ description: >-
 > **两层文档分离**：`partN-exp.md` 留详细数据/调试过程（易被埋没）；`<conclusions-log>` 只留"被数据证实、影响后续决策"的提炼结论 + 证据 + 影响 + 指回 partN 的链接。每完成一个 feature 回填一行（见 Phase 4）。首次使用时与 user 约定 `<conclusions-log>` 的位置（无则可省，但推荐有，避免结论散落）。
 
 约定（首次使用时确认）：
-- 三个路径前缀（task.md / design-dir / exp-dir）由 user 给定，之后整段开发沿用同一套。
+- `task.md` 与两个目录前缀（design-dir / exp-dir）的位置由 user 给定，之后整段开发沿用同一套。
 - 编号规则：新 feature = 现有最大编号 +1；`partN-exp.md` 的 N 与该子任务一一对应（不必等于 feature 号，沿用历史序号即可）。
 - 在 task.md 的待办项里挂上对应 `featureN` 与 `partN-exp` 链接。
-- 若项目暂时只需要其中一两个文档（如纯重构无实验），按需裁剪，但保留「task.md 排序 → 设计 → 回填」主干。
+- 若项目暂时只需要其中一两个文档（如纯重构无实验），按需裁剪，但保留「排优先级 → 设计 → 回填」主干。
 
 ## 四阶段循环
 
@@ -54,7 +54,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 ### Phase 3 — Build + Experiment（实现并实验）
 - **开跑前先声明，但不必等确认。** 每次实验开跑前，在 `partN-exp.md` 里写下它回答 Goal 的哪一问 + 假设与预期（几行即可），然后自己跑。中途冒出新对照臂 / 新变量 / 新工作点也一样——补一条再跑，**不用停下问 user**。这不是审批流程，是给自己留一个可对照的预测：**没有预期，拿到数也判不出是发现还是跑偏**；顺带 user 随时能看出你在测什么。
-- **写预期的同时过决策价值门**：结果为否定时 Goal 的答案或 task.md 的优先级会变吗？不会就不跑。**子任务的量级也要配得上 task.md 上的主线瓶颈**——判别方法见 `experiment-driven-doc` 的「决策价值门」。
+- **写预期的同时过决策价值门**：结果为否定时 Goal 的答案或 `task.md` 的优先级会变吗？不会就不跑。**子任务的量级也要配得上主线瓶颈**——判别方法见 `experiment-driven-doc` 的「决策价值门」。
 - 实现遵循**最小必要改动**原则：只改达成目标所必需的部分，顺手清理被替换掉的过期逻辑。
 - 实验记录遵循 `experiment-driven-doc` skill：先写假设/方案/预期到 `partN-exp.md`，长跑前先 smoke，多轮调试用表格追踪，跑完回填结果/分析/结论。
 - 远端 / 跨会话 / GPU 长跑遵循 `task-loop` skill。

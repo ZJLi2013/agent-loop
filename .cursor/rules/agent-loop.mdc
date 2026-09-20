@@ -14,13 +14,12 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
                   │                                                   │
                   └──────────── 下一个 task ◄── REPAIR / RE-PLAN ◄─────┘
                                      │
-                            task 全部通过 ─► SHIP
+                            task 全部通过 ─► DONE（报告并停）
 ```
 
-## 路由：这一格读哪个 skill
+## 循环内：条件满足就读
 
-**冷 skill 也要读。** `disable-model-invocation: true` 只表示模型不会自作主张地触发它，
-被本规则点名时照常读它的 `SKILL.md`。
+这几格的触发条件都是机械可判的，不需要揣摩意图。
 
 | 当前在做什么 | 读 |
 |---|---|
@@ -29,10 +28,23 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 | 要跑一轮实验或验证 | `experiment-driven-doc` — 先写假设/预期/判据，再跑 |
 | 要在远端或 GPU 上执行 | `remote-exec` |
 | 单条命令预计超过 60 秒 | `agent-heartbeat` |
-| task 全部通过，要交付 | `code-review` → `upstream-contribute` |
-| 调研阶段要产出对外文章 | `research-to-blog` |
 
 `task.md` 是任务状态的唯一真相源。**不要另建 `tasks.json` 或第二份 backlog。**
+
+## 岔出：user 明确要了才走
+
+**这些不在循环里，`task.md` 清空之后默认就是 DONE——报告结果然后停。** 下面每一项都需要
+user 明确提出，或者本轮工作已经产出了它的输入物并经 user 确认；**不要因为「task 做完了」
+就自动往下走**，多数工作到 DONE 就结束了。
+
+| user 要什么 | 读 |
+|---|---|
+| 审这段 diff / PR | `code-review` |
+| 把修复提到上游仓库 | `upstream-contribute` |
+| 把调研写成对外文章 | `research-to-blog` |
+| 画某个模块的 kernel 数据流图 | `code-to-kernel-diagram` |
+
+这四个都带 `disable-model-invocation: true`，本规则也不解除它——被点名时读，其余时候不碰。
 
 ## 失败：先分类，再决定要不要问人
 

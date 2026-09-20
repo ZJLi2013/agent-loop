@@ -25,12 +25,12 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
          │                                                            │
          └──────────────── 下一个 task ◄──────────────────────────────┘
                                   │
-                         全部通过 ─► SHIP: code-review → upstream-contribute
+                         全部通过 ─► DONE（报告并停）
 ```
 
-Cold skills are reached by the rule naming them; `disable-model-invocation: true` only stops the
-model from firing them on its own, which is what we want — deterministic routing, no random
-triggering.
+Everything in the loop triggers on a mechanically checkable condition. `code-review`,
+`upstream-contribute`, `research-to-blog` and `code-to-kernel-diagram` sit **outside** it: they
+run only when the user asks. Clearing `task.md` means DONE, not "now open a PR".
 
 ## Auto-Trigger
 
