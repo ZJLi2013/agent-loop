@@ -1,23 +1,24 @@
 ---
 name: upstream-contribute
 description: >-
-  实验完成后自动评估是否值得向上游贡献 PR 或 Issue。读取 experiments.md 中的结论、
-  修复列表、commit 记录，自主判断贡献类型，生成 PR/Issue body 供用户审查后手动提交。
-  Use after experiment completion (experiments.md status changes to ✅),
-  or when discussing contribution back to upstream repos.
+  评估在他人仓库里做出的修复值不值得提上游，判断走 PR 还是 Issue 还是不提，
+  并生成 body 草稿供用户审查后手动提交。目标 repo 自带 PR 模板时优先用它的。
+  Use when deciding whether to contribute a fix back to an upstream repo, when
+  drafting a PR or Issue body for someone else's project, or after an experiment
+  produced a compatibility fix worth upstreaming.
 disable-model-invocation: true
 ---
 
-# Upstream Contribute — 实验结果 → GitHub PR / Issue
+# Upstream Contribute — 本地修复 → GitHub PR / Issue
 
-实验完成后，自动评估成果并生成上游贡献草稿。**不依赖 gh CLI**，生成 markdown body 供用户在浏览器中创建。
+评估在他人仓库里做出的修复值不值得提，并生成草稿。**不依赖 gh CLI**，生成 markdown body 供用户在浏览器中创建。
 
 **开写 body 之前先过 `external-output-boundary`**（always-applied rule）：AI 披露段、GPU 型号脱敏表、
 私料清理清单都在那里，本 skill 不重述。下面只管「提不提」和「body 长什么样」。
 
 ## Step 1: 自动判断 — PR vs Issue vs 不做
 
-实验结束后（experiments.md 状态 → ✅），agent **自主评估**：
+修复验证通过后，agent **自主评估**：
 
 | 条件 | → 动作 | 判断依据 |
 |------|--------|----------|
@@ -25,17 +26,17 @@ disable-model-invocation: true
 | 有 fork 分支 + 仅 1 处 trivial 修复（如改 flag）| **Issue** with patch | 太小不值得 PR 流程 |
 | **无 fork** + 修复已验证 | **Issue** with inline diff/patch | 在 Issue body 中贴 diff，让维护者自己合入 |
 | 发现 bug 但修复在第三方库 | **Issue** on upstream | 无法直接提 PR |
-| 改动太 hacky / 仅适用特定环境 | **不做** | 记录在 experiments.md 即可 |
+| 改动太 hacky / 仅适用特定环境 | **不做** | 留在自己的实验记录里即可 |
 | 改动跨多个 repo | **拆分** | 每个 repo 独立评估 |
 
 判断完成后，向用户报告结论和理由，等待确认后进入 Step 2。
 
 ## Step 2: 收集素材
 
-从 experiments.md 提取：
+从实验记录提取：
 - **修复列表**：每个 fix 的根因、改动文件、commit hash
-- **验证结果**：demo 输出、性能数据
-- **环境信息**：GPU 型号（⚠️ 脱敏后）、ROCm 版本、Docker image
+- **验证结果**：复现命令的输出、性能数据
+- **环境信息**：能让维护者判断「这个修复在什么条件下被验证过」的最小集合
 
 检查 fork 状态：
 ```bash
@@ -45,36 +46,36 @@ git -C <local_fork_path> remote -v
 
 ## Step 3: 生成 body — 等待用户审查
 
-### PR body 模板
+**先读目标 repo 的 `.github/PULL_REQUEST_TEMPLATE.md` 与 `CONTRIBUTING.md`，有就用它们的。**
+下面是没有模板时的默认骨架。
+
+### PR body
 
 ```markdown
 ## Summary
 
-Enable <project> to run on AMD GPUs (ROCm/HIP).
+<one sentence: what this change makes possible that was not possible before>
 
 ### Changes
-- <one-line per fix, link root cause>
+- <one line per fix, each naming the root cause>
 
 ### Tested on
-- GPU: AMD Instinct <脱敏后型号>
-- ROCm: <version>
-- PyTorch: <version>
-- Docker: `<image tag>`
+- <每一项都是「改变了验证结论」的环境维度；无关的不写>
 
 ### Results
 <key metrics: timing, output verification>
 
 ### Notes
-- All changes are backward-compatible with CUDA
+- <backward compatibility: 明确说明既有用户不受影响，以及靠什么机制保证>
 - <any caveats>
 ```
 
-### Issue body 模板
+### Issue body
 
 ```markdown
 ## Problem
 
-<one paragraph: what fails, on what platform>
+<one paragraph: what fails, under what conditions>
 
 ## Reproduction
 
@@ -91,16 +92,28 @@ Enable <project> to run on AMD GPUs (ROCm/HIP).
 <patch or description; omit if none>
 
 ## Environment
-- GPU: AMD Instinct <脱敏后型号>
+- <同上：只列影响复现的维度>
+```
+
+**`Tested on` / `Environment` 只列会改变结论的维度。** 补丁与硬件无关时列 runtime 版本就够，
+堆一串无关的版本号是噪声。ROCm 移植类的典型填法：
+
+```markdown
+### Tested on
+- GPU: AMD Instinct <脱敏后型号>     # 脱敏表见 external-output-boundary
 - ROCm: <version>
 - PyTorch: <version>
+- Docker: `<image tag>`
+
+### Notes
+- All changes are backward-compatible with CUDA（`try/except` fallback，不改默认路径）
 ```
 
 ### 输出方式
 
 生成完整 markdown body 后：
 1. 输出 PR/Issue **title** 和 **body**
-2. 提供上游 repo URL（如 `https://github.com/Luo-Yihao/FaithC/compare/main...ZJLi2013:rocm_support`）
+2. 给出创建链接：`https://github.com/<upstream-owner>/<repo>/compare/<base>...<you>:<branch>`
 3. 用户复制到浏览器创建
 
 ## 多 repo 拆分
@@ -115,7 +128,7 @@ Enable <project> to run on AMD GPUs (ROCm/HIP).
 ## 原则
 
 - **简洁**：reviewer 能在 2 分钟内理解全部改动
-- **向后兼容**：强调不影响 CUDA 用户（`try/except` fallback 等）
+- **向后兼容**：明确说明既有用户不受影响，并指出靠什么机制保证
 - **可验证**：提供复现命令
 
 ## 与其他 Skill 的协作
