@@ -58,7 +58,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 ### Phase 3 — Build + Experiment（实现并实验）
 - **开跑前先声明，但不必等确认。** 每次实验开跑前，在 `partN-exp.md` 里写下它回答 Goal 的哪一问 + 假设与预期（几行即可），然后自己跑。中途冒出新对照臂 / 新变量 / 新工作点也一样——补一条再跑，**不用停下问 user**。这不是审批流程，是给自己留一个可对照的预测：**没有预期，拿到数也判不出是发现还是跑偏**；顺带 user 随时能看出你在测什么。
 - **写预期的同时过决策价值门**：结果为否定时 Goal 的答案或 backlog 的优先级会变吗？不会就不跑。**子任务的量级也要配得上 backlog 上的主线瓶颈**——判别方法见 `experiment-driven-doc` 的「决策价值门」。
-- 实现遵循**最小必要改动**原则：只改达成目标所必需的部分，顺手清理被替换掉的过期逻辑（若项目内有 `minimal-necessary-code` 类 skill 则沿用）。
+- 实现遵循**最小必要改动**原则：只改达成目标所必需的部分，顺手清理被替换掉的过期逻辑。
 - 实验记录遵循 `experiment-driven-doc` skill：先写假设/方案/预期到 `partN-exp.md`，长跑前先 smoke，多轮调试用表格追踪，跑完回填结果/分析/结论。
 - 远端 / 跨会话 / GPU 长跑遵循 `long-running-agent-harness` skill。
 - 这一阶段**多轮调试由 agent 自主完成**（默认选最推荐方案继续，每轮回到文档开头防跑偏，详见 experiment-driven-doc）。
@@ -88,20 +88,18 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - **文档是给人看的，不是给流程看的。** 自检：读前 10 行能否答出「要解决什么问题、解决了没有」？做不到就是 Goal/结论 没写清。**判据表、scope 清单、假设推演、分析过程一律不进 feature.md**，需要就留在 `partN-exp.md`。每加一节先问：读者会因为这节改变行动吗？不会就删。
 - **feature.md 是「定义系统」不是「实验总结」**：开头放数据流 pipeline + 提炼后的关键结论（帮 user 快速理解系统与卡点）；详细实验数据/调试过程留在 `partN-exp.md`。若发现 feature.md 正在退化成实验流水账，把过程性内容挪回 partN，只在 feature.md 保留提炼结论。
 - **实验完结后精简文档**：只留可复现要点（环境/命令/关键参数）+ 核心结果表 + 结论/Next Step，删掉假设推演、预期等设计草稿。
-- **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称，不写「原先以为 X、其实是 Y」这类对文档自己旧措辞的修订说明（git 里有）。语态细则与自检 grep 见 `experiment-driven-doc` 的「文档语态」段。
+- **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称。细则与自检 grep 见 `narrative-spine` 的「直接陈述当前为真的内容」。
 - **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。**验收判据落在 Goal 的语言上**（任务指标 / user 可感知的量），不是「理论上完美一致」；选法见 `experiment-driven-doc` 的「验收判据阶梯」。
 - **总览表**：每个 `partN-exp.md` 顶部维护一行摘要表（Exp / 目标 / 状态 / 结论）。
 
 ## Human-in-the-loop 检查点
 
-默认自主推进；仅在这些点停下等 user：
-- Phase 1 的优先级与子任务 scope、以及 Phase 2 的 Goal——**「要解决什么问题」由 user 定**，agent 不自行替 user 定义。队列已排好时的例外见「持续模式」第二条。
-- Phase 2 有多个显著权衡方案时的选型。
-- 破坏性 / 资源敏感操作（删数据、覆盖 checkpoint、强推分支、GPU 长占用）。
-- experiment-driven-doc 的硬性中止条件（连续无改善、重复环境错误、Phase 0 假设可能不成立、连续 2 轮结果不改变主线决策）。
+默认自主推进。**本 skill 只加一条自己的检查点**：Phase 1 的优先级与子任务 scope、以及 Phase 2 的 Goal——**「要解决什么问题」由 user 定**，agent 不自行替 user 定义。队列已排好时的例外见「持续模式」第二条。
+
+其余所有「什么情况才停下来问人」（方案选型、不可逆操作、环境错误的自修上限、硬性中止五条）归 `experiment-budget-gate`，那是唯一一份清单，本 skill 不重述。
 
 ## 组合的其它 skill
 
-- `experiment-driven-doc`：实验文档（假设→设计→执行→结果→分析→结论），Phase 3 的核心。
-- `long-running-agent-harness`：通用跨会话 harness / 远端 / GPU / 进度追踪与交接约定。
-- 项目内若有「最小必要改动」类 skill（如 `minimal-necessary-code`）：所有代码改动的最小必要原则。
+- `experiment-driven-doc`：两道门 + 实验记录模板，Phase 3 的核心。
+- `long-running-agent-harness`：跨会话编排、进度追踪与交接；**任务状态的真相源仍是 backlog**（见「持续模式」第三条）。
+- `remote-exec`：Phase 3 的远端 / GPU 执行与失败自修。

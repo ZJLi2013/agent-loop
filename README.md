@@ -9,28 +9,20 @@
 ```
 my_skills/
 ├── .cursor/
-│   ├── skills/                              # Cursor Agent Skills
-│   │   ├── agent-heartbeat/                 # 长任务心跳（自动）
-│   │   ├── experiment-driven-doc/           # 实验记录（自动）
-│   │   ├── feature-dev-pipeline/            # feature backlog 编排（自动）
-│   │   ├── long-running-agent-harness/       # 跨会话编排（自动）
-│   │   ├── code-to-kernel-diagram/          # 模块源码 → kernel 数据流图
-│   │   ├── cross-agent-contract/            # 双 agent 经共享 md 对齐契约
-│   │   ├── cursor-overnight-task-manager/   # 批量夜间 GPU 测试
-│   │   ├── gpu-cluster-resource-manager/    # 多节点 GPU 资源调度
-│   │   ├── local-push-remote-pull-test/      # 本地 push + 远端 pull/test
-│   │   ├── nv_physical_ai_tracker/          # NVIDIA Physical AI 追踪
-│   │   ├── remote-ssh-github-auto/          # 远端 SSH + GitHub 认证
-│   │   ├── research-to-blog/                # 文献调研 → 自媒体
-│   │   ├── tmux-remote-detach/              # 远端 tmux 托管长任务
-│   │   ├── upstream-contribute/             # 实验后评估上游贡献
-│   │   └── video-frame-analysis/            # 视频抽帧目视调试
-│   ├── agents/                              # Cursor Agent 定义
-│   │   ├── replan.md                        # 实验 review & 优先级调整
-│   │   └── code_run_plan.md                 # 代码执行 & 实验闭环
-│   └── configs/                             # 本地私有配置（git-ignored）
-│       ├── gpu_nodes.list                   # SSH 节点清单（用户自建）
-│       └── gpu_nodes.list.example           # 节点清单模板
+│   ├── skills/                          # Cursor Agent Skills
+│   │   ├── feature-dev-pipeline/        # feature backlog 编排（自动）
+│   │   ├── experiment-driven-doc/       # 实验两道门 + 记录模板（自动）
+│   │   ├── long-running-agent-harness/  # 跨会话编排（自动）
+│   │   ├── agent-heartbeat/             # 长任务心跳（自动）
+│   │   ├── remote-exec/                 # 远端 GPU 执行、存活、自修、存储
+│   │   ├── code-review/                 # PR 评审（sglang-diffusion-routing P0-P4）
+│   │   ├── code-to-kernel-diagram/      # 模块源码 → kernel 数据流图
+│   │   ├── upstream-contribute/         # 实验后评估上游贡献
+│   │   └── research-to-blog/            # 文献调研 → 自媒体
+│   ├── rules/                           # always-applied 约束
+│   └── configs/                         # 本地私有配置（git-ignored）
+│       ├── node_inventory.yaml          # 节点清单（用户自建）
+│       └── node_inventory.yaml.example  # 模板
 └── .gitignore
 ```
 
@@ -41,122 +33,135 @@ my_skills/
 | skill | 启用方式 | 描述 |
 |-------|----------|------|
 | `feature-dev-pipeline` | 自动触发 | 大 feature → 子任务 → 设计 → 实现+实验 → 回填 |
-| `experiment-driven-doc` | 自动触发 | 实验驱动文档：假设 → 设计 → 结果 → 结论 |
+| `experiment-driven-doc` | 自动触发 | 决策价值门 + 验收判据阶梯 + 实验记录模板 |
 | `long-running-agent-harness` | 自动触发 | 长任务总控：initializer → loop → gates → handoff |
 | `agent-heartbeat` | 自动触发 | 长命令心跳，防止用户误判卡死 |
+| `remote-exec` | 显式调用 | SSH/认证、选节点、tmux detach、存储治理、远端失败自修表 |
+| `code-review` | 显式调用 | 按 [sglang-diffusion-routing#32](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32) 四段模板 + P0-P4 审 PR/diff |
 | `code-to-kernel-diagram` | 显式调用 | `nn.Module` forward → 逐 kernel 数据流图 |
-| `cross-agent-contract` | 显式调用 | 两 repo 经共享 md 对齐集成契约 |
-| `cursor-overnight-task-manager` | 显式调用 | 批量夜间远端 GPU 测试 |
-| `gpu-cluster-resource-manager` | 显式调用 | 探测节点、选机、管缓存与磁盘 |
-| `local-push-remote-pull-test` | 显式调用 | 本地 push → 远端 pull → 远端测试 |
-| `nv-physical-ai-tracker` | 显式调用 | NVIDIA Physical AI / 机器人研究进展追踪 |
-| `remote-ssh-github-auto` | 显式调用 | SSH 登录 + 远端 GitHub 认证修复 |
+| `upstream-contribute` | 显式调用 | PR vs Issue 判断 + body 模板 |
 | `research-to-blog` | 显式调用 | 文献调研 → 对外博客 / 公众号 |
-| `tmux-remote-detach` | 显式调用 | 远端 tmux 托管长任务 |
-| `upstream-contribute` | 显式调用 | 实验后评估是否提上游 PR / Issue |
-| `video-frame-analysis` | 显式调用 | 从 mp4 抽帧目视，落成可追溯结论 |
 
-### 长任务 Skill 边界
-
-| 场景 | 首选 skill | 职责边界 |
-|------|------------|----------|
-| 长任务跨会话、需要 runbook / progress / handoff | `long-running-agent-harness` | 外层编排，不负责具体远端执行细节 |
-| 假设验证、ablation、debug 实验记录 | `experiment-driven-doc` | 写实验设计、结果、分析和 next step |
-| 批量夜间测试多个 repo | `cursor-overnight-task-manager` | 执行 overnight batch workflow |
-| 单个长命令需要用户可见进度 | `agent-heartbeat` | 输出心跳和阶段进度 |
-| 远端任务需要本地断开后继续跑 | `tmux-remote-detach` | 创建/恢复 tmux session 和日志 |
-
-### Rules（`.cursor/rules/`，always-applied）
+### Rules（`.cursor/rules/`）
 
 | rule | 管什么 |
 |-------|--------|
-| `reply-conclusion-first` | 对话回复：结论先行、肯定句、只答被问到的对象 |
+| `narrative-spine` | 一条能被复述的主线；不为解释而膨胀；直接陈述当前为真的内容（语态的唯一归属处） |
+| `reply-conclusion-first` | 对话回复：第一句即结论、只答被问到的对象、说「做不到」前先查 |
+| `experiment-budget-gate` | 什么先自修、什么才停下来问人（中止清单的唯一归属处）、预算、每轮报改变哪条命令 |
+| `external-output-boundary` | 跨出仓库边界三道检查：AI 披露（取自 [Ghostty AI Policy](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md)）、GPU 型号脱敏、去私料 |
 | `code-comments` | 注释跟邻码一致、只写 WHY |
-| `experiment-budget-gate` | 实验执行期止损：每轮先指出会改变哪条命令，超预算停 |
-| `upstream-ai-disclosure` | 对外贡献的 AI 披露与质量底线（取自 [Ghostty AI Policy](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md)） |
 | `skill-authoring` | 写 `SKILL.md` 时的体量与内容约束（按 glob 挂载） |
 
-### Agents
+### 一个知识点只有一个归属处
 
-| agent | 描述 |
-|-------|------|
-| `replan` | 实验文档 review、分析质量检查、优先级调整 |
-| `code_run_plan` | 基于实验计划执行代码编写、远端运行、结果回填 |
+本库反复出现的失手是同一条判据写在三处，改的时候只改得动一处。归属表见
+[`.cursor/skills/README.md`](.cursor/skills/README.md#ownership-one-knowledge-point-one-home)，
+加新章节前先去那里找归属，找到就只留链接。
+
+### 方向：从会规划的 Chat Agent 到持续运行的 Agentic Loop
+
+目标控制结构是 `Goal → Plan → Execute → Observe → Evaluate → Diagnose → Repair/Re-plan →
+Verify → Continue → Done`，关键约束是**「遇到非预期情况」不等于「问人」**。
+
+当前的落点：`experiment-budget-gate` 的「先自修，再中止」持有这条分流判据——环境错误与契约
+不匹配由 agent 自己处置到重试上限，假设被推翻算结果不算故障，只有不可逆操作、Goal 说不清、
+超预算、以及硬性中止五条才交还给人。`remote-exec` 的「失败处置表」是执行层的自修实现。
+`long-running-agent-harness` 目前仍是会话检查点协议，把它改写成真正的控制环是下一步。
 
 ---
 
 ## 安装到 Cursor 全局目录
 
-Cursor Agent 只读取 `~/.cursor/skills-cursor/` 下的 Skills。
-本库通过 **目录 Junction（Windows）/ 软链接（macOS/Linux）** 链接到该全局目录，
-修改 SKILL.md 后无需重复安装，自动生效。
+Cursor 只读取全局目录：Skills 在 `~/.cursor/skills-cursor/`，Rules 在 `~/.cursor/rules/`。
+本库整个链接过去，改完文件立即生效，不需要重装。
+
+链接方式对两者不同，原因是全局 `skills-cursor/` 里还混着 Cursor 自带的 skill，
+不能整目录替换：
+
+| 目标 | 方式 |
+|---|---|
+| `rules/` | **整目录 junction / 软链接**。`git pull` 替换目录内的文件不会断开它 |
+| `skills-cursor/` | **逐个 skill 建 junction**。加删 skill 后要重跑安装脚本 |
+
+> **不要用硬链接（`mklink /H`）链 rules。** 硬链接绑的是文件本身，`git pull` / `git checkout`
+> 是「删掉重写」，一拉就断，之后仓库改动再也不会反映到 Cursor——而且没有任何报错。
 
 ### Windows（PowerShell，无需管理员）
 
 ```powershell
-# 1. clone 本库（如未 clone）
-git clone https://github.com/ZJLi2013/my_skills.git
+git clone https://github.com/ZJLi2013/my_skills.git   # 如未 clone
 cd my_skills
 
-# 2. 一键安装：将所有 Skills 链接到 Cursor 全局目录
-$skillsSource = "$PWD\.cursor\skills"
-$skillsDest   = "$env:USERPROFILE\.cursor\skills-cursor"
+# 1. Rules —— 整目录 junction
+$rulesDest = "$env:USERPROFILE\.cursor\rules"
+if (Test-Path $rulesDest) {
+    if (-not (Get-Item $rulesDest).LinkType) {
+        Move-Item $rulesDest "$rulesDest-backup-$(Get-Date -f yyyyMMdd)"   # 保住本地独有的 rule
+    } else { Remove-Item $rulesDest -Force }
+}
+cmd /c "mklink /J `"$rulesDest`" `"$PWD\.cursor\rules`""
 
-Get-ChildItem $skillsSource -Directory | ForEach-Object {
-    $target = Join-Path $skillsDest $_.Name
-    if (Test-Path $target) {
-        Write-Host "Already exists (skip): $($_.Name)"
-    } else {
-        cmd /c "mklink /J `"$target`" `"$($_.FullName)`""
-        Write-Host "Linked: $($_.Name)"
-    }
+# 2. Skills —— 先清失效链接，再补新增的（幂等，可反复跑）
+$skillsDest = "$env:USERPROFILE\.cursor\skills-cursor"
+Get-ChildItem $skillsDest -Force | Where-Object { $_.LinkType -eq 'Junction' -and -not (Test-Path ($_.Target -join '')) } |
+    ForEach-Object { cmd /c "rmdir `"$($_.FullName)`""; Write-Host "Pruned: $($_.Name)" }
+Get-ChildItem "$PWD\.cursor\skills" -Directory | ForEach-Object {
+    $t = Join-Path $skillsDest $_.Name
+    if (-not (Test-Path $t)) { cmd /c "mklink /J `"$t`" `"$($_.FullName)`""; Write-Host "Linked: $($_.Name)" }
 }
 
-# 3. 链接私有配置文件（硬链接，无需管理员）
+# 3. 私有配置
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.cursor\configs" | Out-Null
-cmd /c "mklink /H `"$env:USERPROFILE\.cursor\configs\gpu_nodes.env`" `"$PWD\.cursor\configs\gpu_nodes.env`""
+cmd /c "mklink /H `"$env:USERPROFILE\.cursor\configs\node_inventory.yaml`" `"$PWD\.cursor\configs\node_inventory.yaml`""
 ```
 
 ### macOS / Linux（Terminal）
 
 ```bash
-# 1. clone 本库（如未 clone）
-git clone https://github.com/ZJLi2013/my_skills.git
+git clone https://github.com/ZJLi2013/my_skills.git   # 如未 clone
 cd my_skills
 
-# 2. 一键安装：将所有 Skills 软链接到 Cursor 全局目录
-SKILLS_SRC="$PWD/.cursor/skills"
+# 1. Rules —— 整目录软链接
+RULES_DEST="$HOME/.cursor/rules"
+if [ -e "$RULES_DEST" ] && [ ! -L "$RULES_DEST" ]; then
+    mv "$RULES_DEST" "$RULES_DEST-backup-$(date +%Y%m%d)"
+fi
+ln -sfn "$PWD/.cursor/rules" "$RULES_DEST"
+
+# 2. Skills —— 先清失效链接，再补新增的
 SKILLS_DEST="$HOME/.cursor/skills-cursor"
 mkdir -p "$SKILLS_DEST"
-
-for skill_dir in "$SKILLS_SRC"/*/; do
-    skill_name=$(basename "$skill_dir")
-    target="$SKILLS_DEST/$skill_name"
-    if [ -e "$target" ]; then
-        echo "Already exists (skip): $skill_name"
-    else
-        ln -s "$skill_dir" "$target"
-        echo "Linked: $skill_name"
-    fi
+find "$SKILLS_DEST" -maxdepth 1 -type l ! -exec test -e {} \; -print -delete
+for d in "$PWD/.cursor/skills"/*/; do
+    t="$SKILLS_DEST/$(basename "$d")"
+    [ -e "$t" ] || { ln -s "$d" "$t"; echo "Linked: $(basename "$d")"; }
 done
 
-# 3. 链接私有配置
+# 3. 私有配置
 mkdir -p "$HOME/.cursor/configs"
-ln -sf "$PWD/.cursor/configs/gpu_nodes.env" "$HOME/.cursor/configs/gpu_nodes.env"
+ln -sf "$PWD/.cursor/configs/node_inventory.yaml" "$HOME/.cursor/configs/node_inventory.yaml"
 ```
 
 ### 验证安装结果
 
-```powershell
-# Windows
-dir "$env:USERPROFILE\.cursor\skills-cursor"
-# 应看到 <JUNCTION> 条目指向 my_skills 对应目录
+**要验的是链接类型，不是文件在不在**——漂移时文件都在，只是变成了各自独立的副本。
 
-# macOS / Linux
-ls -la ~/.cursor/skills-cursor/
+```powershell
+# Windows：rules 必须是 Junction；skills 不能有 target-exists=False
+(Get-Item "$env:USERPROFILE\.cursor\rules").LinkType
+Get-ChildItem "$env:USERPROFILE\.cursor\skills-cursor" -Force |
+    Where-Object { $_.LinkType -eq 'Junction' } |
+    ForEach-Object { "{0,-30} {1}" -f $_.Name, (Test-Path ($_.Target -join '')) }
 ```
 
-安装后 Cursor 重启即可，**所有项目无需额外配置**，Agent 自动获得这些 Skills。
+```bash
+# macOS / Linux：rules 必须带 -> 指向 my_skills
+ls -ld ~/.cursor/rules
+find ~/.cursor/skills-cursor -maxdepth 1 -type l ! -exec test -e {} \; -print   # 应无输出
+```
+
+安装后 Cursor 重启即可，**所有项目无需额外配置**，Agent 自动获得这些 Skills 与 Rules。
 
 ---
 
@@ -167,7 +172,7 @@ ls -la ~/.cursor/skills-cursor/
 
 ```
 # 在 lerobot 项目中（点名冷 skill）
-"用 remote-ssh-github-auto，ssh 到 david@ip 修 GitHub 认证"
+"用 remote-exec，ssh 到 david@ip 修 GitHub 认证"
 → Agent 读取该 skill 后执行
 
 # 推进大 feature（自动 skill）
@@ -184,22 +189,14 @@ ls -la ~/.cursor/skills-cursor/
 `.cursor/configs/` 目录已 git-ignore，不会入库。需手动在本地创建：
 
 ```bash
-# gpu_nodes.env —— 节点连接信息（含密码，不入库）
-NODE_4090_HOST=<ip>
-NODE_4090_USER=<username>
-NODE_4090_AUTH=<password>          # password 认证节点填此项
-NODE_4090_KEY=~/.ssh/id_ed25519    # key 认证节点填此项
-NODE_4090_REPO=/home/<user>/robot
-```
-
-安装脚本会将此文件硬链接到 `~/.cursor/configs/gpu_nodes.env`，
-Agent 通过 Skills 统一从该全局路径读取，无需在每个项目重复配置。
-
-```bash
 # 从模板创建（首次）
-cp .cursor/configs/gpu_nodes.list.example .cursor/configs/gpu_nodes.list
-# 编辑填入真实节点信息
+cp .cursor/configs/node_inventory.yaml.example .cursor/configs/node_inventory.yaml
+# 编辑填入真实节点信息（字段含义见 remote-exec/reference.md）
 ```
+
+`node_inventory.yaml` 是唯一的节点配置格式；`remote-exec` 在它缺失时退回
+`gpu_nodes.list`（每行一个 SSH host）。安装脚本会把它硬链接到
+`~/.cursor/configs/`，Agent 统一从该全局路径读取，无需在每个项目重复配置。
 
 ---
 

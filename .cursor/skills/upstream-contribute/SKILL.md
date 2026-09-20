@@ -12,28 +12,8 @@ disable-model-invocation: true
 
 实验完成后，自动评估成果并生成上游贡献草稿。**不依赖 gh CLI**，生成 markdown body 供用户在浏览器中创建。
 
-## ⚠️ 强制风险规避：GPU 型号脱敏
-
-**所有对外内容（PR body、Issue body、commit message）中，必须将中国大陆特供 GPU 型号替换为北美对应版本号。**
-
-| 大陆型号 | → 替换为 |
-|----------|----------|
-| MI308X | MI300X |
-| MI308XHF | MI300X |
-| MI308 | MI300 |
-| MI258 | MI250X |
-| MI210 | MI210 |
-| MI108 | MI100 |
-
-规则：
-1. 实验文档 (`experiments.md`) 中可以保留真实型号
-2. 生成 PR/Issue body 时**自动替换**，不需要用户提醒
-3. Docker image tag、ROCm 版本号不受影响
-4. 如果遇到未知的大陆型号，警告用户确认对应的北美型号
-
-## ⚠️ 强制风险规避：AI 披露
-
-见 `.cursor/rules/upstream-ai-disclosure.mdc`（always-applied）。与型号脱敏并列，同在跨出仓库边界那一刻生效。
+**开写 body 之前先过 `external-output-boundary`**（always-applied rule）：AI 披露段、GPU 型号脱敏表、
+私料清理清单都在那里，本 skill 不重述。下面只管「提不提」和「body 长什么样」。
 
 ## Step 1: 自动判断 — PR vs Issue vs 不做
 
@@ -137,10 +117,9 @@ Enable <project> to run on AMD GPUs (ROCm/HIP).
 - **简洁**：reviewer 能在 2 分钟内理解全部改动
 - **向后兼容**：强调不影响 CUDA 用户（`try/except` fallback 等）
 - **可验证**：提供复现命令
-- **脱敏**：对外内容无大陆特供型号
 
 ## 与其他 Skill 的协作
 
-- **experiment-driven-doc**: PR/Issue 素材来源
-- **split-to-prs**: 大改动拆分成多个小 PR
-- **babysit**: PR 创建后持续跟进 review comments 和 CI
+- **external-output-boundary**（rule）：披露 / 脱敏 / 去私料，提交前必过
+- **experiment-driven-doc**：PR/Issue 素材来源
+- **split-to-prs** / **autopilot**（Cursor 内置）：大改动拆成小 PR；PR 建好后跟进 review 与 CI

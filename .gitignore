@@ -4,13 +4,17 @@
 # Private configs (real hostnames, credentials, etc.) — skills/ is tracked
 .cursor/configs/
 
-# Explicitly track skills and agents (override any broad .cursor/ rules)
+# Explicitly track skills and rules (override any broad .cursor/ rules)
 !.cursor/skills/
-!.cursor/agents/
+!.cursor/rules/
 
 # Overnight task manager runtime outputs
 overnight-results/
 input-list.txt
+
+# Python
+__pycache__/
+*.py[cod]
 
 # OS
 .DS_Store

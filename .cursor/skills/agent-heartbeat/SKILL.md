@@ -13,7 +13,8 @@ description: >-
 执行可能超过 60 秒的操作时**必须**心跳，让用户知道你没卡死。
 
 **边界**：本 skill 只管命令执行期间的状态提示；跨会话规划与 handoff 归
-`long-running-agent-harness`，实验设计与结果归 `experiment-driven-doc`。
+`long-running-agent-harness`，实验设计与结果归 `experiment-driven-doc`，
+远端执行与失败自修归 `remote-exec`。
 
 ## 协议
 
@@ -42,7 +43,6 @@ description: >-
 
 ## 与其他 Skill 的协作
 
-- **cursor-overnight-task-manager**：Phase 切换与单 repo 执行期间播报
-- **tmux-remote-detach**：轮询 `capture-pane` / `tail log` 作为进度来源
+- **remote-exec**：轮询 `capture-pane` / `tail log` 作为进度来源；批量任务在 Phase 切换时播报
 - **long-running-agent-harness**：心跳里带上当前 task id
 - **experiment-driven-doc**：长实验的心跳里带关键指标变化

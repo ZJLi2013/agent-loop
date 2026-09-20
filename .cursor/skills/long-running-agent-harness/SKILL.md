@@ -10,9 +10,12 @@ Use this skill for multi-session work where an agent might otherwise lose contex
 This skill is the **orchestration layer**. It does not replace domain-specific skills:
 
 - Use `experiment-driven-doc` for hypothesis, experiment design, results, and conclusions.
+- Use `feature-dev-pipeline` when the work is a large feature driven off a backlog.
+- Use `remote-exec` to get work onto a remote GPU node, keep it alive, and auto-repair failures.
 - Use `agent-heartbeat` for user-visible progress during commands expected to run longer than 60 seconds.
-- Use `tmux-remote-detach` when a remote job must survive local disconnects.
-- Use project-specific skills or docs for domain details.
+
+**Stop/continue is not this skill's call.** `experiment-budget-gate` holds the single list of what
+the agent must self-repair first and what actually warrants stopping to ask the human.
 
 ## Core Principle
 
@@ -32,6 +35,11 @@ For a new long-running task, create or update these files:
 - `.cursor/harness/progress.md`: chronological progress log, current state, blockers, next action.
 - `.cursor/harness/tasks.json`: structured task list with stable IDs and pass/fail status.
 - `.cursor/harness/runbook.md`: exact commands for setup, smoke tests, batch runs, sync, and cleanup.
+
+**Task state must have exactly one source of truth.** When the work is running under
+`feature-dev-pipeline`, its backlog document *is* that source — do not also create `tasks.json`,
+because two task lists always drift. In that case this skill keeps only `progress.md` and
+`runbook.md`. Create `tasks.json` only for long tasks with no backlog document.
 
 If the repo already has an accepted experiment log, roadmap, or issue tracker, keep stable conclusions there. Use `.cursor/harness/progress.md` for active working notes and handoff state.
 
@@ -124,7 +132,7 @@ Notes for next agent:
 
 A long-running task is complete only when:
 
-- all required tasks in `tasks.json` have `passes: true`, or remaining failures are explicitly accepted;
+- all required tasks in the task source of truth pass, or remaining failures are explicitly accepted;
 - verification evidence is recorded in `progress.md`;
 - final stable conclusions are summarized in the appropriate project doc, issue, PR, or report;
 - the next agent can understand the state from durable artifacts without reading the full chat.

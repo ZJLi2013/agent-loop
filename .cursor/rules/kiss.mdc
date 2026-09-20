@@ -1,0 +1,14 @@
+---
+description: KISS — Do right things, not do things right
+alwaysApply: true
+---
+
+# KISS
+
+Do right things, not do things right.
+
+- 遇到问题先想最简单的解法，不要急着动手绕
+- 能用现有工具/镜像就不要从头搭
+- 能一条命令解决就不要写脚本
+- 改动前先问：有没有更简单的方式？
+- 如果发现方案超过 3 步，停下来重新想
