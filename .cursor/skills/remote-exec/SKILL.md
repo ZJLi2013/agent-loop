@@ -1,13 +1,9 @@
 ---
 name: remote-exec
 description: >-
-  把活儿送上远端 GPU 节点并让它活下来：SSH 登录与 GitHub 认证、节点探测与亲和性选机、
-  tmux/docker detach 让本地可断开、容器内写缓存与存储治理，以及一张「哪类失败该自己修、
-  修几次、哪类必须停」的处置表。Use when running anything on a remote GPU node: ssh login
-  or auth failures, picking a node, checking disk or VRAM, launching long/overnight jobs that
-  must survive disconnect, managing cached models/datasets, or recovering from a remote failure.
-  This skill owns how work reaches a remote box and survives; it does not decide what to run
-  or why — that belongs to task-loop and experiment-driven-doc.
+  在远端 GPU 节点上跑东西并让它活下来：SSH 与认证、选节点、tmux 保活、容器内写缓存与磁盘治理，
+  外加一张远端失败的自修表（改什么、重试几次、什么时候换节点）。
+  Use when running anything on a remote GPU node, or when a remote run fails.
 disable-model-invocation: true
 allowed-tools: [Shell]
 ---
@@ -15,7 +11,7 @@ allowed-tools: [Shell]
 # Remote Exec
 
 **边界**：本 skill 只管「活儿怎么上去、怎么活下来、失败了怎么自己修」。跑什么、为什么跑、
-结果算不算通过，归 `task-loop` 与 `experiment-driven-doc`。
+结果算不算通过，归 `task-loop` 与 `experiment-design`。
 
 ## 四条硬规则
 

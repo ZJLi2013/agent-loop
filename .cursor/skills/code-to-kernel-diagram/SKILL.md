@@ -1,17 +1,10 @@
 ---
 name: code-to-kernel-diagram
 description: >-
-  从神经网络模块源码生成 kernel engineer 视角的数据流图：节点名用源码里的模块名
-  （q_proj、q_a_layernorm，不是 gemm / ln），shape 用符号化维度
-  （[bs, ql, num_heads, head_dim]，不是 [1, 1, 83, 83]），带权重的节点标 W[in, out]。
-  以 forward() 的执行顺序为唯一真相，把 attention / MLP / norm 展开到能对应单个
-  GPU kernel 的粒度，并标注 all-reduce 次数、有无 KV cache、可融合的 elementwise。
-  Use when asked to draw a component diagram, block diagram, dataflow diagram, or
-  a "过哪些 kernel / 从前到后经过什么" flow for a transformer block, DiT block,
-  attention module, model layer, or any nn.Module forward path; also when
-  explaining an unfamiliar model architecture from its source file. This skill
-  owns kernel-granularity dataflow of a single module; it is not for system-level
-  architecture diagrams of services, databases, and queues.
+  把一个 nn.Module 的 forward 画成 kernel 粒度的数据流图：节点名取源码属性名、shape 用符号维度、
+  标出 all-reduce 次数与可融合的 elementwise，收尾只讲它与基线 block 的差异。
+  Use when asked to draw a dataflow, block, or component diagram for a transformer block,
+  DiT block, attention module, or any model layer.
 disable-model-invocation: true
 ---
 

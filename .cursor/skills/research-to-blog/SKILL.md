@@ -1,13 +1,9 @@
 ---
 name: research-to-blog
 description: >-
-  从文献调研到自媒体成品（微信公众号 / 技术博客）的内容沉淀流水线：读论文/综述 →
-  联网核实事实 → 内部消化笔记 → 谋篇（高到低结构、单一主线、去重）→
-  客观化与去 AI 味 → 配标题/配图/References → 内外分离归档。
-  Use when turning paper/survey research into a public-facing blog or 公众号
-  article, writing a technical explainer for外部读者, polishing an AI-drafted
-  post to remove "AI 味", separating internal study notes from a public blog,
-  or when the user mentions 自媒体 / 公众号 / 博客 / 科普 / 对外发布.
+  把文献调研写成对外博客：先联网核实「已开源/已解决」这类断言，内部笔记与对外稿分两份，
+  最后按清单去 AI 味。
+  Use when turning research into a public blog or 公众号 article, or polishing an AI-drafted post.
 disable-model-invocation: true
 ---
 
@@ -76,12 +72,6 @@ disable-model-invocation: true
 4. **内外分离归档**：去私料与型号脱敏的清单见 `external-output-boundary` rule。
    内部 study 文档保留完整（含主观判断、私料），作为"活文档"持续更新。
 
-## Key Principles
+## 边界
 
-1. **内外两份稿**：内部 study（主观、私料、第一人称）与对外 blog（客观、可核实、第三人称）严格分离。
-2. **先核实再断言**：任何"已开源/已解决/已发布"都要联网逐条查过，事实清单是唯一真相来源。
-3. **不 overclaim、要自洽**：强断言降级到事实支撑得起的程度，全篇关键判断两两对照不打架。
-4. **去 AI 味是形式活**：删 blockquote 批注、收加粗、删标记语、消清单感——但保留对比表和结构图这类真干货。
-5. **图分两类**：结构图用 mermaid/ascii（清晰可维护），封面用文生图（概念、no text）。
-
-结构与语态归 `narrative-spine`；去私料与脱敏归 `external-output-boundary` rule。
+结构与语态归 `narrative-spine`；去私料与型号脱敏归 `external-output-boundary` rule。

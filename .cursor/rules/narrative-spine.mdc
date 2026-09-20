@@ -74,5 +74,5 @@ featureN 的边界里明确 scope out 了」：读者要的是那个问题是什
 ## 边界
 
 本规则是共用的那一条，**语态与结构的唯一归属处**。各处只留指针：对话回复的补充判据在
-`reply-conclusion-first`；exp / feature 文档的章节模板在 `experiment-driven-doc`；对外博客的
+`reply-conclusion-first`；exp / feature 文档的章节模板在 `experiment-design`；对外博客的
 去 AI 味清单在 `research-to-blog`；SKILL.md 的体量约束在 `skill-authoring`。

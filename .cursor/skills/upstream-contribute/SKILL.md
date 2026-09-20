@@ -1,11 +1,8 @@
 ---
 name: upstream-contribute
 description: >-
-  评估在他人仓库里做出的修复值不值得提上游，判断走 PR 还是 Issue 还是不提，
-  并生成 body 草稿供用户审查后手动提交。目标 repo 自带 PR 模板时优先用它的。
-  Use when deciding whether to contribute a fix back to an upstream repo, when
-  drafting a PR or Issue body for someone else's project, or after an experiment
-  produced a compatibility fix worth upstreaming.
+  判断一个修复该提 PR、提 Issue 还是不提，并生成 body 草稿。目标 repo 有 PR 模板就用它的。
+  Use when contributing a fix back to someone else's repo.
 disable-model-invocation: true
 ---
 
@@ -47,7 +44,7 @@ git -C <local_fork_path> remote -v
 ## Step 3: 生成 body — 等待用户审查
 
 **先读目标 repo 的 `.github/PULL_REQUEST_TEMPLATE.md` 与 `CONTRIBUTING.md`，有就用它们的。**
-下面是没有模板时的默认骨架。
+下面是没有模板时的默认骨架。判据只有一条：**reviewer 两分钟内能看懂全部改动。**
 
 ### PR body
 
@@ -125,14 +122,8 @@ git -C <local_fork_path> remote -v
 3. 先提依赖库的，再提主项目的
 4. 如果依赖库 PR 未合入，主项目 body 中说明 workaround
 
-## 原则
-
-- **简洁**：reviewer 能在 2 分钟内理解全部改动
-- **向后兼容**：明确说明既有用户不受影响，并指出靠什么机制保证
-- **可验证**：提供复现命令
-
 ## 与其他 Skill 的协作
 
 - **external-output-boundary**（rule）：披露 / 脱敏 / 去私料，提交前必过
-- **experiment-driven-doc**：PR/Issue 素材来源
+- **experiment-design**：PR/Issue 素材来源
 - **split-to-prs** / **autopilot**（Cursor 内置）：大改动拆成小 PR；PR 建好后跟进 review 与 CI

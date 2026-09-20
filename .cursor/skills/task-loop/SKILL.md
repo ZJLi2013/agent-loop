@@ -1,13 +1,10 @@
 ---
 name: task-loop
 description: >-
-  Holds the loop's durable state: the task.md schema, how to write an acceptance
-  checkpoint that says what happens on failure as well as on pass, the failure
-  counter that separates a first failure from a third, and the cross-session
-  handoff note. Use when creating or updating task.md, picking the next task,
-  writing or evaluating an acceptance checkpoint, resuming work in a new session,
-  or handing off to another agent. The loop's control flow and routing live in the
-  agent-loop rule; this skill owns the artifacts that loop reads and writes.
+  维护 task.md：验收检查点（同时写失败去向）、失败计数、只有一行 doing 的防漂移不变量、
+  跨会话交接笔记。循环本身归 agent-loop rule。
+  Use when creating or updating task.md, picking the next task, writing an acceptance
+  checkpoint, or resuming work in a new session.
 ---
 
 # Task Loop
@@ -27,7 +24,8 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 
 | P | id | task | 验收检查点 | 状态 | 失败 |
 |---|---|---|---|---|---|
-| P0 | t3 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 🔬 doing | 1 |
+| P0 | t3 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 🚧 blocked t6 | 1 |
+| P0 | t6 | 修 Y 的 schema 漂移 | `validate.py` 退出码 0 | 🔬 doing | 0 |
 | P0 | t4 | 量 Y 的端到端延迟 | p50 ≤ 基线 1.1× | ⬜ todo | 0 |
 | P1 | t5 | 清理 X 的旧路径 | grep 不到 `legacy_x` | ⬜ todo | 0 |
 | — | t2 | 复现 baseline | 输出与 README 同量级 | ✅ done | 0 |
@@ -37,8 +35,12 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 
 **一行需要换行才读得完，就是细节没下沉。** `task.md` 每轮都被完整读一遍。
 
-状态用 `⬜ todo / 🔬 doing / ✅ done / ❌ dropped`。`dropped` 要在行尾链接说明为什么放弃——
-被否决的候选是长期决定，删掉它下次还会有人重提。
+状态用 `⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。`dropped` 要在行尾链接
+说明为什么放弃——被否决的候选是长期决定，删掉它下次还会有人重提。
+
+**`🔬 doing` 有且只有一行。** 跑到一半要去改别的东西时，先把 `🔬` 挪过去（原行转 `🚧`
+并记下挡它的 id），文件才不会和实际在做的事脱节。判据与处置见 `agent-loop` 的「漂移」段；
+**`🚧` 的个数就是嵌套深度，≥ 2 停下问人。**
 
 ## 验收检查点：必须同时写 pass 和 fail
 
@@ -48,11 +50,14 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 一个合格的检查点满足三条：
 
 1. **可执行或可观测**——一条命令、一个产物、一个数值阈值。「功能正常」「效果变好」不算。
-2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-driven-doc` 的「验收判据阶梯」。
+2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-design` 的「验收判据阶梯」。
 3. **失败时的去向是已知的**——不必写在表里，但要能按 `agent-loop` 的失败分流表归类。
-   归不进任何一类的失败，说明这个 task 拆得不对，回 `feature-dev-pipeline` 重拆。
+   归不进任何一类的失败，说明这个 task 拆得不对，回 `feature-planning` 重拆。
 
 写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。**
+
+写成「重构干净」「跑通」的检查点有双重代价：**既判不出完成，也挡不住漂移**——
+任何改动都能说自己在往那个方向走（`agent-loop` 的漂移判据要拿这个检查点当尺子）。
 
 ## 失败计数
 
@@ -66,7 +71,7 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 ## 跨 session 交接
 
 `task.md` 说「做到哪了」，交接笔记说「下一步第一条命令是什么」。长任务在
-`.cursor/harness/progress.md`（或与 user 约定的位置）追加：
+`.cursor/progress.md`（或与 user 约定的位置）追加：
 
 ```markdown
 ## YYYY-MM-DD HH:MM — <task id> <一句话状态>
@@ -91,7 +96,7 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 ## 完成
 
 全部 task `✅` 或剩余失败被显式接受；每个 `✅` 都有检查点的实际输出作为证据；
-结论已收口到 feature 文档（见 `experiment-driven-doc`）；
+结论已收口到 feature 文档（见 `experiment-design`）；
 新 agent 只读这些文件就能接手，不需要翻聊天记录。
 
 **满足这四条就是 DONE：报告结果然后停。** 评审、提上游、写博客都是 user 要了才做的岔出项，

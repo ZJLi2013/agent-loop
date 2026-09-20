@@ -1,12 +1,9 @@
 ---
-name: feature-dev-pipeline
+name: feature-planning
 description: >-
-  把一个大 feature 拆成子任务并排出优先级，为每个子任务先定 Goal 再写设计文档，实现后把结果
-  回填成 as-built。强制 Goal-first：feature 文档开头两节固定为「要解决什么问题」和「解没解决」。
-  这是 agent-loop 里 PLAN 那一格；task.md 的 schema 与验收检查点归 task-loop。
-  Use when breaking a large or multi-subtask feature into a prioritized task list, writing a
-  per-subtask design doc, backfilling results as as-built, or when the user says
-  "拆解 todo / 设计 feature / 实现下一个 sub-task / 推进这个大 feature".
+  把大 feature 拆成排好优先级的 task.md 行，每个子任务先写 Goal 再写设计文档，做完回填成 as-built。
+  Goal 写不出来就不许往下做。
+  Use when breaking down a large feature, planning subtasks, or writing a design doc.
 ---
 
 # Feature Dev Pipeline
@@ -54,11 +51,10 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 ### Phase 3 — Build + Experiment（实现并实验）
 - **开跑前先声明，但不必等确认。** 每次实验开跑前，在 `partN-exp.md` 里写下它回答 Goal 的哪一问 + 假设与预期（几行即可），然后自己跑。中途冒出新对照臂 / 新变量 / 新工作点也一样——补一条再跑，**不用停下问 user**。这不是审批流程，是给自己留一个可对照的预测：**没有预期，拿到数也判不出是发现还是跑偏**；顺带 user 随时能看出你在测什么。
-- **写预期的同时过决策价值门**：结果为否定时 Goal 的答案或 `task.md` 的优先级会变吗？不会就不跑。**子任务的量级也要配得上主线瓶颈**——判别方法见 `experiment-driven-doc` 的「决策价值门」。
+- **写预期的同时过决策价值门**：写出结果为真与为假时各自的下一条命令，两条不同才跑。**子任务的量级也要配得上主线瓶颈**——判别方法见 `experiment-design` 的「决策价值门」。
 - 实现遵循**最小必要改动**原则：只改达成目标所必需的部分，顺手清理被替换掉的过期逻辑。
-- 实验记录遵循 `experiment-driven-doc` skill：先写假设/方案/预期到 `partN-exp.md`，长跑前先 smoke，多轮调试用表格追踪，跑完回填结果/分析/结论。
-- 远端 / 跨会话 / GPU 长跑遵循 `task-loop` skill。
-- 这一阶段**多轮调试由 agent 自主完成**（默认选最推荐方案继续，每轮回到文档开头防跑偏，详见 experiment-driven-doc）。
+- 实验记录遵循 `experiment-design` skill：先写假设/方案/预期到 `partN-exp.md`，长跑前先 smoke，多轮调试用表格追踪，跑完回填结果/分析/结论。
+- 这一阶段**多轮调试由 agent 自主完成**，默认选最推荐方案继续；失败分流与防漂移归 `agent-loop`。
 - 拿到结果后：回填 `partN-exp.md`，并把 `featureN_<slug>.md` 从「设计中」转为 **as-built**——除状态/端到端验证结论外，把实验里**被数据证实、改变了对本 feature 认知**的关键结论**提炼**进 feature 文档（highlight 区），并同步更新开头的 pipeline（哪步通了、卡点移到哪）。feature.md 留提炼结论，`partN-exp.md` 留详细数据/调试过程，两者别互相复制。
 
 ### Phase 4 — Close（回填并拆下一个）
@@ -71,9 +67,9 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 默认按这个模式跑：读 task.md → 取最高优先级未完成项 → 读它的 `featureN`（没有就先写 Goal，见 Phase 2）→ Phase 3 → 回填 `featureN` 与 task.md 的状态列 → 取下一条，不必每轮问 user。
 
-**task.md 上已有 P0、且它的 `featureN` 已有 Goal → 直接进 Phase 2/3 不问。** 只在这三种情况停下等 user：要**新增** task.md 行、要**改优先级**、P0 **清空**了。这三条是 PLAN 阶段特有的，覆盖 Phase 1 「优先级由 user 拍板」那条——那条针对首次拆解，不针对已排好的队列。
+**task.md 上已有 P0、且它的 `featureN` 已有 Goal → 直接进 Phase 2/3 不问。** 只在这三种情况停下等 user：要**新增** task.md 行、要**改优先级**、P0 **清空**了。
 
-task.md 的格式、验收检查点怎么写、失败计数怎么记，归 `task-loop`；循环本身与失败分流归 `agent-loop` rule。本 skill 只负责**把大 feature 变成 task.md 里的行**，以及每行背后的设计文档。
+这三条加上 Phase 2 的 Goal（**「要解决什么问题」由 user 定**，agent 不自行替 user 定义），就是本 skill 全部的 human-in-the-loop 点。其余停机条件（方案选型、不可逆操作、自修上限、硬性中止）归 `experiment-budget-gate`。
 
 ## 文档约定（项目沉淀）
 
@@ -82,18 +78,12 @@ task.md 的格式、验收检查点怎么写、失败计数怎么记，归 `task
 - **feature.md 是「定义系统」不是「实验总结」**：开头放数据流 pipeline + 提炼后的关键结论（帮 user 快速理解系统与卡点）；详细实验数据/调试过程留在 `partN-exp.md`。若发现 feature.md 正在退化成实验流水账，把过程性内容挪回 partN，只在 feature.md 保留提炼结论。
 - **实验完结后精简文档**：只留可复现要点（环境/命令/关键参数）+ 核心结果表 + 结论/Next Step，删掉假设推演、预期等设计草稿。
 - **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称。细则与自检 grep 见 `narrative-spine` 的「直接陈述当前为真的内容」。
-- **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。**验收判据落在 Goal 的语言上**（任务指标 / user 可感知的量），不是「理论上完美一致」；选法见 `experiment-driven-doc` 的「验收判据阶梯」。
+- **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。**验收判据落在 Goal 的语言上**（任务指标 / user 可感知的量），不是「理论上完美一致」；选法见 `experiment-design` 的「验收判据阶梯」。
 - **总览表**：每个 `partN-exp.md` 顶部维护一行摘要表（Exp / 目标 / 状态 / 结论）。
-
-## Human-in-the-loop 检查点
-
-默认自主推进。**本 skill 只加一条自己的检查点**：Phase 1 的优先级与子任务 scope、以及 Phase 2 的 Goal——**「要解决什么问题」由 user 定**，agent 不自行替 user 定义。队列已排好时的例外见「持续模式」第二条。
-
-其余所有「什么情况才停下来问人」（方案选型、不可逆操作、环境错误的自修上限、硬性中止五条）归 `experiment-budget-gate`，那是唯一一份清单，本 skill 不重述。
 
 ## 组合的其它 skill
 
 - `agent-loop`（rule）：本 skill 是它的 PLAN 那一格；跑完 Phase 1 之后由它路由到后续各格。
-- `experiment-driven-doc`：两道门 + 实验记录模板，Phase 3 的核心。
+- `experiment-design`：两道门 + 实验记录模板，Phase 3 的核心。
 - `task-loop`：task.md 的 schema、验收检查点、失败计数、跨 session 交接。
-- `remote-exec`：Phase 3 的远端 / GPU 执行与失败自修。
+- `remote-exec`：Phase 3 跑在远端 / GPU 节点上时才用，点名调用。

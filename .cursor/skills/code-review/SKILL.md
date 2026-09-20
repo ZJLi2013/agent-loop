@@ -1,14 +1,9 @@
 ---
 name: code-review
 description: >-
-  Reviews a PR or diff: four-section output order, severity taxonomy (correctness >
-  hot-path performance > maintainability > style > process), and AI-generated /
-  vibe-coding detection. The review *standard* comes from the target repo
-  (.cursor/BUGBOT.md, AGENTS.md, CONTRIBUTING.md) rather than from this skill.
-  Use when reviewing a pull request or diff, or when the user mentions P0-P4 or
-  vibe coding. Owns how a human-readable review is written; hand off to Cursor's
-  review-bugbot / review-security subagents for automated bug and vuln sweeps,
-  and to upstream-contribute for whether to open an upstream PR.
+  审 PR 或 diff：四段输出、严重度分级、vibe-coding 识别。评审标准从被审 repo 取
+  （.cursor/BUGBOT.md、AGENTS.md、CONTRIBUTING.md），取不到才用本 skill 的默认值。
+  Use when reviewing a pull request or a diff.
 disable-model-invocation: true
 ---
 

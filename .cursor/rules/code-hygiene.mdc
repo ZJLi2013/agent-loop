@@ -70,4 +70,4 @@ if len(set(seeds)) > 1:
 - **不加 AI 署名 trailer**（`Co-authored-by: <agent>`、`Generated with …`），
   除非该仓库的 `git log` 里已经普遍有。对外仓库的 AI 披露另有要求，归
   `external-output-boundary`——那是写在 PR body 里，不是塞进每个 commit。
-- 实验相关的 commit 另有一条编号约定，见 `experiment-driven-doc`。
+- 实验相关的 commit 另有一条编号约定，见 `experiment-design`。

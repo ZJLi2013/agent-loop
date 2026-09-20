@@ -18,27 +18,33 @@ orchestration *skill* kept failing to fire.
 
 ```text
 Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─┬─ pass ─► CLOSE ─┐
-         │        │          │          │                │                │
-         │        │          │          │                └─ fail ─► DIAGNOSE
-  feature-dev  task-loop  experiment- remote-exec                     │
-   -pipeline              driven-doc                          按类别自修，用尽才问人
+         │        │          │                           │                │
+         │        │          │                           └─ fail ─► DIAGNOSE
+  feature-     task-loop  experiment-                                │
+   planning                design                         按类别自修，用尽才问人
          │                                                            │
          └──────────────── 下一个 task ◄──────────────────────────────┘
                                   │
                          全部通过 ─► DONE（报告并停）
 ```
 
-Everything in the loop triggers on a mechanically checkable condition. `code-review`,
-`upstream-contribute`, `research-to-blog` and `code-to-kernel-diagram` sit **outside** it: they
-run only when the user asks. Clearing `task.md` means DONE, not "now open a PR".
+Everything in the loop triggers on a mechanically checkable condition. `remote-exec`,
+`code-review`, `upstream-contribute`, `research-to-blog` and `code-to-kernel-diagram` all sit
+**outside** it and run only when the user asks. Clearing `task.md` means DONE, not "now open a PR".
+
+**Drift control is an invariant, not a reminder.** Exactly one `task.md` row is `🔬 doing`, and a
+change belongs to it only if it moves that row's acceptance checkpoint from failing to passing.
+Anything else becomes its own row before the work starts; the count of `🚧 blocked` rows is the
+nesting depth, and two is the limit. A self-check phrased as "am I drifting?" would never fire —
+every step of a drift looks justified — so the test is anchored on a criterion already written down.
 
 ## Auto-Trigger
 
 Descriptions stay in context; bodies load when the task matches.
 
-- `feature-dev-pipeline`: Large feature → prioritized task.md rows + per-subtask design doc.
+- `feature-planning`: Large feature → prioritized task.md rows + per-subtask design doc.
 - `task-loop`: task.md schema, acceptance checkpoints, failure counter, cross-session handoff.
-- `experiment-driven-doc`: The two gates (decision value, acceptance ladder) and the record template.
+- `experiment-design`: The two gates (decision value, acceptance ladder) and the record template.
 - `agent-heartbeat`: User-visible progress for commands expected to run longer than 60s.
 
 ## Manual / Cold Skills
@@ -59,7 +65,7 @@ outside this library entirely. Merging them would load a review checklist while 
 | 阶段 | 谁执行 | 只有这个生效 |
 |---|---|---|
 | write | 会话内 agent | `code-hygiene` rule |
-| commit | 会话内 agent | `code-hygiene` rule（实验编号见 `experiment-driven-doc`） |
+| commit | 会话内 agent | `code-hygiene` rule（实验编号见 `experiment-design`） |
 | review 本地 diff | 会话内 agent / `review-bugbot`、`review-security` subagent | `code-review` |
 | **review PR** | **Cursor 云端 Bugbot** | **`.cursor/BUGBOT.md` + dashboard Team / Repository Rules** |
 | PR body | 会话内 agent | `upstream-contribute` |
@@ -83,8 +89,8 @@ only one of them getting updated. Before adding a section, find its owner below 
 | SKILL.md 体量与反膨胀 | `skill-authoring` (rule, globs on `SKILL.md`) |
 | 注释密度、WHY-only、commit message | `code-hygiene` (rule) |
 | review 的四段输出、严重度轴、vibe-coding 识别 | `code-review` |
-| 决策价值门判别法、验收判据阶梯、Phase 0、exp 文档章节模板 | `experiment-driven-doc` |
-| 大 feature 拆子任务、Goal-first、四阶段、设计文档 | `feature-dev-pipeline` |
+| 决策价值门判别法、验收判据阶梯、Phase 0、exp 文档章节模板 | `experiment-design` |
+| 大 feature 拆子任务、Goal-first、四阶段、设计文档 | `feature-planning` |
 | `task.md` schema、验收检查点、失败计数、跨会话交接 | `task-loop` |
 | SSH / 选节点 / detach / 存储 / 远端失败自修表 | `remote-exec` |
 

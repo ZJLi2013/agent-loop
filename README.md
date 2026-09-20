@@ -10,8 +10,8 @@
 my_skills/
 ├── .cursor/
 │   ├── skills/                          # Cursor Agent Skills
-│   │   ├── feature-dev-pipeline/        # 大 feature 拆子任务（自动）
-│   │   ├── experiment-driven-doc/       # 实验两道门 + 记录模板（自动）
+│   │   ├── feature-planning/        # 大 feature 拆子任务（自动）
+│   │   ├── experiment-design/       # 实验两道门 + 记录模板（自动）
 │   │   ├── task-loop/                   # task.md、验收检查点、交接（自动）
 │   │   ├── agent-heartbeat/             # 长任务心跳（自动）
 │   │   ├── remote-exec/                 # 远端 GPU 执行、存活、自修、存储
@@ -32,9 +32,9 @@ my_skills/
 
 | skill | 启用方式 | 描述 |
 |-------|----------|------|
-| `feature-dev-pipeline` | 自动触发 | 大 feature → 子任务 → 设计 → 实现+实验 → 回填 |
+| `feature-planning` | 自动触发 | 大 feature → 子任务 → 设计 → 实现+实验 → 回填 |
 | `task-loop` | 自动触发 | `task.md` schema、验收检查点（含失败去向）、失败计数、跨会话交接 |
-| `experiment-driven-doc` | 自动触发 | 决策价值门 + 验收判据阶梯 + 实验记录模板 |
+| `experiment-design` | 自动触发 | 决策价值门 + 验收判据阶梯 + 实验记录模板 |
 | `agent-heartbeat` | 自动触发 | 长命令心跳，防止用户误判卡死 |
 | `remote-exec` | 显式调用 | SSH/认证、选节点、tmux detach、存储治理、远端失败自修表 |
 | `code-review` | 显式调用 | 审 PR/diff 的四段输出与 vibe-coding 识别；标准从被审 repo 取，取不到才回落 [P0-P4](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32) |
@@ -82,26 +82,43 @@ description 在上下文、正文要被语义匹配命中才加载。**一个需
 
 ```text
 Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─┬─ pass ─► CLOSE ─┐
-         │        │          │          │                │                │
-         │        │          │          │                └─ fail ─► DIAGNOSE
-  feature-dev  task-loop  experiment- remote-exec                     │
-   -pipeline              driven-doc                          按类别自修，用尽才问人
+         │        │          │                           │                │
+         │        │          │                           └─ fail ─► DIAGNOSE
+  feature-     task-loop  experiment-                                │
+   planning                design                         按类别自修，用尽才问人
          │                                                            │
          └──────────────── 下一个 task ◄──────────────────────────────┘
                                   │
                          全部通过 ─► DONE（报告并停）
 ```
 
-循环内每一格的触发条件都是机械可判的。`code-review`、`upstream-contribute`、
-`research-to-blog`、`code-to-kernel-diagram` **在循环之外**,只有你明确要了才走——
-`task.md` 清空意味着 DONE,不意味着该去开 PR。
+循环内每一格的触发条件都是机械可判的。`remote-exec`、`code-review`、`upstream-contribute`、
+`research-to-blog`、`code-to-kernel-diagram` **都在循环之外**，只有你明确要了才走——
+`task.md` 清空意味着 DONE，不意味着该去开 PR。
 
-失败分流是闭环的关键，四类去向：环境/瞬时错误走 `remote-exec` 的失败处置表自修；契约不匹配走
-`experiment-driven-doc` 的层 0 复现样例；**假设被推翻算结果不算故障**，回填后重排优先级继续；
-判据失效就沿验收判据阶梯往任务指标退。四类都用尽重试上限，才查 `experiment-budget-gate`
-的中止清单——到这一步才轮到停下问人。
+失败分流是闭环的关键，四类去向：环境/瞬时错误自己修，同类最多两次并计入失败计数（跑远端 GPU
+时具体修法见 `remote-exec` 的失败处置表）；契约不匹配走 `experiment-design` 的层 0 复现样例；
+**假设被推翻算结果不算故障**，回填后重排优先级继续；判据失效就沿验收判据阶梯往任务指标退。
+四类都用尽重试上限，才查 `experiment-budget-gate` 的中止清单——到这一步才轮到停下问人。
 
 `task.md` 是任务状态的唯一真相源，schema 与验收检查点的写法归 `task-loop`。
+
+### 闭环还缺的两块（TODO）
+
+**一、memory：跨会话保不住具体事实。** 跑久了 agent 会忘掉用的是哪个远端节点、哪个容器、
+哪个 checkpoint 路径。交接笔记是**按时间追加**的，第 1 天写下的节点名到第 3 天已经被十条记录
+埋掉；`task.md` 里也只有任务行，没有放常量的地方。缺的是一个**就地覆盖**（而非追加）的事实块，
+每轮开始必读、任何新确定的常量立刻写进去。
+
+**二、VERIFY：没人问「这个通过是真的吗」。** 现在 EVALUATE 只判断检查点过没过。
+测试通过可能是因为它被 skip 了，指标变好可能是因为 baseline 自己坏了，断言可能压根没执行到。
+假通过的代价比普通失败高——task 被标 `✅`，循环继续往前走，错误在几个 task 之后才浮出来。
+可能的补法：在 pass 分支加一道 VERIFY，要求用检查点的**实际输出**而不是退出码来判定。
+
+**防漂移靠不变量,不靠提醒。** `task.md` 里有且只有一行 `🔬 doing`,一次改动属于它的唯一判据是
+「会让那行的验收检查点从不通过变成通过吗」;不属于就先建新行再动手,`🚧 blocked` 的个数就是
+嵌套深度,超过两层停下问人。写成「自查有没有漂」的规则永远不会触发——漂移的每一步看着都合理,
+那个自省时刻不会到来,所以判据必须落在一个已经写下来的检查点上。
 
 ---
 
@@ -211,7 +228,7 @@ find ~/.cursor/skills-cursor -maxdepth 1 -type l ! -exec test -e {} \; -print   
 
 # 推进大 feature（自动 skill）
 "按 task.md 做下一个 sub-task"
-→ Agent 使用 feature-dev-pipeline
+→ Agent 使用 feature-planning
 ```
 
 不需要在每个项目的 `.cursor/` 下放置 Skill 文件。
