@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "command": "python .cursor/hooks/memory-lookup.py",
+        "matcher": "Read",
+        "timeout": 10
+      }
+    ]
+  }
+}
