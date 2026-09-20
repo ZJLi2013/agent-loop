@@ -1,13 +1,14 @@
 ---
-description: 代码注释跟邻码一致、只写 WHY、禁止 agent 式 narration 与说明性段落
+description: 写代码时持续生效的两件事——注释跟邻码一致只写 WHY，commit message 跟仓库已有风格且陈述改完后的状态
 alwaysApply: true
 ---
 
-# Code Comments
+# Code Hygiene
 
-写或改代码时，注释风格**以当前文件已有写法为准**，不要比周围更啰嗦。
+**注释和 commit message 都以当前仓库已有的写法为准，不要引入自己的风格。** agent 的通病是
+比周围更啰嗦、更教学、更爱 narrate 过程；这条规则管的就是这个。
 
-## 先读再写
+## 注释：先读再写
 
 改某个函数/模块前，先看同文件上下 20–40 行：注释密度、语言、是否用 docstring。新注释应**融入**，不要引入另一种风格。
 
@@ -46,7 +47,7 @@ if len(set(seeds)) > 1:
 - 邻码普遍有完整 docstring → 跟同文件格式与密度，不另起一种风格。
 - 私有 helper、局部逻辑：即使公开 API 邻码有 docstring，也不要比邻码更密。
 
-## 收尾自检（每次改完必做）
+## 注释收尾自检（每次改完必做）
 
 扫 diff 里**你新增**的每一行注释：
 
@@ -55,3 +56,18 @@ if len(set(seeds)) > 1:
 3. 是否比同文件旧代码更密、更教学？是则删或改短。
 
 默认倾向：**少注释、跟邻码**；有疑问就不加。
+
+## Commit message
+
+**先 `git log --oneline -20` 看这个仓库怎么写**，跟它：有没有 conventional-commits 前缀、
+用中文还是英文、subject 多长。仓库没有统一风格时才用下面的默认。
+
+- **Subject 陈述改完之后为真的状态**，不叙述过程。`Consolidate skills around one owner per
+  knowledge point`，不是 `修改了几个 skill 文件`。语态细则归 `narrative-spine`。
+- **Body 只写 why 和非显然的约束**——为什么这么改、踩了什么坑、有什么后续影响。
+  **不复述 diff**，`git show` 比任何复述都准。改动显然时不写 body。
+- **一个 commit 一件事。** 顺手改的无关格式、无关重命名另起一个。
+- **不加 AI 署名 trailer**（`Co-authored-by: <agent>`、`Generated with …`），
+  除非该仓库的 `git log` 里已经普遍有。对外仓库的 AI 披露另有要求，归
+  `external-output-boundary`——那是写在 PR body 里，不是塞进每个 commit。
+- 实验相关的 commit 另有一条编号约定，见 `experiment-driven-doc`。

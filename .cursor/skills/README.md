@@ -23,10 +23,27 @@ Daily path plus long-running orchestration. Descriptions stay in context; bodies
 These include `disable-model-invocation: true` and are invoked by name.
 
 - `remote-exec`: Get work onto a remote GPU node, keep it alive, auto-repair failures, manage storage.
-- `code-review`: PR/diff review with sglang-diffusion-routing P0-P4 + four-section template.
+- `code-review`: Four-section review output; the standard comes from the target repo, not this skill.
 - `code-to-kernel-diagram`: `nn.Module` forward → per-kernel dataflow.
 - `upstream-contribute`: PR-vs-Issue judgement and body templates for upstream contributions.
 - `research-to-blog`: Paper/survey → public blog / 公众号.
+
+## The code path, by who executes it
+
+These pieces deliberately stay separate: they fire at different moments, and two of them run
+outside this library entirely. Merging them would load a review checklist while writing code.
+
+| 阶段 | 谁执行 | 只有这个生效 |
+|---|---|---|
+| write | 会话内 agent | `code-hygiene` rule |
+| commit | 会话内 agent | `code-hygiene` rule（实验编号见 `experiment-driven-doc`） |
+| review 本地 diff | 会话内 agent / `review-bugbot`、`review-security` subagent | `code-review` |
+| **review PR** | **Cursor 云端 Bugbot** | **`.cursor/BUGBOT.md` + dashboard Team / Repository Rules** |
+| PR body | 会话内 agent | `upstream-contribute` |
+| 跨仓库边界 | 会话内 agent | `external-output-boundary` rule |
+
+**Bugbot 不读 `.cursor/rules/*.mdc`，也不读 Skills。** 想让某条标准影响 PR 上真正跑的那次
+review，只能写进被审 repo 的 `.cursor/BUGBOT.md`，或配一次 dashboard 的 Team Rules。
 
 ## Ownership: one knowledge point, one home
 
@@ -40,7 +57,8 @@ only one of them getting updated. Before adding a section, find its owner below 
 | 什么先自修、什么才停下来问人、预算、硬性中止 | `experiment-budget-gate` (rule) |
 | AI 披露、GPU 型号脱敏、对外去私料 | `external-output-boundary` (rule) |
 | SKILL.md 体量与反膨胀 | `skill-authoring` (rule, globs on `SKILL.md`) |
-| 注释密度与 WHY-only | `code-comments` (rule) |
+| 注释密度、WHY-only、commit message | `code-hygiene` (rule) |
+| review 的四段输出、严重度轴、vibe-coding 识别 | `code-review` |
 | 决策价值门判别法、验收判据阶梯、Phase 0、exp 文档章节模板 | `experiment-driven-doc` |
 | backlog 排序、Goal-first、四阶段循环、持续模式 | `feature-dev-pipeline` |
 | 跨会话状态、runbook、handoff | `long-running-agent-harness` |

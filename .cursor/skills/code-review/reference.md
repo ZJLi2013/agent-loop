@@ -1,6 +1,10 @@
-# P0–P4 Style Guide
+# P0–P4 Style Guide（外部默认值）
 
-Canonical rules from [sglang-diffusion-routing#32](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32). Priority: Correctness (P0) > Performance (P1) > Maintainability (P2) > Style (P3) > Process (P4).
+来自 [sglang-diffusion-routing#32](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32)，面向**高性能推理系统**。优先级：Correctness (P0) > Performance (P1) > Maintainability (P2) > Style (P3) > Process (P4)。
+
+> **这是回落值，不是本库的标准。** 被审 repo 自己有 `.cursor/BUGBOT.md` / `AGENTS.md` /
+> `CONTRIBUTING.md` 时一律用它的（顺序见 [SKILL.md](SKILL.md) 的「先确定标准从哪来」）。
+> 用到这份时要在 review 开头声明。审 Web 服务、CLI、文档仓库时 P1 整段不适用。
 
 ## P0 — Correctness
 

@@ -15,7 +15,7 @@ my_skills/
 │   │   ├── long-running-agent-harness/  # 跨会话编排（自动）
 │   │   ├── agent-heartbeat/             # 长任务心跳（自动）
 │   │   ├── remote-exec/                 # 远端 GPU 执行、存活、自修、存储
-│   │   ├── code-review/                 # PR 评审（sglang-diffusion-routing P0-P4）
+│   │   ├── code-review/                 # PR/diff 评审的四段输出
 │   │   ├── code-to-kernel-diagram/      # 模块源码 → kernel 数据流图
 │   │   ├── upstream-contribute/         # 实验后评估上游贡献
 │   │   └── research-to-blog/            # 文献调研 → 自媒体
@@ -37,7 +37,7 @@ my_skills/
 | `long-running-agent-harness` | 自动触发 | 长任务总控：initializer → loop → gates → handoff |
 | `agent-heartbeat` | 自动触发 | 长命令心跳，防止用户误判卡死 |
 | `remote-exec` | 显式调用 | SSH/认证、选节点、tmux detach、存储治理、远端失败自修表 |
-| `code-review` | 显式调用 | 按 [sglang-diffusion-routing#32](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32) 四段模板 + P0-P4 审 PR/diff |
+| `code-review` | 显式调用 | 审 PR/diff 的四段输出与 vibe-coding 识别；标准从被审 repo 取，取不到才回落 [P0-P4](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32) |
 | `code-to-kernel-diagram` | 显式调用 | `nn.Module` forward → 逐 kernel 数据流图 |
 | `upstream-contribute` | 显式调用 | PR vs Issue 判断 + body 模板 |
 | `research-to-blog` | 显式调用 | 文献调研 → 对外博客 / 公众号 |
@@ -50,14 +50,22 @@ my_skills/
 | `reply-conclusion-first` | 对话回复：第一句即结论、只答被问到的对象、说「做不到」前先查 |
 | `experiment-budget-gate` | 什么先自修、什么才停下来问人（中止清单的唯一归属处）、预算、每轮报改变哪条命令 |
 | `external-output-boundary` | 跨出仓库边界三道检查：AI 披露（取自 [Ghostty AI Policy](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md)）、GPU 型号脱敏、去私料 |
-| `code-comments` | 注释跟邻码一致、只写 WHY |
+| `code-hygiene` | 注释跟邻码一致只写 WHY；commit message 跟仓库风格、陈述改完后的状态 |
 | `skill-authoring` | 写 `SKILL.md` 时的体量与内容约束（按 glob 挂载） |
 
 ### 一个知识点只有一个归属处
 
 本库反复出现的失手是同一条判据写在三处，改的时候只改得动一处。归属表见
-[`.cursor/skills/README.md`](.cursor/skills/README.md#ownership-one-knowledge-point-one-home)，
-加新章节前先去那里找归属，找到就只留链接。
+[`.cursor/skills/README.md`](.cursor/skills/README.md)，加新章节前先去那里找归属，
+找到就只留链接。
+
+### code 链路：`.cursor/rules/` 管不到 PR review
+
+写代码与 commit 由 `code-hygiene` 管，审本地 diff 由 `code-review` 管，两者都在会话内生效。
+**但 PR 上真正跑的那次 review 由 Cursor 云端 Bugbot 执行，它只读被审 repo 的
+`.cursor/BUGBOT.md` 与 dashboard 的 Team / Repository Rules，不读 `.cursor/rules/*.mdc`，
+也不读 Skills。** 要让某条标准在 PR 阶段生效，只能写进那两处。分阶段的完整对照表见
+[`.cursor/skills/README.md`](.cursor/skills/README.md)。
 
 ### 方向：从会规划的 Chat Agent 到持续运行的 Agentic Loop
 

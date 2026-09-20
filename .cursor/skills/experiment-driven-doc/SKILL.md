@@ -204,8 +204,9 @@ Next Step（按优先级）。然后清理一次性脚本与中间文件（保�
 
 ## Commit Convention
 
-实验前 `F4 noise sweep: experiment design and hypothesis`；
-实验后 `F4 noise sweep results: noise aug harmful on Franka, all sigma degrade E1`。
+通用写法归 `code-hygiene`。实验类只加一条：**subject 带实验编号**，
+开跑前 `F4 noise sweep: experiment design and hypothesis`，
+跑完 `F4 noise sweep results: noise aug harmful on Franka, all sigma degrade E1`。
 
 ## Key Principles
 
