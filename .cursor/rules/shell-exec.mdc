@@ -1,0 +1,32 @@
+---
+description: 多行 shell 先写成脚本文件再执行；以及 Windows PowerShell 上几个会静默失败的坑
+alwaysApply: true
+---
+
+# Shell 执行
+
+**多行命令先写文件，再执行。** 直接把多行内容送进终端容易丢 stdout 或挂住，
+而且报错位置会指向拼接后的临时脚本，看不出是原文哪一行。
+
+判据——命中任一条就写文件：多行、带循环 / 函数 / heredoc、引号嵌套、长输出、
+或者用 `&&` 串了一长串。`ls` / `cat` / `rg` 这类只读单行直接跑。
+
+写到临时目录（`$TMP`、`scripts/_tmp/`），开头放 `#!/usr/bin/env bash` 与 `set -euo pipefail`，
+跑完即删。**破坏性脚本要让调用方看得见**，不要藏在脚本里。
+
+## Windows PowerShell 的三个坑
+
+这三条都**不报预期中的错**，而是以别的面目出现，所以单列：
+
+| 坑 | 症状 | 做法 |
+|---|---|---|
+| **不支持 heredoc** | `<<'EOF'` 报 "The '<' operator is reserved for future use" | 内容先写进文件，命令里只引用文件（`git commit -F <file>`） |
+| **`.ps1` 按 ANSI 读** | 脚本里的中文被拆坏，报 "string is missing the terminator" | 存成 **UTF-8 with BOM**；无 BOM 的 UTF-8 在 PS 5.1 下会乱码 |
+| **`Remove-Item` 删不了 junction** | 抛 `NullReferenceException`，看着像脚本 bug | 用 `cmd /c rmdir "<path>"` |
+
+另外 `>` 重定向写出的是 UTF-16LE，下游用 UTF-8 读会撞上 `0xff` 开头报错；
+要 UTF-8 就用 `Set-Content -Encoding utf8` 或直接在内存里传。
+
+## 边界
+
+远端执行另有一套（`ssh -A` 的 socket 失效、tmux 引号嵌套），归 `remote-exec` 的「两个坑」。

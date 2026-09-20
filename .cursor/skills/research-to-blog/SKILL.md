@@ -33,7 +33,7 @@ disable-model-invocation: true
 
 ### Phase 3: 谋篇（结构先于文字）
 
-主线、高到低组织、解释性膨胀归 `narrative-spine`。博客特有的只有两条：
+主线、高到低组织、解释性膨胀归 `write-for-humans`。博客特有的只有两条：
 
 1. **去重扫描**：同一批概念/同一个决策清单只讲一次。多个小节都在重述
    "各选项优劣 + 推荐"时，合并成一节。列出每节"独有信息"，无独有信息的节删掉或并入。
@@ -43,7 +43,7 @@ disable-model-invocation: true
 ### Phase 4: 客观化 + 去 AI 味（对外稿的关键一步）
 
 **客观化（内容层）：**
-- 第三人称与直接陈述归 `narrative-spine`；这里额外删掉一切"面向读者/面向自己"的解释
+- 第三人称与直接陈述归 `write-for-humans`；这里额外删掉一切"面向读者/面向自己"的解释
   （"回到你的问题""我的建议""帮你梳理"）。
 - **不 overclaim**：把"解决了/已兑现/护城河"这类强断言，降级到事实支撑得起的程度
   （例："工程门槛已解阻" ≠ "根本权衡消失了"）。区分"方向性投入"与"成熟范式"。
@@ -74,4 +74,4 @@ disable-model-invocation: true
 
 ## 边界
 
-结构与语态归 `narrative-spine`；去私料与型号脱敏归 `external-output-boundary` rule。
+结构与语态归 `write-for-humans`；去私料与型号脱敏归 `external-output-boundary` rule。

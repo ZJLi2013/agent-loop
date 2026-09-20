@@ -63,7 +63,7 @@ if len(set(seeds)) > 1:
 用中文还是英文、subject 多长。仓库没有统一风格时才用下面的默认。
 
 - **Subject 陈述改完之后为真的状态**，不叙述过程。`Consolidate skills around one owner per
-  knowledge point`，不是 `修改了几个 skill 文件`。语态细则归 `narrative-spine`。
+  knowledge point`，不是 `修改了几个 skill 文件`。语态细则归 `write-for-humans`。
 - **Body 只写 why 和非显然的约束**——为什么这么改、踩了什么坑、有什么后续影响。
   **不复述 diff**，`git show` 比任何复述都准。改动显然时不写 body。
 - **一个 commit 一件事。** 顺手改的无关格式、无关重命名另起一个。

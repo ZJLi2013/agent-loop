@@ -14,7 +14,7 @@ description: >-
 
 | 文件 | 角色 | 谁维护 |
 |---|---|---|
-| `task.md` | 任务状态的唯一真相源：P0/P1/P2 + 验收检查点 + 状态 + 失败计数。**schema 归 `task-loop`** | Phase 1 / Phase 4 |
+| `task.md` | 任务状态的唯一真相源：P0/P1/P2 + 验收检查点 + 状态 + 失败计数。**schema 归 `task-state`** | Phase 1 / Phase 4 |
 | `<design-dir>/featureN_<slug>.md` | 单个子任务的**设计文档 = Goal + 结论 + 定义系统**（开头两节 Goal / 结论，然后数据流 pipeline；实现后转 as-built）。**不是实验总结** | Phase 2 / Phase 3 |
 | `<exp-dir>/partN-exp.md` | 单个子任务的实验记录（多轮调试可追溯，**留详细数据**） | Phase 3 |
 | `<conclusions-log>`（如项目 `readme.md`/概览文档的「结论速查」区） | **跨 feature 关键结论汇总**（可检索的单一真相来源，**留提炼结论**） | Phase 4 |
@@ -69,7 +69,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 **task.md 上已有 P0、且它的 `featureN` 已有 Goal → 直接进 Phase 2/3 不问。** 只在这三种情况停下等 user：要**新增** task.md 行、要**改优先级**、P0 **清空**了。
 
-这三条加上 Phase 2 的 Goal（**「要解决什么问题」由 user 定**，agent 不自行替 user 定义），就是本 skill 全部的 human-in-the-loop 点。其余停机条件（方案选型、不可逆操作、自修上限、硬性中止）归 `experiment-budget-gate`。
+这三条加上 Phase 2 的 Goal（**「要解决什么问题」由 user 定**，agent 不自行替 user 定义），就是本 skill 全部的 human-in-the-loop 点。其余停机条件（方案选型、不可逆操作、自修上限、硬性中止）归 `when-to-stop`。
 
 ## 文档约定（项目沉淀）
 
@@ -77,7 +77,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - **文档是给人看的，不是给流程看的。** 自检：读前 10 行能否答出「要解决什么问题、解决了没有」？做不到就是 Goal/结论 没写清。**判据表、scope 清单、假设推演、分析过程一律不进 feature.md**，需要就留在 `partN-exp.md`。每加一节先问：读者会因为这节改变行动吗？不会就删。
 - **feature.md 是「定义系统」不是「实验总结」**：开头放数据流 pipeline + 提炼后的关键结论（帮 user 快速理解系统与卡点）；详细实验数据/调试过程留在 `partN-exp.md`。若发现 feature.md 正在退化成实验流水账，把过程性内容挪回 partN，只在 feature.md 保留提炼结论。
 - **实验完结后精简文档**：只留可复现要点（环境/命令/关键参数）+ 核心结果表 + 结论/Next Step，删掉假设推演、预期等设计草稿。
-- **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称。细则与自检 grep 见 `narrative-spine` 的「直接陈述当前为真的内容」。
+- **陈述语态**：feature.md / partN 一律写「当前为真的结论」，第三人称。细则与自检 grep 见 `write-for-humans` 的「直接陈述当前为真的内容」。
 - **不靠改码就判成功**：结论必须有测试/日志/结果/视频或 user 验收支撑。**验收判据落在 Goal 的语言上**（任务指标 / user 可感知的量），不是「理论上完美一致」；选法见 `experiment-design` 的「验收判据阶梯」。
 - **总览表**：每个 `partN-exp.md` 顶部维护一行摘要表（Exp / 目标 / 状态 / 结论）。
 
@@ -85,5 +85,5 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 - `agent-loop`（rule）：本 skill 是它的 PLAN 那一格；跑完 Phase 1 之后由它路由到后续各格。
 - `experiment-design`：两道门 + 实验记录模板，Phase 3 的核心。
-- `task-loop`：task.md 的 schema、验收检查点、失败计数、跨 session 交接。
+- `task-state`：task.md 的 schema、验收检查点、失败计数、跨 session 交接。
 - `remote-exec`：Phase 3 跑在远端 / GPU 节点上时才用，点名调用。

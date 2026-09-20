@@ -1,5 +1,5 @@
 ---
-name: task-loop
+name: task-state
 description: >-
   维护 task.md：验收检查点（同时写失败去向）、失败计数、只有一行 doing 的防漂移不变量、
   跨会话交接笔记。循环本身归 agent-loop rule。
@@ -7,13 +7,14 @@ description: >-
   checkpoint, or resuming work in a new session.
 ---
 
-# Task Loop
+# Task State
 
 控制流与路由在 `agent-loop` rule（常驻）。本 skill 只管它读写的那些文件。
 
 ## `task.md` 是任务状态的唯一真相源
 
-一个项目一份，位置与 user 约定后固定。**不要另建 `tasks.json`，也不要在别处维护第二份
+一个项目一份，放在 **`.cursor/task.md`**——和 `.cursor/memory/`、`.cursor/progress.md` 同一个
+home，也避开仓库自带的 `task.md` / `TODO.md`。**不要另建 `tasks.json`，也不要在别处维护第二份
 backlog**——两份任务状态必然漂移，而且每轮都要付一次读过期上下文的税。
 
 ```markdown
@@ -42,6 +43,9 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 并记下挡它的 id），文件才不会和实际在做的事脱节。判据与处置见 `agent-loop` 的「漂移」段；
 **`🚧` 的个数就是嵌套深度，≥ 2 停下问人。**
 
+**具体的值不写进 `task.md`。** 远端节点、容器名、checkpoint 路径这类跨会话还要用的常量，
+归 `agent-memory` 的 `.cursor/memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
+
 ## 验收检查点：必须同时写 pass 和 fail
 
 **只写「怎样算成功」的检查点是半个检查点。** 成功了做什么是显然的（下一个 task），
@@ -66,12 +70,22 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 每次失败看起来都像第一次，于是要么无限重试，要么第一次就上报。
 
 自修一次就 +1，并在该 task 的实验文档里记一行「试了什么、结果如何」。
-计数触及 `experiment-budget-gate` 的中止条件时才停。
+计数触及 `when-to-stop` 的中止条件时才停。
 
 ## 跨 session 交接
 
-`task.md` 说「做到哪了」，交接笔记说「下一步第一条命令是什么」。长任务在
-`.cursor/progress.md`（或与 user 约定的位置）追加：
+三份东西分工不同，**区别在追加还是覆盖**：
+
+| 文件 | 内容 | 写法 | 归属 |
+|---|---|---|---|
+| `.cursor/memory/facts.md` | 现在该用哪个节点 / 容器 / 路径 | **覆盖**，只有当前值 | `agent-memory` |
+| `task.md` | 做到哪了、哪条被挡住 | 改状态列 | 本 skill |
+| `.cursor/progress.md` | 这一轮发生了什么、下一步第一条命令 | **追加**，带时间戳 | 本 skill |
+
+**具体的值不要只写进交接笔记**——它按时间追加，三天后就被后面的记录埋掉，
+这正是「跑久了忘掉节点名」的成因。
+
+交接笔记的格式：
 
 ```markdown
 ## YYYY-MM-DD HH:MM — <task id> <一句话状态>
@@ -89,9 +103,11 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 
 ## 新 session 开工
 
-读 `task.md` → `git status` 与近期 `git log` → 交接笔记的「下一步第一条命令」→
-跑一次 runbook 里最小的 smoke。**四步都做完再动手改代码**，跳过 smoke 是
-「环境早就坏了但前两小时都在改逻辑」的主要来源。
+读 `task.md` → 读 `.cursor/memory/facts.md` 并**验证接下来要用到的那几条**（见 `agent-memory`）
+→ `git status` 与近期 `git log` → 交接笔记的「下一步第一条命令」→ 跑一次 runbook 里最小的 smoke。
+
+**五步都做完再动手改代码。** 跳过验证与 smoke 是「环境早就坏了但前两小时都在改逻辑」的
+主要来源。
 
 ## 完成
 

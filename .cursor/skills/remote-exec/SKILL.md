@@ -11,7 +11,7 @@ allowed-tools: [Shell]
 # Remote Exec
 
 **边界**：本 skill 只管「活儿怎么上去、怎么活下来、失败了怎么自己修」。跑什么、为什么跑、
-结果算不算通过，归 `task-loop` 与 `experiment-design`。
+结果算不算通过，归 `task-state` 与 `experiment-design`。
 
 ## 四条硬规则
 
@@ -152,7 +152,7 @@ running 但 > 90 天的僵尸容器可以 stop + rm，跳过 `node-exporter|prom
 
 ## 相关
 
-- `task-loop`：把 session 名、日志路径、恢复命令写进交接笔记，跨 session 接手靠它不靠本 skill。
+- `task-state`：把 session 名、日志路径、恢复命令写进交接笔记，跨 session 接手靠它不靠本 skill。
 - `agent-heartbeat`：轮询 `capture-pane` / `tail log` 时输出心跳与进度。
 - `upstream-contribute`：远端测出的兼容性修复要提 PR 时，body 生成与 GPU 型号脱敏走它。
 - 批量夜间测多个 repo 的具体流程见 [reference.md](reference.md)。

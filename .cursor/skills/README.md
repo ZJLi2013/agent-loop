@@ -18,15 +18,24 @@ orchestration *skill* kept failing to fire.
 
 ```text
 Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─┬─ pass ─► CLOSE ─┐
-         │        │          │                           │                │
-         │        │          │                           └─ fail ─► DIAGNOSE
-  feature-     task-loop  experiment-                                │
-   planning                design                         按类别自修，用尽才问人
-         │                                                            │
-         └──────────────── 下一个 task ◄──────────────────────────────┘
+         │        │          │          │                │                │
+         │        │          │          │                └─ fail ─► DIAGNOSE
+  feature-     task-state  experiment-  │                            │
+   planning                design       │              按类别自修，用尽才问人
+         │                              │                            │
+         └──────────────── 下一个 task ◄─┴────────────────────────────┘
                                   │
                          全部通过 ─► DONE（报告并停）
+
+         .cursor/memory/facts.md  ← 要用一个具体值就读它，第二次用到就写回
+              （横穿每一格，不是其中一格）
 ```
+
+`agent-memory` is not a cell. **The file is the source of truth and the conversation is a cache**:
+read a value out of `facts.md` when you are about to put it in a command, rather than recalling it.
+That sidesteps having to notice that context was compacted — in a window left open all day there is
+no "session start" to hang a re-read on, and dropped facts are silent. `agent-heartbeat` likewise
+crosses the loop: it hangs off any command expected to exceed 60 seconds.
 
 Everything in the loop triggers on a mechanically checkable condition. `remote-exec`,
 `code-review`, `upstream-contribute`, `research-to-blog` and `code-to-kernel-diagram` all sit
@@ -43,7 +52,8 @@ every step of a drift looks justified — so the test is anchored on a criterion
 Descriptions stay in context; bodies load when the task matches.
 
 - `feature-planning`: Large feature → prioritized task.md rows + per-subtask design doc.
-- `task-loop`: task.md schema, acceptance checkpoints, failure counter, cross-session handoff.
+- `task-state`: task.md schema, acceptance checkpoints, failure counter, cross-session handoff.
+- `agent-memory`: `.cursor/memory/` — concrete values that must survive across sessions.
 - `experiment-design`: The two gates (decision value, acceptance ladder) and the record template.
 - `agent-heartbeat`: User-visible progress for commands expected to run longer than 60s.
 
@@ -82,23 +92,24 @@ only one of them getting updated. Before adding a section, find its owner below 
 | 知识点 | 唯一归属 |
 |---|---|
 | 循环的状态机、路由到哪个 skill、失败按类别分流 | `agent-loop` (rule) |
-| 主线、解释性膨胀、标题写问题本身、清单不写段落、肯定式陈述、陈述当前为真 | `narrative-spine` (rule) |
-| 对话专属：第一句即结论、只答被问到的对象、说「做不到」前先查 | `reply-conclusion-first` (rule) |
-| 什么先自修、什么才停下来问人、预算、硬性中止 | `experiment-budget-gate` (rule) |
+| 结论先行、主线、解释性膨胀、只答被问对象、陈述真值、说「做不到」前先查 | `write-for-humans` (rule) |
+| 什么先自修、什么才停下来问人、预算、硬性中止 | `when-to-stop` (rule) |
 | AI 披露、GPU 型号脱敏、对外去私料 | `external-output-boundary` (rule) |
-| SKILL.md 体量与反膨胀 | `skill-authoring` (rule, globs on `SKILL.md`) |
+| SKILL.md / rule 的准入体量，以及「该放 rule / skill / hook」 | `authoring` (rule, glob) |
+| 多行命令先写文件；PowerShell 的坑 | `shell-exec` (rule) |
 | 注释密度、WHY-only、commit message | `code-hygiene` (rule) |
 | review 的四段输出、严重度轴、vibe-coding 识别 | `code-review` |
 | 决策价值门判别法、验收判据阶梯、Phase 0、exp 文档章节模板 | `experiment-design` |
 | 大 feature 拆子任务、Goal-first、四阶段、设计文档 | `feature-planning` |
-| `task.md` schema、验收检查点、失败计数、跨会话交接 | `task-loop` |
+| `task.md` schema、验收检查点、失败计数、跨会话交接 | `task-state` |
+| 跨会话要保住的具体值：准入判据、覆盖语义、过期验证 | `agent-memory` |
 | SSH / 选节点 / detach / 存储 / 远端失败自修表 | `remote-exec` |
 
 **任务状态只有一个真相源：`task.md`。** 不建 `tasks.json`，不维护第二份 backlog。
 
 ## Maintenance Rules
 
-- **Writing/updating a `SKILL.md`: follow `.cursor/rules/skill-authoring.mdc`** (auto-attaches on `SKILL.md`). It owns the size budget and anti-bloat constraints; don't restate them here.
+- **Writing/updating a `SKILL.md`: follow `.cursor/rules/authoring.mdc`** (auto-attaches on `SKILL.md`). It owns the size budget and anti-bloat constraints; don't restate them here.
 - Keep each `SKILL.md` concise. Move long runbooks to `reference.md` and reusable commands to `scripts/`.
 - Prefer precise descriptions with explicit trigger phrases.
 - Auto-trigger only the four skills above. Everything else gets `disable-model-invocation: true`.

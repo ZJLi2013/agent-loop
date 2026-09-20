@@ -55,7 +55,7 @@ Docker image tag、ROCm 版本号不受影响。遇到表上没有的大陆型�
 - **提到他人仓库的产物里一律不放生成图**（这是上表「媒体」那条：代价由维护者承担）。
   需要图就用真实产出——trace、曲线、截图；结构图用 mermaid / ascii。
   自己的博客 / 公众号封面可以用生成图，约束见 `research-to-blog`。
-- 语态（第三人称、不 overclaim、直接陈述真值）归 `narrative-spine`。
+- 语态（第三人称、不 overclaim、直接陈述真值）归 `write-for-humans`。
 
 ## 边界
 

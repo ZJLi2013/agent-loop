@@ -10,9 +10,10 @@
 my_skills/
 ├── .cursor/
 │   ├── skills/                          # Cursor Agent Skills
-│   │   ├── feature-planning/        # 大 feature 拆子任务（自动）
-│   │   ├── experiment-design/       # 实验两道门 + 记录模板（自动）
-│   │   ├── task-loop/                   # task.md、验收检查点、交接（自动）
+│   │   ├── feature-planning/            # 大 feature 拆子任务（自动）
+│   │   ├── task-state/                   # task.md、验收检查点、交接（自动）
+│   │   ├── experiment-design/           # 实验两道门 + 记录模板（自动）
+│   │   ├── agent-memory/                # 跨会话保住的具体值（自动）
 │   │   ├── agent-heartbeat/             # 长任务心跳（自动）
 │   │   ├── remote-exec/                 # 远端 GPU 执行、存活、自修、存储
 │   │   ├── code-review/                 # PR/diff 评审的四段输出
@@ -33,8 +34,9 @@ my_skills/
 | skill | 启用方式 | 描述 |
 |-------|----------|------|
 | `feature-planning` | 自动触发 | 大 feature → 子任务 → 设计 → 实现+实验 → 回填 |
-| `task-loop` | 自动触发 | `task.md` schema、验收检查点（含失败去向）、失败计数、跨会话交接 |
+| `task-state` | 自动触发 | `task.md` schema、验收检查点（含失败去向）、失败计数、跨会话交接 |
 | `experiment-design` | 自动触发 | 决策价值门 + 验收判据阶梯 + 实验记录模板 |
+| `agent-memory` | 自动触发 | `.cursor/memory/facts.md`：跨会话要保住的具体值，就地覆盖、开工前验证 |
 | `agent-heartbeat` | 自动触发 | 长命令心跳，防止用户误判卡死 |
 | `remote-exec` | 显式调用 | SSH/认证、选节点、tmux detach、存储治理、远端失败自修表 |
 | `code-review` | 显式调用 | 审 PR/diff 的四段输出与 vibe-coding 识别；标准从被审 repo 取，取不到才回落 [P0-P4](https://github.com/zhaochenyang20/sglang-diffusion-routing/issues/32) |
@@ -47,12 +49,13 @@ my_skills/
 | rule | 管什么 |
 |-------|--------|
 | `agent-loop` | **循环的调度器**：定位当前在哪一格 → 点名去读哪个 skill；失败按类别自修，用尽才问人 |
-| `narrative-spine` | 一条能被复述的主线；不为解释而膨胀；直接陈述当前为真的内容（语态的唯一归属处） |
-| `reply-conclusion-first` | 对话回复：第一句即结论、只答被问到的对象、说「做不到」前先查 |
-| `experiment-budget-gate` | 什么先自修、什么才停下来问人（中止清单的唯一归属处）、预算、每轮报改变哪条命令 |
+| `write-for-humans` | **一切给人看的产出**（回复与文档共用）：结论先行、一条主线、不为解释而膨胀、只答被问到的对象、直接陈述真值、说「做不到」前先查 |
+| `when-to-stop` | 什么先自修、什么才停下来问人（**中止清单的唯一归属处**）、预算、每轮报改变哪条命令 |
 | `external-output-boundary` | 跨出仓库边界三道检查：AI 披露（取自 [Ghostty AI Policy](https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md)）、GPU 型号脱敏、去私料 |
 | `code-hygiene` | 注释跟邻码一致只写 WHY；commit message 跟仓库风格、陈述改完后的状态 |
-| `skill-authoring` | 写 `SKILL.md` 时的体量与内容约束（按 glob 挂载） |
+| `shell-exec` | 多行命令先写文件再执行；PowerShell 三个会静默失败的坑 |
+| `kiss` | 先想最简解法；方案超过 3 步就停下重想 |
+| `authoring` | 写 `SKILL.md` 或 `.mdc` 时的准入、体量、归属；**一条约束该放 rule / skill / hook 的判据**（按 glob 挂载） |
 
 ### 一个知识点只有一个归属处
 
@@ -82,15 +85,23 @@ description 在上下文、正文要被语义匹配命中才加载。**一个需
 
 ```text
 Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─┬─ pass ─► CLOSE ─┐
-         │        │          │                           │                │
-         │        │          │                           └─ fail ─► DIAGNOSE
-  feature-     task-loop  experiment-                                │
-   planning                design                         按类别自修，用尽才问人
-         │                                                            │
-         └──────────────── 下一个 task ◄──────────────────────────────┘
+         │        │          │          │                │                │
+         │        │          │          │                └─ fail ─► DIAGNOSE
+  feature-     task-state  experiment-  │                            │
+   planning                design       │              按类别自修，用尽才问人
+         │                              │                            │
+         └──────────────── 下一个 task ◄─┴────────────────────────────┘
                                   │
                          全部通过 ─► DONE（报告并停）
+
+         .cursor/memory/facts.md  ← 要用一个具体值就读它，第二次用到就写回
+              （横穿每一格，不是其中一格）
 ```
+
+**`agent-memory` 不是环上的格子。** 关键规则是「**文件是真相源，对话是缓存**」——要把一个值
+放进命令时读文件，而不是凭印象。这样就不需要察觉自己有没有被压缩：开了一天没关的窗口里根本
+没有「开工」这个时刻可以挂重读，而上下文被裁掉时事实是静默消失的。`agent-heartbeat` 同样横穿
+整个环，它挂在任何预计超过 60 秒的命令上。
 
 循环内每一格的触发条件都是机械可判的。`remote-exec`、`code-review`、`upstream-contribute`、
 `research-to-blog`、`code-to-kernel-diagram` **都在循环之外**，只有你明确要了才走——
@@ -99,21 +110,52 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 失败分流是闭环的关键，四类去向：环境/瞬时错误自己修，同类最多两次并计入失败计数（跑远端 GPU
 时具体修法见 `remote-exec` 的失败处置表）；契约不匹配走 `experiment-design` 的层 0 复现样例；
 **假设被推翻算结果不算故障**，回填后重排优先级继续；判据失效就沿验收判据阶梯往任务指标退。
-四类都用尽重试上限，才查 `experiment-budget-gate` 的中止清单——到这一步才轮到停下问人。
+四类都用尽重试上限，才查 `when-to-stop` 的中止清单——到这一步才轮到停下问人。
 
-`task.md` 是任务状态的唯一真相源，schema 与验收检查点的写法归 `task-loop`。
+`task.md` 是任务状态的唯一真相源，schema 与验收检查点的写法归 `task-state`。
 
-### 闭环还缺的两块（TODO）
+### memory：工作项目的 `.cursor/memory/` + 一个强制注入的 hook
 
-**一、memory：跨会话保不住具体事实。** 跑久了 agent 会忘掉用的是哪个远端节点、哪个容器、
-哪个 checkpoint 路径。交接笔记是**按时间追加**的，第 1 天写下的节点名到第 3 天已经被十条记录
-埋掉；`task.md` 里也只有任务行，没有放常量的地方。缺的是一个**就地覆盖**（而非追加）的事实块，
-每轮开始必读、任何新确定的常量立刻写进去。
+**记忆属于被开发的那个项目，本库只发模板与 hook。** 在工作项目下建四个文件：
+`INDEX.md`（目录，常驻）/ `facts.md`（覆盖）/ `episodes.md`（跑过什么、被推翻了什么、
+排除了什么）/ `lessons.md`（上限 15 条，`[x3]` 晋升为规则）。procedural memory 就是
+`.cursor/skills/` 本身，不另建索引。模板在
+[`agent-memory/templates/`](.cursor/skills/agent-memory/templates/)。
 
-**二、VERIFY：没人问「这个通过是真的吗」。** 现在 EVALUATE 只判断检查点过没过。
-测试通过可能是因为它被 skip 了，指标变好可能是因为 baseline 自己坏了，断言可能压根没执行到。
-假通过的代价比普通失败高——task 被标 `✅`，循环继续往前走，错误在几个 task 之后才浮出来。
-可能的补法：在 pass 分支加一道 VERIFY，要求用检查点的**实际输出**而不是退出码来判定。
+**检索不由 agent 决定。** `postToolUse` 是 Cursor 唯一能返回 `additional_context` 的 hook 事件，
+挂上 `Read` matcher 之后，**读 `task.md` 会无条件注入索引 + 词面命中的 0~5 条**。
+写成规则的版本仍然是「让 LLM 判断自己不知道什么」，而那正是不可靠的地方。
+无命中时会明说库存条数——索引坏了和确实没做过必须可区分。
+
+写入挂在**转换**上（task 关闭 / 假设被推翻 / 方案被否决 / 被挡住 / 自修成功 / 值变了 / pivot），
+不挂在「我发现了一个事实」上——后者是判断题，要先意识到才触发。
+
+### 具体的值：`facts.md`
+
+跑久了 agent 会忘掉用的是哪个远端节点、哪个容器、哪个 checkpoint 路径。**交接笔记救不了
+这个**——它按时间追加，第 1 天写下的节点名到第 3 天已经被十条记录埋掉。
+
+解法是一份**就地覆盖、只留当前值**的 `facts.md`。准入判据两条同时成立：后面每轮都要用，
+且重查一次要花条命令。写入时机挂在「一个值第二次被用到」这个动作上，不依赖想起来。
+新 session 开工先读它并验证要用到的那几条——**过期的事实比缺失的更坏，它不会报错**，
+命令照常执行，只是打在了错的机器上。
+
+三份跨会话产物的区别在**追加还是覆盖**：`facts.md` 覆盖（当前值），`task.md` 改状态列，
+`.cursor/progress.md` 追加（这一轮发生了什么）。具体的值只写进第三份，三天后就被埋掉了。
+
+这和 [Anthropic 给 long-horizon agent 的方案](https://www.anthropic.com/news/context-management)
+是同一个形状：memory tool 展开就是一个 `/memories` 目录加几个文件操作，没有向量库。
+本库同样不做检索——每个任务的常量大约十行，精确查找就够，
+把 key-value 塞进语义检索反而会取回相邻的那一条。
+
+判据与扩展方式见 [`agent-memory`](.cursor/skills/agent-memory/SKILL.md)。
+
+### 还缺：VERIFY（TODO）
+
+**没人问「这个通过是真的吗」。** 现在 EVALUATE 只判断检查点过没过。测试通过可能是因为它被
+skip 了，指标变好可能是因为 baseline 自己坏了，断言可能压根没执行到。假通过的代价比普通失败
+高——task 被标 `✅`，循环继续往前走，错误在几个 task 之后才浮出来。可能的补法：在 pass 分支
+加一道 VERIFY，要求用检查点的**实际输出**而不是退出码来判定。
 
 **防漂移靠不变量,不靠提醒。** `task.md` 里有且只有一行 `🔬 doing`,一次改动属于它的唯一判据是
 「会让那行的验收检查点从不通过变成通过吗」;不属于就先建新行再动手,`🚧 blocked` 的个数就是
@@ -122,97 +164,32 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 
 ---
 
-## 安装到 Cursor 全局目录
+## 同步到 Cursor 全局目录
 
-Cursor 只读取全局目录：Skills 在 `~/.cursor/skills-cursor/`，Rules 在 `~/.cursor/rules/`。
-本库整个链接过去，改完文件立即生效，不需要重装。
-
-链接方式对两者不同，原因是全局 `skills-cursor/` 里还混着 Cursor 自带的 skill，
-不能整目录替换：
-
-| 目标 | 方式 |
-|---|---|
-| `rules/` | **整目录 junction / 软链接**。`git pull` 替换目录内的文件不会断开它 |
-| `skills-cursor/` | **逐个 skill 建 junction**。加删 skill 后要重跑安装脚本 |
-
-> **不要用硬链接（`mklink /H`）链 rules。** 硬链接绑的是文件本身，`git pull` / `git checkout`
-> 是「删掉重写」，一拉就断，之后仓库改动再也不会反映到 Cursor——而且没有任何报错。
-
-### Windows（PowerShell，无需管理员）
+Cursor 只读全局目录：Skills 在 `~/.cursor/skills-cursor/`，Rules 在 `~/.cursor/rules/`。
+本库链接过去之后，改文件立即生效。
 
 ```powershell
 git clone https://github.com/ZJLi2013/my_skills.git   # 如未 clone
 cd my_skills
-
-# 1. Rules —— 整目录 junction
-$rulesDest = "$env:USERPROFILE\.cursor\rules"
-if (Test-Path $rulesDest) {
-    if (-not (Get-Item $rulesDest).LinkType) {
-        Move-Item $rulesDest "$rulesDest-backup-$(Get-Date -f yyyyMMdd)"   # 保住本地独有的 rule
-    } else { Remove-Item $rulesDest -Force }
-}
-cmd /c "mklink /J `"$rulesDest`" `"$PWD\.cursor\rules`""
-
-# 2. Skills —— 先清失效链接，再补新增的（幂等，可反复跑）
-$skillsDest = "$env:USERPROFILE\.cursor\skills-cursor"
-Get-ChildItem $skillsDest -Force | Where-Object { $_.LinkType -eq 'Junction' -and -not (Test-Path ($_.Target -join '')) } |
-    ForEach-Object { cmd /c "rmdir `"$($_.FullName)`""; Write-Host "Pruned: $($_.Name)" }
-Get-ChildItem "$PWD\.cursor\skills" -Directory | ForEach-Object {
-    $t = Join-Path $skillsDest $_.Name
-    if (-not (Test-Path $t)) { cmd /c "mklink /J `"$t`" `"$($_.FullName)`""; Write-Host "Linked: $($_.Name)" }
-}
-
-# 3. 私有配置
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.cursor\configs" | Out-Null
-cmd /c "mklink /H `"$env:USERPROFILE\.cursor\configs\node_inventory.yaml`" `"$PWD\.cursor\configs\node_inventory.yaml`""
+powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-### macOS / Linux（Terminal）
+**每次增删或重命名 skill 之后重跑一次**——脚本幂等，会清掉失效的 junction、补上新增的，
+最后打印一遍链接类型供核对。跑完重启 Cursor，所有项目自动获得这些 Skills 与 Rules。
 
-```bash
-git clone https://github.com/ZJLi2013/my_skills.git   # 如未 clone
-cd my_skills
+### 为什么是 junction 而不是硬链接
 
-# 1. Rules —— 整目录软链接
-RULES_DEST="$HOME/.cursor/rules"
-if [ -e "$RULES_DEST" ] && [ ! -L "$RULES_DEST" ]; then
-    mv "$RULES_DEST" "$RULES_DEST-backup-$(date +%Y%m%d)"
-fi
-ln -sfn "$PWD/.cursor/rules" "$RULES_DEST"
+| 目标 | 方式 | 原因 |
+|---|---|---|
+| `rules/` | 整目录 junction | 整个目录都归本库，可以替换 |
+| `skills-cursor/` | 逐个 skill 建 junction | 该目录里混着 Cursor 自带的 skill，不能整目录替换 |
 
-# 2. Skills —— 先清失效链接，再补新增的
-SKILLS_DEST="$HOME/.cursor/skills-cursor"
-mkdir -p "$SKILLS_DEST"
-find "$SKILLS_DEST" -maxdepth 1 -type l ! -exec test -e {} \; -print -delete
-for d in "$PWD/.cursor/skills"/*/; do
-    t="$SKILLS_DEST/$(basename "$d")"
-    [ -e "$t" ] || { ln -s "$d" "$t"; echo "Linked: $(basename "$d")"; }
-done
+> **不要用硬链接（`mklink /H`）链 rules。** 硬链接绑的是文件本身，而 `git pull` /
+> `git checkout` 是「删掉重写」，一拉就断——之后仓库改动再也不会反映到 Cursor，
+> **而且不会有任何报错**：文件都还在，只是变成了各自独立的副本。
 
-# 3. 私有配置
-mkdir -p "$HOME/.cursor/configs"
-ln -sf "$PWD/.cursor/configs/node_inventory.yaml" "$HOME/.cursor/configs/node_inventory.yaml"
-```
-
-### 验证安装结果
-
-**要验的是链接类型，不是文件在不在**——漂移时文件都在，只是变成了各自独立的副本。
-
-```powershell
-# Windows：rules 必须是 Junction；skills 不能有 target-exists=False
-(Get-Item "$env:USERPROFILE\.cursor\rules").LinkType
-Get-ChildItem "$env:USERPROFILE\.cursor\skills-cursor" -Force |
-    Where-Object { $_.LinkType -eq 'Junction' } |
-    ForEach-Object { "{0,-30} {1}" -f $_.Name, (Test-Path ($_.Target -join '')) }
-```
-
-```bash
-# macOS / Linux：rules 必须带 -> 指向 my_skills
-ls -ld ~/.cursor/rules
-find ~/.cursor/skills-cursor -maxdepth 1 -type l ! -exec test -e {} \; -print   # 应无输出
-```
-
-安装后 Cursor 重启即可，**所有项目无需额外配置**，Agent 自动获得这些 Skills 与 Rules。
+macOS / Linux 把 junction 换成 `ln -s` 即可，逻辑相同；本库目前只在 Windows 上用，没有备 .sh。
 
 ---
 
@@ -264,7 +241,7 @@ git pull origin main   # 获取最新版
 
 ## 参考资源
 
-- [skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — Anthropic 官方：怎么写 skill、progressive disclosure、eval 循环、description 触发优化。本库在 Cursor 里写 skill 走内置 `create-skill`；体量约束在 [`.cursor/rules/skill-authoring.mdc`](.cursor/rules/skill-authoring.mdc)。
+- [skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md) — Anthropic 官方：怎么写 skill、progressive disclosure、eval 循环、description 触发优化。本库在 Cursor 里写 skill 走内置 `create-skill`；体量约束在 [`.cursor/rules/authoring.mdc`](.cursor/rules/authoring.mdc)。
 - [claude code skills (官方仓库)](https://github.com/anthropics/skills)
 - [awesome-claude-skills](https://github.com/ComposioHQ/awesome-claude-skills)
 - [cowork-skills](https://github.com/ZhangHanDong/cowork-skills)

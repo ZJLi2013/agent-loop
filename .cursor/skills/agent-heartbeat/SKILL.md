@@ -11,7 +11,7 @@ description: >-
 执行可能超过 60 秒的操作时**必须**心跳，让用户知道你没卡死。
 
 **边界**：本 skill 只管命令执行期间的状态提示；跨会话规划与 handoff 归
-`task-loop`，实验设计与结果归 `experiment-design`，
+`task-state`，实验设计与结果归 `experiment-design`，
 远端执行与失败自修归 `remote-exec`。
 
 ## 协议
