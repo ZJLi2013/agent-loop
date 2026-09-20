@@ -24,3 +24,57 @@
 
 TODO 
 
+
+
+
+### GPT推荐设计
+
+__Layer 1 — Agent__
+
+think
+plan
+execute
+diagnose
+replan
+
+__Layer 2 — Harness__
+
+run
+timeout
+retry
+rollback
+checkpoint
+persist state
+capture logs
+resource limits
+
+
+__Layer 3 — Verifier__
+
+Is this actually done?
+Did the experiment answer the question?
+Did metric improve?
+Did tests pass?
+Is evidence sufficient?
+
+
+Verifier 必须独立于 Agent 的“我觉得完成了"
+
+
+
+### 关键设计: Fresh Context 
+
+
+
+
+
+
+
+
+
+
+
+## 参考
+
+[ralph](https://github.com/chrismdp/ralph)
+

@@ -1,13 +1,17 @@
-# my_skills
+# agent-loop
 
-个人 Agent Skills 库，面向 **Cursor** 的可复用工作流集合。部分高风险/长任务 Skills 默认不自动启用，需显式点名调用。
+面向 **Cursor** 的 agent 控制环：**每一步判断该继续、该换一条、还是该停，并且默认继续。**
+
+主体是 7 条常驻 rule 与 1 个 hook 组成的控制层——它决定失败之后自修还是上报、跑偏时怎么拉回、
+无人值守时把「被挡住」从「等人」改成「跳过做下一条」。skills 是这个环路由过去的 playbook，
+不是产品本身。
 
 ---
 
 ## 目录结构
 
 ```
-my_skills/
+agent-loop/
 ├── .cursor/
 │   ├── skills/                          # Cursor Agent Skills
 │   │   ├── feature-planning/            # 大 feature 拆子任务（自动）
@@ -170,8 +174,8 @@ Cursor 只读全局目录：Skills 在 `~/.cursor/skills-cursor/`，Rules 在 `~
 本库链接过去之后，改文件立即生效。
 
 ```powershell
-git clone https://github.com/ZJLi2013/my_skills.git   # 如未 clone
-cd my_skills
+git clone https://github.com/ZJLi2013/agent-loop.git   # 如未 clone
+cd agent-loop
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
@@ -230,7 +234,7 @@ cp .cursor/configs/node_inventory.yaml.example .cursor/configs/node_inventory.ya
 
 ## 更新 Skills
 
-直接在 `my_skills` 仓库修改 SKILL.md，保存后立即生效（Junction/软链接同步）：
+直接在 `agent-loop` 仓库修改 SKILL.md，保存后立即生效（Junction/软链接同步）：
 
 ```bash
 git pull origin main   # 获取最新版

@@ -106,7 +106,7 @@
 
 四个文件 + 一个 hook，procedural 直接复用 `.cursor/skills/`。
 
-**记忆属于工作项目，不属于本库。** my_skills 只发模板与 hook，`.cursor/memory/`
+**记忆属于工作项目，不属于本库。** agent-loop 只发模板与 hook，`.cursor/memory/`
 在每个项目里各有一份——脚本按 cwd 解析，所以它在哪个项目跑就读那个项目的：
 
 ```text
@@ -116,7 +116,7 @@
   episodes.md    # 追加：experiments / disproved / rejected
   lessons.md     # 追加，上限 15 条，[x1]/[x2]/[x3] 晋升
 
-my_skills/.cursor/
+agent-loop/.cursor/
   skills/agent-memory/templates/   ← 四个文件的模板
   hooks/memory-lookup.py           ← 机制，装到 ~/.cursor/hooks/ 全局生效
 ```
