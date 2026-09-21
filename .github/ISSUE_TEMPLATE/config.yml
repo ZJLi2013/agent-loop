@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and design discussion
+    url: https://github.com/ZJLi2013/agent-loop/discussions
+    about: Ask usage questions or discuss an RFC before filing implementation work.
+  - name: Private security report
+    url: https://github.com/ZJLi2013/agent-loop/security/advisories/new
+    about: Report vulnerabilities without exposing details publicly.
+

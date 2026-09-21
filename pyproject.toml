@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cursor-agent-loop"
+version = "0.1.0"
+description = "A reviewed, evidence-driven agent control loop for Cursor"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "ZJLi2013"}]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.urls]
+Homepage = "https://github.com/ZJLi2013/agent-loop"
+Issues = "https://github.com/ZJLi2013/agent-loop/issues"
+
+[project.scripts]
+agent-loop-harness = "harness.run:main"
+
+[tool.setuptools.packages.find]
+include = ["harness*"]
+

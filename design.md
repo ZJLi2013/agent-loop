@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 2
+Plan Revision: 3
 Plan Review: approved
 
 ## Goal
@@ -157,6 +157,15 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 
 每次扩展必须同时删除被替代路径。contract test 测 transition 与 guard，不匹配说明文案。
 
+## Public repository contract
+
+- Apache-2.0 是代码、rules、skills 与文档的发行许可证；
+- `CONTRIBUTING.md` 与 `AI_POLICY.md` 定义贡献边界，Kernel 变更先走 Issue / RFC；
+- `.cursor/task.md`、`.cursor/memory/`、`.harness/` 是 maintainer runtime，不进入发行内容；
+- GitHub Issues / Milestones 是公开 backlog，`ROADMAP.md` 只写 Now / Next / Later；
+- `SECURITY.md` 与 GitHub Private Vulnerability Reporting 承接 hook、命令执行和日志泄漏问题；
+- 支持范围、breaking schema 和迁移方式由 README / CHANGELOG / SemVer 对外声明。
+
 ## Repository target
 
 ```text
@@ -186,6 +195,8 @@ agent-loop/
 - README 只保留安装、最短使用路径、边界与文档入口。
 - plan document 统一 Goal / 当前结论 / 下一步决策 / Experiment Log，详细实验只拆 linked sub-exp；
 - Goal Review 由 action / elapsed / failure / stale / preCompact 事件触发，复用 PAUSED 与 revision gate。
+- public baseline 提供 Apache-2.0、CI、贡献 / 安全 / AI policy、Issue / PR 模板与安全卸载；
+  maintainer runtime state 不再进入发行内容。
 
 本次重构后，`core.py` 从 767 个非空行降到 467，常驻 loop rule 从 82 降到 48，README 从
 大约 150 个物理行降到约 80；删除的是重复 owner 和解释路径，不是判据。

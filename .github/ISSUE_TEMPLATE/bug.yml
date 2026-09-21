@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible agent-loop defect
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, private prompts, transcripts, hostnames, and unpublished data.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+  - type: input
+    attributes:
+      label: Commit or release
+      placeholder: "1e7da88 or v0.1.0"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Environment
+      description: OS, Cursor version, Python version, and shell
+      placeholder: "Windows 11; Cursor 3.x; Python 3.13; PowerShell 5.1"
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Layer
+      options:
+        - Installer
+        - Kernel / Harness
+        - Policy / Skill
+        - Cursor hook / Adapter
+        - Documentation
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Minimal steps, command, and sanitized input
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected boundary
+      description: What should have continued, paused, verified, or stopped?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual result and evidence
+      description: Sanitized output, exit code, and relevant state fields
+    validations:
+      required: true
+

@@ -1,0 +1,47 @@
+name: Feature or RFC
+description: Propose a problem to solve before proposing code
+title: "[proposal] "
+labels: ["proposal"]
+body:
+  - type: textarea
+    attributes:
+      label: Problem
+      description: What real workflow fails today? Include evidence, not only a preferred solution.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Proposed layer
+      options:
+        - Config / Profile
+        - Policy / Skill
+        - Adapter / Hook
+        - Kernel state, event, or guard
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Why the current owner is insufficient
+      description: Point to the current owner in design.md and explain the missing boundary.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Acceptance evidence
+      description: What executable or observable result would prove this solved?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Compatibility and migration
+      description: Affected CLI, hook, rule, skill, schema, or persisted state
+  - type: checkboxes
+    attributes:
+      label: Scope
+      options:
+        - label: I considered solving this with config or an existing Policy before changing the Kernel.
+          required: true
+        - label: I will remove the path this proposal replaces.
+          required: true
+

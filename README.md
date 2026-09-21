@@ -1,5 +1,8 @@
 # agent-loop
 
+[![tests](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml/badge.svg)](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 面向 Cursor 的 agent 控制环：**默认继续，但不允许未 review 的计划、旧 revision 或未验证证据继续驱动任务。**
 
 ```text
@@ -16,6 +19,9 @@ Goal → Plan → Human Review → Run → Verify → Done
 
 完整边界与扩展规则见 [`design.md`](design.md)。
 
+> 安装会在 user-level Cursor 配置中创建 junction，并让本地 Python hook 在所有 workspace 运行。
+> 请先审阅并固定可信 commit；完整边界见 [`SECURITY.md`](SECURITY.md)。
+
 ## 安装
 
 ```powershell
@@ -26,6 +32,21 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 
 脚本幂等，将 rules、skills、Harness 与 hooks 链接到 `~/.cursor/`。完成后重启 Cursor；
 仓库移动、skill 增删改名后重跑。
+
+卸载只移除 agent-loop 自己的 links 与 hook entries，不删除备份：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
+```
+
+## 支持范围
+
+| Component | Status |
+|---|---|
+| Windows + PowerShell 5.1 | Installer supported |
+| Python 3.11 / 3.13 | CI tested |
+| Harness on Ubuntu | CI tested |
+| macOS/Linux installer | Roadmap；当前需手动 symlink |
 
 ## 新项目
 
@@ -68,10 +89,13 @@ python $env:USERPROFILE\.cursor\harness\run.py resume
 默认每 3 次 action、60 分钟、失败或 context compact 后触发 Goal Review；用
 `goal-review --decision continue|replan|stop --evidence "<结论>"` 处理。
 
+最小可运行样例见 [`examples/minimal-project/`](examples/minimal-project/)。
+
 ## 边界
 
 - Harness 只硬控显式交给 runner 的命令；其它 Cursor tool call 仍由 Cursor 管。
 - `task.md` 是 backlog 唯一真相源；`.harness/` 只存有界 runtime evidence。
+- `.cursor/task.md` 与 `.cursor/memory/` 是项目本地 runtime，不属于发行内容；仓库只提供 templates。
 - checkpoint / rollback 复用 git，不自动覆盖用户工作树。
 - 脱离 Cursor、由外部进程掌握 agent 生命周期时，优先评估
   [BOUND](https://github.com/Danny-de-bree/bound)。
@@ -85,3 +109,10 @@ python $env:USERPROFILE\.cursor\harness\run.py resume
 | [`study/planning-contract.md`](study/planning-contract.md) | 渐进计划、review 与人工纠偏 |
 | [`study/memory.md`](study/memory.md) | facts / episodes / lessons 的检索设计 |
 | [`.cursor/skills/README.md`](.cursor/skills/README.md) | Policy 索引与唯一 owner |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献流程、新 feature 准入与测试 |
+| [`AI_POLICY.md`](AI_POLICY.md) | AI-assisted contribution 披露 |
+| [`SECURITY.md`](SECURITY.md) | 安全边界与私密报告渠道 |
+| [`CHANGELOG.md`](CHANGELOG.md) | 用户可感知变化 |
+| [`ROADMAP.md`](ROADMAP.md) | Now / Next / Later |
+
+Apache-2.0 licensed. Security issues must use private vulnerability reporting, not public Issues.

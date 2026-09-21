@@ -22,6 +22,11 @@ input-list.txt
 # Per-project Harness runtime
 .harness/
 
+# Per-project agent runtime (templates live under skills/agent-memory/)
+.cursor/task.md
+.cursor/progress.md
+.cursor/memory/
+
 # Python
 __pycache__/
 *.py[cod]

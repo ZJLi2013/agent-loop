@@ -16,6 +16,7 @@
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.cursor" | Out-Null
 
 # --- Rules：整目录 junction ---
 $rulesDest = "$env:USERPROFILE\.cursor\rules"
@@ -125,7 +126,7 @@ if (Test-Path $hooksSrc) {
             preCompact = @($goalRefresh)
         } } |
             ConvertTo-Json -Depth 10 | Set-Content $hooksJson -Encoding utf8
-        Write-Host "Wrote hooks.json with memory and Harness hooks" -ForegroundColor Green
+        Write-Host "Wrote hooks.json with memory, Harness, and Goal Review hooks" -ForegroundColor Green
     }
 }
 
