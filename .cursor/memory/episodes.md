@@ -10,6 +10,12 @@
 - [2026-09-21] rules 源目录从 `.cursor/rules/` 移到仓库根 `rules/`，并删掉项目级 `.cursor/hooks.json`。
   Cursor 把项目级与 user 级**两层都加载**，而 `~/.cursor/rules` 是指向本仓库的 junction，
   所以在本仓库工作时 7 条常驻 rule 与 memory 注入各出现两遍（只影响本仓库，其它项目只有 user 级一份）
+- [2026-09-21] 最小 Harness 落地：stdlib runner 硬控 timeout / attempt / wall budget，执行证据有界落盘；
+  锁定 verifier + 工作树 fingerprint 决定是否放行 Cursor stop，未验证时由 `followup_message` 续跑。
+  边界：只控制显式 runner 命令；完整 tool 强制需外部 driver
+- [2026-09-21] planning contract 落地：feature Goal 先于 exp，新 task 先过 `📝 proposed` review；
+  一个 task 最多跨一个未验证假设，只展开最近 1–2 项；human 纠偏先改 feature Goal，再
+  RECONCILE `task.md`
 
 ## disproved
 - [2026-09-20] 「把 P0–P4 放进全局 skill 就能影响 PR review」→ **不成立**。Bugbot 只读 `.cursor/BUGBOT.md` 与 dashboard 规则，不读 skills，也不读 `.cursor/rules/*.mdc`。要在 PR 阶段生效只能写那两处

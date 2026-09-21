@@ -25,6 +25,7 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 
 | P | id | task | 验收检查点 | 状态 | 失败 |
 |---|---|---|---|---|---|
+| P0 | t7 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 📝 proposed | 0 |
 | P0 | t3 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 🚧 blocked t6 | 1 |
 | P0 | t6 | 修 Y 的 schema 漂移 | `validate.py` 退出码 0 | 🔬 doing | 0 |
 | P0 | t4 | 量 Y 的端到端延迟 | p50 ≤ 基线 1.1× | ⬜ todo | 0 |
@@ -36,12 +37,13 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 
 **一行需要换行才读得完，就是细节没下沉。** `task.md` 每轮都被完整读一遍。
 
-状态用 `⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。`dropped` 要在行尾链接
-说明为什么放弃——被否决的候选是长期决定，删掉它下次还会有人重提。
+状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。
+`proposed` 表示还在 Human Review Gate，批准前不执行；`dropped` 要在行尾链接说明为什么放弃——
+被否决的候选是长期决定，删掉它下次还会有人重提。
 
-**`🔬 doing` 有且只有一行。** 跑到一半要去改别的东西时，先把 `🔬` 挪过去（原行转 `🚧`
-并记下挡它的 id），文件才不会和实际在做的事脱节。判据与处置见 `agent-loop` 的「漂移」段；
-**`🚧` 的个数就是嵌套深度，≥ 2 停下问人。**
+等待 review 时允许「若干 `📝 proposed` + 零行 doing」；除此之外，**`🔬 doing` 有且只有一行。**
+批准时最高优先级 proposed 转 doing，其余转 todo。跑到一半要改别的东西时，先挪 `🔬`
+（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下问人。**
 
 **具体的值不写进 `task.md`。** 远端节点、容器名、checkpoint 路径这类跨会话还要用的常量，
 归 `agent-memory` 的 `.cursor/memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
@@ -57,6 +59,10 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-design` 的「验收判据阶梯」。
 3. **失败时的去向是已知的**——不必写在表里，但要能按 `agent-loop` 的失败分流表归类。
    归不进任何一类的失败，说明这个 task 拆得不对，回 `feature-planning` 重拆。
+
+再做一步长检查：**一个 task 最多跨越一个未验证假设。** 如果通过要同时赌两件事，或失败后
+无法判断哪条假设错了，就把 inspection / probe 拆成前一项。只把最近 1–2 个增量项写进表，
+远期路线留在 feature 文档；每项变绿后再生成下一项。
 
 写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。**
 
@@ -97,6 +103,13 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 ```
 
 **下一步要能直接粘贴执行。** 写「继续调试 Y」等于没写——接手的 agent 会重新探索一遍。
+
+## Human 纠偏后的状态更新
+
+user 纠正 Goal、scope 或优先级时，旧 task 不能继续充当真相源。先更新 feature Goal，再一次性
+RECONCILE 本表：当前行及剩余行逐项保留、blocked 或 dropped；按新 Goal 写最近 1–2 个 proposed；
+review 通过后恢复唯一 doing；最后覆盖交接笔记的下一条命令。不能静默删除旧行，也不能先继续执行
+再补状态。
 
 长跑还要写一份 runbook（setup / smoke / 全量 / 同步 / 清理的确切命令），
 让新 session 不必重新发现环境怎么搭。

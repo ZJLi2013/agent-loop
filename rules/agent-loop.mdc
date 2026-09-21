@@ -22,12 +22,16 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 
 | 当前在做什么 | 读 |
 |---|---|
-| user 给了新目标，还没有 `task.md` | `feature-planning` — 拆子任务、排 P0/P1/P2 |
+| user 给了新目标，或选中 task 缺少 feature Goal | `feature-planning` — 先定义意图与渐进设计，再拆 task |
+| `task.md` 有 `📝 proposed`，等待 review / approve | `feature-planning` — Human Review Gate |
 | `task.md` 有未完成项，要挑下一个 | `task-state` — 选取规则与验收检查点的写法 |
 | 要跑一轮实验或验证 | `experiment-design` — 先写假设/预期/判据，再跑 |
 | 单条命令预计超过 60 秒 | `agent-heartbeat` |
 
 `task.md` 是任务状态的唯一真相源。**不要另建 `tasks.json` 或第二份 backlog。**
+feature 开发进入 `experiment-design` 前，选中 task 必须已从 `📝 proposed` 获批，且链接的 feature
+文档已有 Goal；缺任一项就回 `feature-planning`。只有 task 明确标为 standalone diagnostic 时，
+才允许只写 exp 文档。
 
 具体的值（节点名、容器名、checkpoint 路径、分支、image tag）归 `.cursor/memory/facts.md`，
 就地覆盖，准入判据见 `agent-memory`：
@@ -38,6 +42,10 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 - 新 session 开工、以及遇到环境类失败时，验证接下来要用到的那几条。
   **过期的事实比缺失的更坏——它不会报错**，命令照常执行，只是打在了错的机器上。
 
+项目根目录存在启用中的 `.harness/state.json` 时，耗时或会改变验收证据的命令经
+`~/.cursor/harness/run.py exec` 执行；结束前运行锁定的 `verify`。stop hook 会拒绝未验证、
+验证后工作树又变化、或预算状态不清楚的完成声明。
+
 ## 岔出：user 明确要了才走
 
 **`task.md` 清空即 DONE——报告结果然后停**，不要因为「task 做完了」就自动往下走。
@@ -46,6 +54,7 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 
 ## 漂移：只有一行在 doing，改动必须让它的检查点变绿
 
+除等待 Human Review 的计划可以是「若干 `📝 proposed` + 零行 doing」外，
 **`task.md` 里有且只有一行是 `🔬 doing`。** 多于一行或一行没有，都说明状态已和实际脱节，
 先修文件再继续。跑到一半发现设计有问题时，是否顺着改下去，判据是：
 
@@ -62,6 +71,17 @@ Goal ─► PLAN ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE ─�
 **blocked 链长度 ≥ 2 就停下问人**——套了两层说明最初的拆解不对。链长直接数 `🚧` 的个数，
 不靠回忆。这个判断至少做两次：**改第一个文件之前**，以及每次因失败回写 `task.md` 时。
 
+## Human 纠偏：先改意图，再改计划
+
+user 新消息纠正 Goal、scope 或优先级时，立即覆盖旧计划，**下一次 tool call 前**完成 RECONCILE：
+
+1. 暂停当前动作，先更新 feature 文档的 Goal / 边界；
+2. 当前与剩余 task 逐项判定：仍服务新 Goal 就保留，否则标 `❌ dropped` 或 `🚧 blocked` 并写原因；
+3. 重排 `task.md`，恢复 review 阶段或选出新的唯一 `🔬 doing`；
+4. 把下一条可执行命令写进交接记录，再继续。
+
+只在对话里回复「明白」而不改 feature / `task.md`，等于纠偏没有进入 loop。
+
 ## 无人值守模式
 
 user 说**「无人看守 / 我下班了 / overnight / 你自己跑完 / 明早看结果」**时进入，直到 user 再次说话。
@@ -69,6 +89,7 @@ user 说**「无人看守 / 我下班了 / overnight / 你自己跑完 / 明早�
 
 | 平时 | 无人值守时 |
 |---|---|
+| 新计划停在 Human Review Gate | 按 KISS 自批准，feature 标 `Review: ⚠️ unreviewed` |
 | 拿不准就 `AskQuestion` | **不问**。选最推荐的那个继续，把候选与放弃项记进文档 |
 | 有显著权衡的选型停下等 user | 按 KISS 选，标 `⚠️ 待确认` 留给早上 |
 | 被挡住就停下等人 | **跳过这条 task 标 `🚧`，去做下一条**——真停下来等，一整夜就没了 |

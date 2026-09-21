@@ -27,18 +27,29 @@ description: >-
 - 在 task.md 的待办项里挂上对应 `featureN` 与 `partN-exp` 链接。
 - 若项目暂时只需要其中一两个文档（如纯重构无实验），按需裁剪，但保留「排优先级 → 设计 → 回填」主干。
 
-## 四阶段循环
+## 循环
 
 ```text
-Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──► Phase 4 Close ──┐
-   ▲                                                                              │
-   └──────────────────────────── 拆解下一个子任务 ◄──────────────────────────────┘
+Plan ─► Human Review Gate ─► Design ─► Build+Experiment ─► Close ─┐
+  ▲                                                               │
+  └──────────── evidence 驱动地拆下一个增量 task ◄────────────────┘
 ```
 
 ### Phase 1 — Plan（排优先级）
-- 与 user 一起把大 feature 拆成子任务，写进 task.md，按「杠杆高 / 风险低」排 P0/P1/P2。
-- agent 主动给出推荐排序与理由；**首次拆解时优先级和 scope 由 user 拍板**（这是主要的 human-in-the-loop 点）。队列排好之后按「持续模式」自主取，不必每轮回来问。
-- 输出：task.md 有清晰的下一个子任务 + 现状基线。
+- **先写 feature 文档的 Goal / 边界，再从它拆 task**；不能先列实现步骤再反推 Goal。
+- task 一次只跨越**一个未验证假设**，且失败后能判断是哪条假设错了；否则先拆 probe / inspection。
+- 只把最近 1–2 个增量 task 写进 `task.md` 并给可执行检查点；远期路线留在 feature 文档作候选，
+  不提前写死。每项通过后用新 evidence 再决定下一项。
+- 新拆的 task 状态是 `📝 proposed`，此时允许零行 `🔬 doing`。
+
+### Phase 1.5 — Human Review Gate
+
+- 正常交互模式：给 user 看 feature Goal、边界、最近 1–2 个 proposed task 与排序理由；
+  user 可 `approve / revise / continue automatically`。批准前不进实验、不改实现。
+- user 明确要求直接执行时跳过等待；无人值守时按 KISS 自批准，并在 feature 文档标
+  `Review: ⚠️ unreviewed` 留待确认。
+- 批准后，最高优先级行转 `🔬 doing`，其余转 `⬜ todo`。review 改了 Goal / scope 时，先改
+  feature 文档，再重新生成 proposed task，不能在旧 task 上局部打补丁。
 
 ### Phase 2 — Design（子任务设计文档）
 - 取最高优先级子任务，写 `featureN_<slug>.md`：**开头两节固定为 `Goal` 和 `结论`**，其后 `Design / 影响范围 / Tests / 边界`。
@@ -48,6 +59,7 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 - **这两节之后再定义系统，不要一上来就贴实验**：用一节「数据流 / Pipeline」把这个 feature 的实际路径串清楚（一句话定义 + 分步表：步骤/做什么/脚本/产物/issue + 关键可视化 checkpoint），让 user 不读实验记录也能看懂系统长什么样、卡点在哪一步。抽象路线图（若有）落到本 feature 的真实脚本与产物上。
 - 现状代码用 **markdown 文件链接**引用（见下「文档约定」）。
 - 若存在多个有显著权衡的方案，列出并让 user 选；否则按 KISS 选最简方案并记录理由。
+- 设计步长自检：如果该 task 同时依赖两个未验证假设，或失败后无法定位哪一步错了，退回 Phase 1 拆小。
 
 ### Phase 3 — Build + Experiment（实现并实验）
 - **开跑前先声明，但不必等确认。** 每次实验开跑前，在 `partN-exp.md` 里写下它回答 Goal 的哪一问 + 假设与预期（几行即可），然后自己跑。中途冒出新对照臂 / 新变量 / 新工作点也一样——补一条再跑，**不用停下问 user**。这不是审批流程，是给自己留一个可对照的预测：**没有预期，拿到数也判不出是发现还是跑偏**；顺带 user 随时能看出你在测什么。
@@ -65,11 +77,22 @@ Phase 1 Plan ──► Phase 2 Design ──► Phase 3 Build+Experiment ──�
 
 ## 持续模式：排好队之后自主取任务
 
-默认按这个模式跑：读 task.md → 取最高优先级未完成项 → 读它的 `featureN`（没有就先写 Goal，见 Phase 2）→ Phase 3 → 回填 `featureN` 与 task.md 的状态列 → 取下一条，不必每轮问 user。
+默认按这个模式跑：读 task.md → 取最高优先级未完成项 → 读它的 `featureN`（没有就先写 Goal，
+不得直接写 exp）→ Phase 3 → 回填 feature 与 task → 用新 evidence 生成下一项。不一次性展开整条路线。
 
-**task.md 上已有 P0、且它的 `featureN` 已有 Goal → 直接进 Phase 2/3 不问。** 只在这三种情况停下等 user：要**新增** task.md 行、要**改优先级**、P0 **清空**了。
+**task 已获批准、且它的 feature Goal 存在 → 直接进 Phase 2/3 不问。** 新 Goal 的首次拆解、
+Goal / scope 改变、或 user 要 review 时进入 Human Review Gate；普通的 evidence 驱动后继项可自主继续。
 
-这三条加上 Phase 2 的 Goal（**「要解决什么问题」由 user 定**，agent 不自行替 user 定义），就是本 skill 全部的 human-in-the-loop 点。其余停机条件（方案选型、不可逆操作、自修上限、硬性中止）归 `when-to-stop`。
+## Human 纠偏后的 RECONCILE
+
+user 修改 Goal、scope 或优先级后，先暂停当前动作，再作为一个事务完成：
+
+1. 更新 feature Goal / 边界，直接写当前真值；
+2. 当前与剩余 task 逐项标 `保留 / blocked / dropped`，dropped 留原因，不静默删除；
+3. 按新 Goal 重建最近 1–2 个 `📝 proposed` task 并重新过 Review Gate；
+4. 批准后恢复唯一 `🔬 doing`，同步交接笔记的下一条命令。
+
+以上四步落盘后才继续。对话里的确认不算更新 loop。
 
 ## 文档约定（项目沉淀）
 

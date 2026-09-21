@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    把本库的 rules 与 skills 链接到 Cursor 的全局目录。幂等，可反复跑。
+    把本库的 rules、skills、Harness 与 hooks 链接到 Cursor 的全局目录。幂等，可反复跑。
 
 .DESCRIPTION
     每次增删或重命名 skill 之后重跑一次——失效的 junction 会被清掉，新增的会补上。
@@ -50,6 +50,21 @@ Get-ChildItem "$repo\.cursor\skills" -Directory | ForEach-Object {
     }
 }
 
+# --- Harness：整目录 junction ---
+$harnessSrc  = "$repo\harness"
+$harnessDest = "$env:USERPROFILE\.cursor\harness"
+if (Test-Path $harnessDest) {
+    if ((Get-Item $harnessDest).LinkType) {
+        cmd /c "rmdir `"$harnessDest`"" | Out-Null
+    } else {
+        $bk = "$harnessDest-backup-$(Get-Date -f yyyyMMdd-HHmmss)"
+        Move-Item $harnessDest $bk
+        Write-Host "Backed up existing harness/ to $bk" -ForegroundColor Yellow
+    }
+}
+cmd /c "mklink /J `"$harnessDest`" `"$harnessSrc`"" | Out-Null
+Write-Host "Linked harness/ -> $harnessSrc" -ForegroundColor Green
+
 # --- Hooks：整目录 junction + 合并 hooks.json ---
 # hook 必须装到 user 级，否则只在本仓库生效，而 memory 要用在各个工作项目里。
 # user hook 的 command 路径相对 ~/.cursor/，所以这里写 ./hooks/...
@@ -69,7 +84,7 @@ if (Test-Path $hooksSrc) {
 
     $hooksJson = "$env:USERPROFILE\.cursor\hooks.json"
     $ours     = @{ command = "python ./hooks/memory-lookup.py"; matcher = "Read"; timeout = 10 }
-    $stopProbe = @{ command = "python ./hooks/stop-probe.py"; timeout = 10 }
+    $harnessStop = @{ command = "python ./hooks/harness-stop.py"; timeout = 10; loop_limit = 5 }
     if (Test-Path $hooksJson) {
         # 保留别处配置的 hook，只替换我们自己那一条。
         # 不用 ConvertFrom-Json -AsHashtable：该参数是 PS 6+，PS 5.1 上会直接报错。
@@ -88,15 +103,17 @@ if (Test-Path $hooksSrc) {
         }
         $keptStop = @()
         if ($merged.hooks.ContainsKey('stop')) {
-            $keptStop = @($merged.hooks['stop'] | Where-Object { $_.command -notlike "*stop-probe*" })
+            $keptStop = @($merged.hooks['stop'] | Where-Object {
+                $_.command -notlike "*stop-probe*" -and $_.command -notlike "*harness-stop*"
+            })
         }
-        $merged.hooks['stop'] = @($keptStop) + @($stopProbe)
+        $merged.hooks['stop'] = @($keptStop) + @($harnessStop)
         $merged | ConvertTo-Json -Depth 10 | Set-Content $hooksJson -Encoding utf8
-        Write-Host "Merged memory hook into existing hooks.json" -ForegroundColor Green
+        Write-Host "Merged memory and Harness hooks into existing hooks.json" -ForegroundColor Green
     } else {
-        @{ version = 1; hooks = @{ postToolUse = @($ours); stop = @($stopProbe) } } |
+        @{ version = 1; hooks = @{ postToolUse = @($ours); stop = @($harnessStop) } } |
             ConvertTo-Json -Depth 10 | Set-Content $hooksJson -Encoding utf8
-        Write-Host "Wrote hooks.json with the memory hook" -ForegroundColor Green
+        Write-Host "Wrote hooks.json with memory and Harness hooks" -ForegroundColor Green
     }
 }
 
@@ -113,6 +130,7 @@ if (Test-Path $cfg) {
 # --- 验证：看链接类型，不是看文件在不在 ---
 Write-Host "`n--- Verify ---" -ForegroundColor Cyan
 "rules/ LinkType = $((Get-Item $rulesDest).LinkType)   (必须是 Junction)"
+"harness/ LinkType = $((Get-Item $harnessDest).LinkType)   (必须是 Junction)"
 Get-ChildItem $skillsDest -Force | Where-Object { $_.LinkType -eq 'Junction' } | ForEach-Object {
     "{0,-26} target-exists={1}" -f $_.Name, (Test-Path ($_.Target -join ''))
 }

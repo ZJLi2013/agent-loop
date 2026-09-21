@@ -19,6 +19,9 @@ input-list.txt
 # Hook runtime logs
 .cursor/hooks/*.log
 
+# Per-project Harness runtime
+.harness/
+
 # Python
 __pycache__/
 *.py[cod]

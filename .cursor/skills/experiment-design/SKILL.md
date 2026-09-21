@@ -13,10 +13,17 @@ description: >-
 能复现思路与决策依据。
 
 **边界**：本 skill 是 `agent-loop` 里 DESIGN 那一格——**被选中的那个 task 要跑一轮验证时**
-用它。它管两道门与实验文档的章节模板，不管任务怎么排、循环怎么转。
+用它。它只管**实验设计**（假设、方案、预期、判据）与实验记录，不代写 feature 的 Goal、
+系统设计或渐进 task；那些归 `feature-planning`。
 
 `task.md` 的 schema、验收检查点、失败计数归 `task-state`；语态归 `write-for-humans`；
 「什么情况才停下来问人」归 `when-to-stop`。**本 skill 不定义任何任务清单格式。**
+
+## 准入：feature 先于 exp
+
+feature 开发调用本 skill 前，task 必须已获批准（不是 `📝 proposed`），且链接的 feature 文档
+已有 Goal。缺任一项就停止写 exp，回 `feature-planning` 补齐并过 Human Review Gate。
+只有 task 明确标为 standalone diagnostic 时才允许 exp-only；diagnostic 不能借机承载系统设计。
 
 ---
 
@@ -101,7 +108,7 @@ GPU 占用、大量 token）。**便宜的是写，贵的是跑和读。**
 **这道门每次失守的代价都是整批实验作废**，因为所有调优都做在一个无解的问题上。
 策略学习的具体问法与一个 10+ 组实验全 0% 的实例见 [reference.md](reference.md)。
 
-### Phase 1 — 开跑前写设计
+### Phase 1 — 开跑前写实验设计
 
 先过**决策价值门**，再写文档：Phase 0 结论、一句话假设、方案、预期、判据选**阶梯**哪一层。
 
