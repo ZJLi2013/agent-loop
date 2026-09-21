@@ -1,7 +1,7 @@
 # Facts
 
 ## install
-- `~/.cursor/rules` → 整目录 junction 指向 `.cursor/rules`
+- `~/.cursor/rules` → 整目录 junction 指向仓库根的 `rules/`（**不放 `.cursor/rules/`**：两层都会被加载）
 - `~/.cursor/hooks` → 整目录 junction 指向 `.cursor/hooks`；`~/.cursor/hooks.json` 由 sync 脚本生成
 - `~/.cursor/skills-cursor/<name>` → 逐个 skill 的 junction，共 10 个
 - 同步命令：`powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1`（幂等）

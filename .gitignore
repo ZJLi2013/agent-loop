@@ -4,9 +4,13 @@
 # Private configs (real hostnames, credentials, etc.) — skills/ is tracked
 .cursor/configs/
 
-# Explicitly track skills and rules (override any broad .cursor/ rules)
+# Explicitly track skills (override any broad .cursor/ rules)
 !.cursor/skills/
-!.cursor/rules/
+
+# Project-level copies of what sync-to-cursor.ps1 already installs at user level:
+# Cursor loads both layers, so keeping these here doubles every rule and hook in context.
+.cursor/rules/
+.cursor/hooks.json
 
 # Overnight task manager runtime outputs
 overnight-results/

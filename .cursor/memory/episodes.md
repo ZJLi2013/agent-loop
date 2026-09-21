@@ -7,6 +7,10 @@
 - [2026-09-21] 注入通道确认可用：`additional_context` 以 `<system_reminder>` 出现在 Read 结果尾部。
   判据用的是 hook 运行时生成、别处不落盘的 nonce——只有真进了上下文才复述得出来
 
+- [2026-09-21] rules 源目录从 `.cursor/rules/` 移到仓库根 `rules/`，并删掉项目级 `.cursor/hooks.json`。
+  Cursor 把项目级与 user 级**两层都加载**，而 `~/.cursor/rules` 是指向本仓库的 junction，
+  所以在本仓库工作时 7 条常驻 rule 与 memory 注入各出现两遍（只影响本仓库，其它项目只有 user 级一份）
+
 ## disproved
 - [2026-09-20] 「把 P0–P4 放进全局 skill 就能影响 PR review」→ **不成立**。Bugbot 只读 `.cursor/BUGBOT.md` 与 dashboard 规则，不读 skills，也不读 `.cursor/rules/*.mdc`。要在 PR 阶段生效只能写那两处
 - [2026-09-20] 「skill 设成 auto-trigger 就会被用上」→ **不成立**。旧的编排 skill 一直是 auto，仍需反复提醒；语义匹配是概率性的，调度器不能依赖它
@@ -22,3 +26,5 @@
 - [2026-09-20] `INDEX.md` 不索引 skills：name + description 每轮已在上下文，重复付费，且硬路径会随改名漂移（一天内改名三次）
 - [2026-09-20] code 相关的四个 skill/rule 不合并：它们在不同时刻加载，合并会导致写代码时载入 review 清单
 - [2026-09-20] `experiment-design` 不再为压到 150 行而砍：剩下的是两道门与 Workflow，属于删能力不是去重
+- [2026-09-21] 常驻 rule 不为凑字符预算而砍（同上一条）：只删推导与重复示例，判据一条不动。
+  给压缩设数字目标会直接开始删判据

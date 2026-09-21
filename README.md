@@ -7,11 +7,12 @@
 不是产品本身。
 
 ```text
-agent-loop/.cursor/
-├── rules/       # 常驻约束，每轮都在上下文（控制层主体）
-├── skills/      # 按需加载的 playbook，清单与归属见 skills/README.md
-├── hooks/       # 模型之外的执行者，目前只有 memory 注入
-└── memory/      # 本库自己的记忆；工作项目各有一份
+agent-loop/
+├── rules/           # 常驻约束，每轮都在上下文（控制层主体）
+└── .cursor/
+    ├── skills/      # 按需加载的 playbook，清单与归属见 skills/README.md
+    ├── hooks/       # 模型之外的执行者，目前只有 memory 注入
+    └── memory/      # 本库自己的记忆；工作项目各有一份
 ```
 
 ---
@@ -42,6 +43,10 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 
 增删或重命名 skill 之后、**以及本仓库改名或移动之后**，重跑一次。
 
+**rules 与 hook 清单只存在于 user 级一份。** 源目录是仓库根的 `rules/`，不是 `.cursor/rules/`：
+`~/.cursor/rules` 是指向它的 junction，而 Cursor 会把项目级与 user 级**两层都加载**——
+两处都有就是每条 rule 进上下文两遍。同理本仓库不放 `.cursor/hooks.json`（memory 会被注入两份）。
+
 > **不要用硬链接（`mklink /H`）。** 硬链接绑的是文件本身，而 `git pull` / `git checkout`
 > 是「删掉重写」，一拉就断——之后仓库改动再也不会反映到 Cursor，**且不会有任何报错**。
 > 同类陷阱：仓库改名后 junction 指向不存在的路径，`Test-Path` 对目录仍返回 True，
@@ -68,7 +73,7 @@ copy $env:USERPROFILE\.cursor\skills-cursor\agent-memory\templates\*.md .cursor\
 
 ---
 
-## Rules（`.cursor/rules/`）
+## Rules（`rules/`）
 
 前 7 条 `alwaysApply: true`，每轮都在上下文；`authoring` 按 glob 挂在 `SKILL.md` 与 `.mdc` 上。
 

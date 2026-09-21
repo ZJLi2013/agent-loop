@@ -8,7 +8,8 @@
 | P | id | task | 验收检查点 | 状态 | 失败 |
 |---|---|---|---|---|---|
 | P1 | t7 | memory hook 加第二个触发点 | 不读 task.md 的会话里也能拿到 INDEX | ⬜ todo | 0 |
-| P1 | t10 | 项目级与 user 级 hook 去重 | 本仓库里读 task.md 只注入一份 Memory | ⬜ todo | 0 |
+| P1 | t10 | 项目级与 user 级重复加载去重 | 重启 Cursor 后，本仓库里 7 条常驻 rule 各只出现一次，读 task.md 只注入一份 Memory | 🔬 doing | 0 |
+| P1 | t11 | 常驻 rule 去掉推导与重复示例 | 每条只剩判据与踩过的坑，删掉的内容不改变任何一条可执行判断 | ✅ done | 0 |
 | P1 | t8 | VERIFY：识别假通过 | 能挡住 skip 掉的测试与坏掉的 baseline | ⬜ todo | 0 |
 | P2 | t9 | CONSOLIDATE 与清理触发点 | `[x3]` 提示晋升；已关闭 feature 的 experiments 行被提示剪掉 | ⬜ todo | 0 |
 | — | t1 | skill 去重与归属表 | 16 → 10，无重复归属 | ✅ done | 0 |

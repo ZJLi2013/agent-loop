@@ -28,8 +28,8 @@ if (Test-Path $rulesDest) {
         Write-Host "Backed up existing rules to $bk" -ForegroundColor Yellow
     }
 }
-cmd /c "mklink /J `"$rulesDest`" `"$repo\.cursor\rules`"" | Out-Null
-Write-Host "Linked rules/ -> $repo\.cursor\rules" -ForegroundColor Green
+cmd /c "mklink /J `"$rulesDest`" `"$repo\rules`"" | Out-Null
+Write-Host "Linked rules/ -> $repo\rules" -ForegroundColor Green
 
 # --- Skills：先清失效链接，再补新增的 ---
 $skillsDest = "$env:USERPROFILE\.cursor\skills-cursor"
