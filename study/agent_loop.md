@@ -1,5 +1,7 @@
 
+# Agent Loop 设计沿革
 
+> 当前架构以 [`design.md`](../design.md) 为准；本文保留问题背景与演进依据。
 
 ## 背景
 
@@ -36,7 +38,7 @@
                                    │
   GOAL ─► PLAN ─► HUMAN REVIEW ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE
    │       │          │              │         │                    │
- user   feature-   proposed       task-state experiment-       ┌─────┴─────┐
+ user    work-     proposed       task-state experiment-       ┌─────┴─────┐
   定     planning  approve/revise               design        pass        fail
                                                            │           │
                                                          CLOSE     DIAGNOSE
@@ -72,11 +74,12 @@
 **三、防漂移靠不变量，不靠提醒。** `task.md` 里有且只有一行 `🔬 doing`，一次改动属于它的唯一
 判据是「会让那行的验收检查点从不通过变成通过吗」。
 
-**四、计划先过 Human Review Gate。** feature Goal 先承载 human 意图，新 task 先标
+**四、计划先过 Human Review Gate。** plan document 先承载 human 意图，新 task 先标
 `📝 proposed`；批准前不进实验。无人值守时才按 KISS 自批准并标 `⚠️ unreviewed`。
 
 **五、计划按 evidence 渐进展开。** 一个 task 最多跨越一个未验证假设，只细化最近 1–2 项；
-每项变绿后重排。human 纠偏时先更新 feature Goal，再 RECONCILE `task.md`，旧计划不能继续驱动。
+每项变绿后重排。human 纠偏时 Harness 先 pause，plan revision 递增，再 RECONCILE `task.md`；
+plan review、task `rN` 与 runtime revision 一致后才能 resume。
 
 
 ### 缺口
@@ -106,6 +109,7 @@
 | retry | ✅ Verify attempt 硬上限；repair 动作仍由 agent 选择，不原样自动重跑 |
 | resource limits | ✅ runner 的总 wall budget；其它 Cursor tool call 不在边界内 |
 | timeout | ✅ runner 杀进程树；其它 Cursor tool call 由 Cursor 管 |
+| mid-run human review | ✅ pause request 可中断 runner；Plan Revision gate 拒绝旧 task 恢复 |
 | run / rollback / checkpoint | ⚠️ run 已有；checkpoint / rollback 复用 git，不自动覆盖用户工作树 |
 
 

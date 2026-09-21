@@ -159,7 +159,7 @@ class HarnessTest(unittest.TestCase):
         (self.root / "changed.py").write_text("changed = True\n")
         self.assertIn("is stale", completion_gate(self.root) or "")
         _, state = load_runtime(self.root)
-        self.assertEqual(state["phase"], "failed")
+        self.assertEqual(state["phase"], "paused")
 
     def test_completion_gate_requests_one_stop_report(self) -> None:
         self.init("raise SystemExit(1)", max_attempts=1)
@@ -175,7 +175,7 @@ class HarnessTest(unittest.TestCase):
 
         self.assertEqual(result["outcome"], "reject")
         self.assertFalse(result["verification_passed"])
-        self.assertEqual(state["phase"], "failed")
+        self.assertEqual(state["phase"], "paused")
         self.assertEqual(state["last_outcome"], "reject")
 
 

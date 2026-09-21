@@ -85,6 +85,7 @@ if (Test-Path $hooksSrc) {
     $hooksJson = "$env:USERPROFILE\.cursor\hooks.json"
     $ours     = @{ command = "python ./hooks/memory-lookup.py"; matcher = "Read"; timeout = 10 }
     $harnessStop = @{ command = "python ./hooks/harness-stop.py"; timeout = 10; loop_limit = 5 }
+    $goalRefresh = @{ command = "python ./hooks/goal-refresh.py"; timeout = 10 }
     if (Test-Path $hooksJson) {
         # 保留别处配置的 hook，只替换我们自己那一条。
         # 不用 ConvertFrom-Json -AsHashtable：该参数是 PS 6+，PS 5.1 上会直接报错。
@@ -108,10 +109,21 @@ if (Test-Path $hooksSrc) {
             })
         }
         $merged.hooks['stop'] = @($keptStop) + @($harnessStop)
+        $keptCompact = @()
+        if ($merged.hooks.ContainsKey('preCompact')) {
+            $keptCompact = @($merged.hooks['preCompact'] | Where-Object {
+                $_.command -notlike "*goal-refresh*"
+            })
+        }
+        $merged.hooks['preCompact'] = @($keptCompact) + @($goalRefresh)
         $merged | ConvertTo-Json -Depth 10 | Set-Content $hooksJson -Encoding utf8
-        Write-Host "Merged memory and Harness hooks into existing hooks.json" -ForegroundColor Green
+        Write-Host "Merged memory, Harness, and Goal Review hooks into existing hooks.json" -ForegroundColor Green
     } else {
-        @{ version = 1; hooks = @{ postToolUse = @($ours); stop = @($harnessStop) } } |
+        @{ version = 1; hooks = @{
+            postToolUse = @($ours)
+            stop = @($harnessStop)
+            preCompact = @($goalRefresh)
+        } } |
             ConvertTo-Json -Depth 10 | Set-Content $hooksJson -Encoding utf8
         Write-Host "Wrote hooks.json with memory and Harness hooks" -ForegroundColor Green
     }

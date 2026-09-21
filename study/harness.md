@@ -9,7 +9,7 @@
 
 最小 Harness 已落地：显式 runner 命令受 hard timeout、attempt / wall budget 和有界 journal 控制；
 锁定 verifier 通过且工作树未变化时，stop hook 才允许 Cursor 结束。它不拦截所有 Cursor tool call，
-任务状态仍以 `.cursor/task.md` 为唯一真相源。
+任务状态仍以 `.cursor/task.md` 为唯一真相源。运行中 pause 与 Plan Revision gate 已落地。
 
 ## Pipeline
 
@@ -19,6 +19,8 @@ agent 选择动作
   ├─ run exec ─► hard timeout ─► bounded stdout/stderr ─► runs.jsonl
   │
   └─ run verify ─► 锁定的 verifier ─► fingerprint
+                                      │
+human pause ─► 中断 runner ─► plan revision + review + task rN ─► resume
                                       │
 Cursor stop hook ─────────────────────┤
   ├─ verified + fingerprint 未变 ─► 允许结束
@@ -32,6 +34,7 @@ Cursor stop hook ─────────────────────
 .harness/
 ├── config.json       # verifier 与硬预算；初始化后锁定
 ├── state.json        # 当前 phase / attempt / budget，不复制 task 内容
+├── pause.json        # 无锁 pause request；运行中的 runner 轮询它
 ├── runs.jsonl        # 有界执行摘要
 └── artifacts/        # 有界 stdout/stderr
 ```
@@ -41,20 +44,26 @@ Cursor stop hook ─────────────────────
 - `task.md` 管「做哪件事」；Harness 只管「哪条命令跑过、证据是否有效、还能不能继续」。
 - `exit 0` 只表示命令成功；只有 verifier 通过且工作树 fingerprint 未变化，task 才可完成。
 - retry 由 agent 诊断后产生不同动作；Harness 只计数并拒绝超预算，不原样自动重跑。
+- task 锁定 plan document 的 `Plan Revision`；review、task `rN` 与 Harness state 不一致时拒绝运行。
+- pause request 不等 state lock，可中断长命令；human correction 要求 revision 递增后才能 resume。
+- action count、elapsed time、失败、evidence stale 与 preCompact 共用 pause gate 触发 Goal Review。
 - stdout/stderr 先脱敏再持久化，单流和 artifact 数量都有硬上限；memory 只引用 run id，不复制日志。
 - checkpoint 使用 git，不在 `.harness/checkpoints/` 复制工作树。
 
 ## Tests
 
-`python -m unittest discover -s tests -v` 的 12 个测试覆盖：
+`python -m unittest discover -s tests -v` 覆盖：
 
 - pass / non-zero exit / timeout / process-tree cleanup；
 - attempt 与总 wall budget；
 - stdout/stderr 脱敏、截断、artifact 与 journal 上限；
 - config 锁定、输出契约拒绝 exit-0 假通过；
 - 未验证续跑、验证后改码失效、预算耗尽只要求一次 Auto-Stop Report。
+- proposed plan 自动暂停、运行中 pause、revision / review / task `rN` 一致后 resume。
+- Goal Review 的 action / time / failure 触发，以及 continue / replan / stop 与 preCompact adapter。
 
-[`harness/core.py`](../harness/core.py) 是 runner 与状态机；[`harness-stop.py`](../.cursor/hooks/harness-stop.py)
-把状态接到 Cursor `stop.followup_message`；[`sync-to-cursor.ps1`](../scripts/sync-to-cursor.ps1) 将二者
-安装到 user 级。完整强制边界仍需外部 driver 拥有 agent 生命周期；离开 Cursor 时优先评估 BOUND。
+[`protocol.py`](../harness/protocol.py) 定义状态机；storage / runner / journal / plan 各持一个职责，
+[`core.py`](../harness/core.py) 只做 orchestration 与兼容 façade。[`harness-stop.py`](../.cursor/hooks/harness-stop.py)
+把状态接到 Cursor `stop.followup_message`。完整强制边界仍需外部 driver 拥有 agent 生命周期；
+离开 Cursor 时优先评估 BOUND。
 

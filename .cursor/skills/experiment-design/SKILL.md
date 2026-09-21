@@ -13,17 +13,17 @@ description: >-
 能复现思路与决策依据。
 
 **边界**：本 skill 是 `agent-loop` 里 DESIGN 那一格——**被选中的那个 task 要跑一轮验证时**
-用它。它只管**实验设计**（假设、方案、预期、判据）与实验记录，不代写 feature 的 Goal、
-系统设计或渐进 task；那些归 `feature-planning`。
+用它。它只管**实验设计**（假设、方案、预期、判据）与 evidence，不代写 plan 的 Goal、
+当前结论或渐进 task；那些归 `work-planning`。
 
 `task.md` 的 schema、验收检查点、失败计数归 `task-state`；语态归 `write-for-humans`；
 「什么情况才停下来问人」归 `when-to-stop`。**本 skill 不定义任何任务清单格式。**
 
-## 准入：feature 先于 exp
+## 准入：plan 先于实验
 
-feature 开发调用本 skill 前，task 必须已获批准（不是 `📝 proposed`），且链接的 feature 文档
-已有 Goal。缺任一项就停止写 exp，回 `feature-planning` 补齐并过 Human Review Gate。
-只有 task 明确标为 standalone diagnostic 时才允许 exp-only；diagnostic 不能借机承载系统设计。
+task 必须已获批准（不是 `📝 proposed`），且 plan document 已有 Goal；task 的 `rev` 必须等于
+plan 的 `Plan Revision`，`Plan Review` 必须是 `approved` 或 `unreviewed`。缺任一项就停止，
+回 `work-planning` 补齐。一次性 diagnostic 的 plan document 可以就是这份实验记录。
 
 ---
 
@@ -71,7 +71,8 @@ GPU 占用、大量 token）。**便宜的是写，贵的是跑和读。**
 
 ## 文档结构：一篇一个结论
 
-主线、解释性膨胀与组织轴的通则在 `write-for-humans`，本节只写 feature / exp 文档的章节模板。
+主线、解释性膨胀与组织轴的通则在 `write-for-humans`。默认把本轮写进 plan document 的
+Experiment Log；只有 `work-planning` 判定需要拆分时才写 linked sub-exp。
 
 **没有重点的报告等于没有结论的实验。** 模型默认按执行顺序平铺（L0/L1/L2 各一节各十几行），读者被迫认为它们同等重要，读完记不住任何一条。
 
@@ -81,7 +82,8 @@ GPU 占用、大量 token）。**便宜的是写，贵的是跑和读。**
 4. **方法与前提降到后面**：环境、换算、参数核实回答「怎么得到的」，必须在但不占开头。
 5. **删掉空占位表**：`| 待填 |` 是把没做的事伪装成内容，总览表里一行 `⬜ 待跑` 就够。
 6. **L0/L1/L2 留在总览表**，正文按「结论 / 证据 / 单独要指出的事 / 可信度边界 / 方法」组织。
-7. **结论收口在 feature 文档，exp 文档只放实验记录。** 一个数只有一个定义处，别处用链接。
+7. **结论收口在 plan document 的稳定头部，Experiment Log / sub-exp 留证据。**
+   一个数只有一个定义处，别处用链接。
 
 ---
 
@@ -139,10 +141,11 @@ Next Step（按优先级）。然后清理一次性脚本与中间文件（保�
 过一遍上面两节的自检。
 
 删草稿后最常残留三样：**平均着墨的分级标题**、**「原先以为 X、实测是 Y」的衔接句**，
-以及**为了自包含而复述到 exp 里的结论**（该留在 feature，这里放链接）。
+以及**为了自包含而复述到 sub-exp 的结论**（该留在 plan document，这里放链接）。
 
-### Phase 4 — 总览表与归档
+### Phase 4 — Experiment Log 与归档
 
-每份 exp 文档顶部维护一行摘要：`| Exp | 假设 | 状态 | 关键结果 | 结论 |`。
+plan document 的 Experiment Log 每轮维护一行摘要：
+`| Exp | 假设 | 状态 | 关键结果 | 结论 / sub-exp |`。
 
 

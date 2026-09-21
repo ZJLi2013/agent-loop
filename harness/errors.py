@@ -1,0 +1,3 @@
+class HarnessError(RuntimeError):
+    pass
+

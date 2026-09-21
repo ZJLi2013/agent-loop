@@ -16,6 +16,13 @@
 - [2026-09-21] planning contract 落地：feature Goal 先于 exp，新 task 先过 `📝 proposed` review；
   一个 task 最多跨一个未验证假设，只展开最近 1–2 项；human 纠偏先改 feature Goal，再
   RECONCILE `task.md`
+- [2026-09-21] Plan Revision gate 落地：pause request 不等 runner state lock，可中断长命令；
+  feature review、task `rN` 与 runtime revision 不一致时拒绝新命令 / resume
+- [2026-09-21] agent-loop 收敛为 Stable Kernel / Policies / Adapters：protocol 成为转移真相源，
+  Harness 拆为 storage / runner / journal / plan，rule 与 skills index 只留路由和唯一 owner；
+  删除文案匹配测试，README 只保留入口
+- [2026-09-21] feature / exp 两文档改为一份 plan document，详细实验按需拆 linked sub-exp；
+  Goal Review 由 action / time / failure / stale / preCompact 触发，复用 PAUSED 与 revision gate
 
 ## disproved
 - [2026-09-20] 「把 P0–P4 放进全局 skill 就能影响 PR review」→ **不成立**。Bugbot 只读 `.cursor/BUGBOT.md` 与 dashboard 规则，不读 skills，也不读 `.cursor/rules/*.mdc`。要在 PR 阶段生效只能写那两处

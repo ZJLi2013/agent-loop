@@ -76,5 +76,5 @@ alwaysApply: true
 ## 边界
 
 用户明确要求「详细展开 / 完整列出 / 给我背景」时才铺开。
-**本规则是语态与结构的唯一归属处**，各处只留指针：exp / feature 文档的章节模板在
-`experiment-design`；对外博客的去 AI 味清单在 `research-to-blog`；体量约束在 `authoring`。
+**本规则是语态与结构的唯一归属处**，各处只留指针：plan document 在 `work-planning`，
+实验记录在 `experiment-design`；对外博客的去 AI 味清单在 `research-to-blog`；体量约束在 `authoring`。

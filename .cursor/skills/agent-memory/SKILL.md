@@ -64,7 +64,7 @@ hook 覆盖不到的时刻（临时问一句、中途换方向），靠 `INDEX.m
 
 | 转换 | 写哪儿 | 不写会怎样 |
 |---|---|---|
-| task → `✅` | `episodes.md#experiments`：结论一行 + 证据链接 | 结论埋在 exp 文档里，下次找不到 |
+| task → `✅` | `episodes.md#experiments`：结论一行 + 证据链接 | 结论埋在 Experiment Log，下次找不到 |
 | **假设被推翻** | `episodes.md#disproved` | **最贵也最容易丢**，下次还有人再试一遍 |
 | 方案被否决 | `episodes.md#rejected` | 三周后有人重提同一个方案 |
 | task → `🚧` | `episodes.md`：挡在什么上、解开条件 | 重排期时不知道它为什么还在那儿 |
@@ -88,7 +88,7 @@ hook 检测到超限会直接告警，届时把条目并粗（指向小节而不
 
 | 段 | 老化 | 处置 |
 |---|---|---|
-| `experiments` | 会老化 | feature 关闭、结论已收口到 feature 文档后，这一行冗余，可剪 |
+| `experiments` | 会老化 | Goal 关闭、结论已收口到 plan document 后，这一行冗余，可剪 |
 | `disproved` / `rejected` | **不老化** | 长期决定。删一条排除项，三周后就有人重提同一个方案 |
 
 给它设统一行数上限是错的——那会逼着删掉最该留的那部分。
