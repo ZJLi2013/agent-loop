@@ -12,6 +12,9 @@
 overnight-results/
 input-list.txt
 
+# Hook runtime logs
+.cursor/hooks/*.log
+
 # Python
 __pycache__/
 *.py[cod]

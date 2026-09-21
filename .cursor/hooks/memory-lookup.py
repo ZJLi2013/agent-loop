@@ -107,8 +107,11 @@ def _health(root: str) -> str:
 
 
 def main() -> None:
+    # Cursor writes UTF-8-with-BOM to stdin on Windows; sys.stdin.read() keeps the
+    # \ufeff and json.loads then fails silently into the no-op branch.
+    raw = sys.stdin.buffer.read().decode("utf-8-sig", errors="replace")
     try:
-        payload = json.loads(sys.stdin.read() or "{}")
+        payload = json.loads(raw or "{}")
     except json.JSONDecodeError:
         _emit(None)
 

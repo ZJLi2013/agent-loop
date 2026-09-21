@@ -7,6 +7,12 @@
         "matcher": "Read",
         "timeout": 10
       }
+    ],
+    "stop": [
+      {
+        "command": "python .cursor/hooks/stop-probe.py",
+        "timeout": 10
+      }
     ]
   }
 }
