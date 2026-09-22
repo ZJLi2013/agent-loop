@@ -1,11 +1,9 @@
 # Cline task history (local session data, not for sharing)
 .cline_storage/
 
-# Private configs (real hostnames, credentials, etc.) — skills/ is tracked
+# Private configs (real hostnames, credentials, etc.)
+.agent-loop/configs/
 .cursor/configs/
-
-# Explicitly track skills (override any broad .cursor/ rules)
-!.cursor/skills/
 
 # Project-level copies of what sync-to-cursor.ps1 already installs at user level:
 # Cursor loads both layers, so keeping these here doubles every rule and hook in context.
@@ -17,12 +15,18 @@ overnight-results/
 input-list.txt
 
 # Hook runtime logs
+adapters/cursor/hooks/*.log
 .cursor/hooks/*.log
 
 # Per-project Harness runtime
 .harness/
 
 # Per-project agent runtime (templates live under skills/agent-memory/)
+.agent-loop/task.md
+.agent-loop/progress.md
+.agent-loop/memory/
+
+# Legacy runtime read compatibility
 .cursor/task.md
 .cursor/progress.md
 .cursor/memory/

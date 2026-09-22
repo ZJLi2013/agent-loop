@@ -15,5 +15,10 @@ All notable user-facing changes are documented here. This project follows Semant
 - Runtime pause/resume and event-driven Goal Review.
 - Project memory with forced retrieval through a Cursor hook.
 
+### Changed
+
+- Project runtime moved from `.cursor/` to `.agent-loop/`, with read compatibility for existing projects.
+- Policies and hook actions moved behind platform-neutral `skills/` and adapter protocol boundaries.
+
 [Unreleased]: https://github.com/ZJLi2013/agent-loop/commits/main
 

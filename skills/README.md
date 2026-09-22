@@ -1,10 +1,10 @@
 # Skills Index
 
-Skills are the **Policies** layer defined in [`design.md`](../../design.md): each one explains how to act in a
+Skills are the **Policies** layer defined in [`design.md`](../design.md): each one explains how to act in a
 specific state. They do not redefine state transitions, runtime guards, or another skill's document format.
 
 ```text
-.cursor/skills/<skill-name>/SKILL.md
+skills/<skill-name>/SKILL.md
 ```
 
 ## Loop policies
@@ -45,14 +45,14 @@ Descriptions stay in context; bodies load only when the current event matches.
 | 人类可读输出 | `write-for-humans` rule |
 | 对外披露 / 脱敏 / 去私料 | `external-output-boundary` rule |
 | Harness runtime / evidence | `harness/` |
-| Cursor 事件接线 | `.cursor/hooks/` |
+| 平台事件接线 | `adapters/<platform>/` |
 
 Bugbot 不读 rules 或 skills。PR 上的 review 标准只能放目标 repo 的 `.cursor/BUGBOT.md` 或
 Cursor dashboard Team / Repository Rules。
 
 ## Adding behavior
 
-按 [`design.md`](../../design.md) 的 extension rule 判断：
+按 [`design.md`](../design.md) 的 extension rule 判断：
 
 1. 项目差异 → config / profile；
 2. 某状态下怎么做 → 现有 owner skill；

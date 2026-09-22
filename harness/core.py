@@ -554,7 +554,7 @@ def completion_gate(root: Path) -> str | None:
             state["verify_attempts"]
         )
         remaining_wall = max(0.0, _remaining_wall(config, state))
-        runner = Path.home() / ".cursor" / "harness" / "run.py"
+        runner = Path(__file__).with_name("run.py")
         verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
         if phase in {Phase.RUNNING, Phase.VERIFYING}:
             _transition(state, Event.INTERRUPTED)

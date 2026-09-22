@@ -10,7 +10,7 @@ Open an Issue first when a change:
 
 - adds or changes a lifecycle state, event, transition, or non-bypassable guard;
 - changes a persisted schema or public CLI;
-- changes global Cursor hook behavior;
+- changes global platform hook behavior;
 - removes or renames a rule or skill.
 
 Classify the proposal:
@@ -41,7 +41,7 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
 ```
 
-Do not commit `.harness/`, `.cursor/task.md`, `.cursor/progress.md`, `.cursor/memory/`, hook logs, transcripts,
+Do not commit `.harness/`, `.agent-loop/task.md`, `.agent-loop/progress.md`, `.agent-loop/memory/`, hook logs, transcripts,
 credentials, hostnames, or private performance data.
 
 ## Pull requests

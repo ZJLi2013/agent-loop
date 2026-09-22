@@ -1,6 +1,6 @@
 ---
-description: 写 SKILL.md 或 .cursor/rules/*.mdc 时的准入、体量与归属约束；以及一条约束该放 rule、skill 还是 hook
-globs: ["**/SKILL.md", "**/.cursor/skills/**/*.md", "**/rules/*.mdc", "**/.cursor/rules/*.mdc"]
+description: 写 SKILL.md 或常驻 rule 时的准入、体量与归属约束；以及一条约束该放 rule、skill 还是 hook
+globs: ["**/SKILL.md", "**/skills/**/*.md", "**/rules/*.mdc", "**/.cursor/rules/*.mdc"]
 alwaysApply: false
 ---
 

@@ -45,7 +45,7 @@ Plan Review: proposed
 1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。
 2. 一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
-4. 正常模式用 Cursor `AskQuestion` 给 human：
+4. 正常模式用平台的结构化提问能力给 human：
    `approve / revise / continue automatically`。批准前不实验、不改实现。
 5. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
    `Plan Review: unreviewed`。

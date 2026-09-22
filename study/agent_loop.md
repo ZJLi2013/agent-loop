@@ -55,7 +55,7 @@
                                                                        │
                                                              全部通过 ─► DONE
   ─────────────────────────────────────────────────────────────────────────
-  横穿全环：.cursor/memory/（值第二次用到就写，要用就读）
+  横穿全环：.agent-loop/memory/（值第二次用到就写，要用就读）
             agent-heartbeat（命令 > 60s）
             Harness（显式命令 timeout / journal；stop 前独立 Verify）
   环之外：code-review / upstream-contribute / research-to-blog /
@@ -88,7 +88,7 @@ plan review、task `rN` 与 runtime revision 一致后才能 resume。
 |---|---|
 | OBSERVE | **没有独立节点**。实验类由 `experiment-design` 的 Phase 2/3 覆盖，重构 / 修 bug 类的产物无人要求落盘 |
 | VERIFY | ✅ 锁定 verifier 独立执行；工作树 fingerprint 防止验证后改码 |
-| 强制执行 | ⚠️ stop hook 能拒绝未验证的完成；未显式交给 runner 的 Cursor tool call 仍由 Cursor 管 |
+| 强制执行 | ⚠️ enforced adapter 能拒绝未验证的完成；未显式交给 runner 的 host tool call 仍由宿主管理 |
 
 
 ## 三层分工
@@ -104,11 +104,11 @@ plan review、task `rN` 与 runtime revision 一致后才能 resume。
 
 | 能力 | 现状 |
 |---|---|
-| persist state | ✅ `task.md` + `.cursor/memory/` + `progress.md` |
+| persist state | ✅ `task.md` + `.agent-loop/memory/` + `progress.md` |
 | capture logs | ✅ runner 记录有界 stdout/stderr、hash 与 `runs.jsonl` |
 | retry | ✅ Verify attempt 硬上限；repair 动作仍由 agent 选择，不原样自动重跑 |
-| resource limits | ✅ runner 的总 wall budget；其它 Cursor tool call 不在边界内 |
-| timeout | ✅ runner 杀进程树；其它 Cursor tool call 由 Cursor 管 |
+| resource limits | ✅ runner 的总 wall budget；其它 host tool call 不在边界内 |
+| timeout | ✅ runner 杀进程树；其它 host tool call 由宿主管理 |
 | mid-run human review | ✅ pause request 可中断 runner；Plan Revision gate 拒绝旧 task 恢复 |
 | run / rollback / checkpoint | ⚠️ run 已有；checkpoint / rollback 复用 git，不自动覆盖用户工作树 |
 

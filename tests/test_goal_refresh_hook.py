@@ -11,7 +11,8 @@ from harness.plan import pause_request
 
 HOOK_PATH = (
     Path(__file__).resolve().parents[1]
-    / ".cursor"
+    / "adapters"
+    / "cursor"
     / "hooks"
     / "goal-refresh.py"
 )

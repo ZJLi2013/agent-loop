@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Remove only the user-level Cursor links and hook entries installed by agent-loop.
 
@@ -14,15 +14,16 @@ function Normalize-Path([string]$Path) {
     return [IO.Path]::GetFullPath($Path).TrimEnd('\')
 }
 
-function Remove-OwnedJunction([string]$Path, [string]$ExpectedTarget) {
-    if (-not (Test-Path $Path)) { return }
-    $item = Get-Item $Path
+function Remove-OwnedJunction([string]$Path, [string[]]$ExpectedTargets) {
+    $item = Get-Item $Path -Force -ErrorAction SilentlyContinue
+    if ($null -eq $item) { return }
     if ($item.LinkType -ne 'Junction') {
         Write-Host "Kept non-junction: $Path" -ForegroundColor Yellow
         return
     }
     $targets = @($item.Target | ForEach-Object { Normalize-Path $_ })
-    if ($targets -notcontains (Normalize-Path $ExpectedTarget)) {
+    $expected = @($ExpectedTargets | ForEach-Object { Normalize-Path $_ })
+    if (@($targets | Where-Object { $expected -contains $_ }).Count -eq 0) {
         Write-Host "Kept junction with another target: $Path" -ForegroundColor Yellow
         return
     }
@@ -52,21 +53,30 @@ if (Test-Path $hooksJson) {
 
 $skillsDest = "$cursorHome\skills-cursor"
 if (Test-Path $skillsDest) {
-    $skillsRoot = Normalize-Path "$repo\.cursor\skills"
+    $skillsRoots = @(
+        Normalize-Path "$repo\skills"
+        Normalize-Path "$repo\.cursor\skills"
+    )
     Get-ChildItem $skillsDest -Force |
         Where-Object { $_.LinkType -eq 'Junction' } |
         ForEach-Object {
             $targets = @($_.Target | ForEach-Object { Normalize-Path $_ })
-            if (@($targets | Where-Object { $_.StartsWith($skillsRoot) }).Count -gt 0) {
+            if (@($targets | Where-Object {
+                $target = $_
+                @($skillsRoots | Where-Object { $target.StartsWith($_) }).Count -gt 0
+            }).Count -gt 0) {
                 cmd /c "rmdir `"$($_.FullName)`"" | Out-Null
                 Write-Host "Removed skill: $($_.Name)" -ForegroundColor Green
             }
         }
 }
 
-Remove-OwnedJunction "$cursorHome\rules" "$repo\rules"
-Remove-OwnedJunction "$cursorHome\harness" "$repo\harness"
-Remove-OwnedJunction "$cursorHome\hooks" "$repo\.cursor\hooks"
+Remove-OwnedJunction "$cursorHome\rules" @("$repo\rules")
+Remove-OwnedJunction "$cursorHome\harness" @("$repo\harness")
+Remove-OwnedJunction "$cursorHome\hooks" @(
+    "$repo\adapters\cursor\hooks"
+    "$repo\.cursor\hooks"
+)
 
 Write-Host "`nBackups were not modified. Restart Cursor to unload the hooks." -ForegroundColor Cyan
 

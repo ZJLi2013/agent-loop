@@ -10,7 +10,8 @@ from harness.core import initialize
 
 HOOK_PATH = (
     Path(__file__).resolve().parents[1]
-    / ".cursor"
+    / "adapters"
+    / "cursor"
     / "hooks"
     / "harness-stop.py"
 )

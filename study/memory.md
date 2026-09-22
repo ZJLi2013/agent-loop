@@ -24,7 +24,7 @@
 | working | 当前任务状态 | `task.md` |
 | semantic | 去情境化的事实 | `facts.md` |
 | episodic | 发生过什么、试过什么 | `episodes.md` |
-| procedural | 可复用的做法、验证过的脚本 | `.cursor/skills/` 本身 |
+| procedural | 可复用的做法、验证过的脚本 | `skills/` 本身 |
 
 episodic 固化成 semantic（「用户在 1/5、1/12、2/1 都改了日期格式」→「用户偏好 DD/MM/YYYY」）
 **不会自动发生**，现有系统都要靠显式提示或启发式触发。计数晋升就是本库对这一步的答案。
@@ -74,19 +74,20 @@ episodic 固化成 semantic（「用户在 1/5、1/12、2/1 都改了日期格�
 
 ## v1 实现
 
-**记忆属于工作项目，不属于本库。** agent-loop 只发模板与 hook，脚本按 cwd 向上找 `.cursor/`，
+**记忆属于工作项目，不属于本库。** agent-loop 只发模板与 hook，adapter 从事件中取得项目路径，
 所以它在哪个项目跑就读那个项目的：
 
 ```text
-<工作项目>/.cursor/memory/
+<工作项目>/.agent-loop/memory/
   INDEX.md       # 常驻索引，带 anchor，上限 30 行
   facts.md       # 覆盖
   episodes.md    # 追加：experiments / disproved / rejected
   lessons.md     # 追加，上限 15 条，[x1]/[x2]/[x3] 晋升
 
-agent-loop/.cursor/
-  skills/agent-memory/templates/   ← 四个文件的模板
-  hooks/memory-lookup.py           ← 机制，装到 ~/.cursor/hooks/ 全局生效
+agent-loop/
+  skills/agent-memory/templates/       ← 四个文件的模板
+  adapters/core.py                     ← 平台无关检索动作
+  adapters/cursor/hooks/memory-lookup.py  ← Cursor codec
 ```
 
 **GATE 做成 hook，不是规则。这是 v1 最关键的实现选择。**

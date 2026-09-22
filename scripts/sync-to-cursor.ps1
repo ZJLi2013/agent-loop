@@ -43,7 +43,7 @@ Get-ChildItem $skillsDest -Force |
         Write-Host "Pruned dead link: $($_.Name)" -ForegroundColor Yellow
     }
 
-Get-ChildItem "$repo\.cursor\skills" -Directory | ForEach-Object {
+Get-ChildItem "$repo\skills" -Directory | ForEach-Object {
     $t = Join-Path $skillsDest $_.Name
     if (-not (Test-Path $t)) {
         cmd /c "mklink /J `"$t`" `"$($_.FullName)`"" | Out-Null
@@ -69,11 +69,12 @@ Write-Host "Linked harness/ -> $harnessSrc" -ForegroundColor Green
 # --- Hooks：整目录 junction + 合并 hooks.json ---
 # hook 必须装到 user 级，否则只在本仓库生效，而 memory 要用在各个工作项目里。
 # user hook 的 command 路径相对 ~/.cursor/，所以这里写 ./hooks/...
-$hooksSrc  = "$repo\.cursor\hooks"
+$hooksSrc  = "$repo\adapters\cursor\hooks"
 $hooksDest = "$env:USERPROFILE\.cursor\hooks"
 if (Test-Path $hooksSrc) {
-    if (Test-Path $hooksDest) {
-        if ((Get-Item $hooksDest).LinkType) { cmd /c "rmdir `"$hooksDest`"" | Out-Null }
+    $hooksItem = Get-Item $hooksDest -Force -ErrorAction SilentlyContinue
+    if ($null -ne $hooksItem) {
+        if ($hooksItem.LinkType) { cmd /c "rmdir `"$hooksDest`"" | Out-Null }
         else {
             $bk = "$hooksDest-backup-$(Get-Date -f yyyyMMdd-HHmmss)"
             Move-Item $hooksDest $bk
@@ -131,10 +132,10 @@ if (Test-Path $hooksSrc) {
 }
 
 # --- 私有配置（可选，文件不存在就跳过）---
-$cfg = "$repo\.cursor\configs\node_inventory.yaml"
+$cfg = "$repo\.agent-loop\configs\node_inventory.yaml"
 if (Test-Path $cfg) {
-    New-Item -ItemType Directory -Force "$env:USERPROFILE\.cursor\configs" | Out-Null
-    $t = "$env:USERPROFILE\.cursor\configs\node_inventory.yaml"
+    New-Item -ItemType Directory -Force "$env:USERPROFILE\.agent-loop\configs" | Out-Null
+    $t = "$env:USERPROFILE\.agent-loop\configs\node_inventory.yaml"
     Remove-Item $t -Force -ErrorAction SilentlyContinue
     cmd /c "mklink /H `"$t`" `"$cfg`"" | Out-Null
     Write-Host "Linked node_inventory.yaml" -ForegroundColor Green

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.errors import HarnessError
+from harness.project import task_file
 from harness.protocol import Event, TransitionError, apply_event
 from harness.storage import (
     STATE_FILE,
@@ -47,7 +48,7 @@ def plan_metadata(root: Path, plan_path: str) -> tuple[int, str]:
 
 
 def task_plan_revision(root: Path, task_id: str) -> int:
-    path = root.resolve() / ".cursor" / "task.md"
+    path = task_file(root)
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except OSError as exc:
@@ -60,7 +61,7 @@ def task_plan_revision(root: Path, task_id: str) -> int:
         if not match:
             raise HarnessError(f"task {task_id} must bind a revision as rN")
         return int(match.group(1))
-    raise HarnessError(f"task {task_id} is missing from .cursor/task.md")
+    raise HarnessError(f"task {task_id} is missing from {path}")
 
 
 def pause_request(root: Path) -> dict[str, Any] | None:

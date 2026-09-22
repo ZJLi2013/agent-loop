@@ -36,8 +36,8 @@ class HarnessPauseTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def write_task(self, revision: int) -> None:
-        task_dir = self.root / ".cursor"
+    def write_task(self, revision: int, runtime_dir: str = ".agent-loop") -> None:
+        task_dir = self.root / runtime_dir
         task_dir.mkdir(exist_ok=True)
         (task_dir / "task.md").write_text(
             "| P | id | rev | task | check | status | failures |\n"
@@ -75,6 +75,14 @@ class HarnessPauseTest(unittest.TestCase):
         self.write_task(1)
         with self.assertRaisesRegex(HarnessError, "binds r1, plan is r2"):
             self.init()
+
+    def test_legacy_cursor_task_remains_readable(self) -> None:
+        self.write_plan(1, "approved")
+        self.write_task(1, ".cursor")
+        self.init()
+        _, state = load_runtime(self.root)
+
+        self.assertEqual(state["phase"], "ready")
 
     def test_human_correction_requires_new_approved_revision(self) -> None:
         self.write_plan(1, "approved")

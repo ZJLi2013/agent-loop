@@ -17,15 +17,15 @@ Relevant reports include:
 - hooks reading or emitting unintended files, prompts, source, or secrets;
 - path traversal outside the selected project;
 - secret leakage through execution journals or hook output;
-- installer/uninstaller changes that overwrite unrelated Cursor configuration.
+- installer/uninstaller changes that overwrite unrelated host configuration.
 
-Include the affected commit, OS, Python and Cursor versions, reproduction steps, expected boundary, and a minimal
+Include the affected commit, OS, Python and host versions, reproduction steps, expected boundary, and a minimal
 sanitized proof. Maintainers will acknowledge the report as soon as practical and coordinate disclosure after a
 fix is available.
 
 ## Trust boundary
 
-Installing agent-loop creates user-level Cursor hooks and junctions. Those hooks execute local Python code in
-every Cursor workspace. Review the checked-out commit before installation, pin versions in managed environments,
+Installing an enforced adapter can create user-level hooks and links. Those hooks execute local Python code in
+every workspace covered by that host. Review the checked-out commit before installation, pin versions in managed environments,
 and do not run untrusted forks with production credentials.
 

@@ -30,7 +30,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 
 ## 硬不变量
 
-- `.cursor/task.md` 是 backlog 唯一真相源；不建第二份任务清单。
+- `.agent-loop/task.md` 是 backlog 唯一真相源；不建第二份任务清单。
 - 等待 review 时允许「若干 `📝 proposed` + 零行 doing」；否则有且只有一行 `🔬 doing`。
 - plan document `Plan Revision`、task `rN` 与 Harness runtime revision 必须一致；review 未批准不执行。
 - 改动必须让当前检查点从不通过变成通过；否则先按 `task-state` 改状态，不能顺手做。

@@ -22,8 +22,8 @@ allowed-tools: [Shell]
 
 ## 配置
 
-首选 `.cursor/configs/node_inventory.yaml`（gitignored，模板见同目录 `.example`）；
-缺失则退回 `.cursor/configs/gpu_nodes.list`（每行一个 SSH host，`# [hot]` 标热节点，无标注取前 5 行）。
+首选 `.agent-loop/configs/node_inventory.yaml`（gitignored，模板见同目录 `.example`）；
+缺失则退回 `.agent-loop/configs/gpu_nodes.list`（每行一个 SSH host，`# [hot]` 标热节点，无标注取前 5 行）。
 
 30+ 节点的池子里**只精细维护 top 5 hot nodes**（标签 + 缓存 + 定期清理）；cold pool 只在
 hot 全部不可用时探测回退。字段含义与完整样例见 [reference.md](reference.md)。

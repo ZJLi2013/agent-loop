@@ -8,8 +8,8 @@
 ## 结论
 
 最小 Harness 已落地：显式 runner 命令受 hard timeout、attempt / wall budget 和有界 journal 控制；
-锁定 verifier 通过且工作树未变化时，stop hook 才允许 Cursor 结束。它不拦截所有 Cursor tool call，
-任务状态仍以 `.cursor/task.md` 为唯一真相源。运行中 pause 与 Plan Revision gate 已落地。
+锁定 verifier 通过且工作树未变化时，enforced adapter 才允许宿主结束。它不拦截所有 host tool call，
+任务状态仍以 `.agent-loop/task.md` 为唯一真相源。运行中 pause 与 Plan Revision gate 已落地。
 
 ## Pipeline
 
@@ -22,13 +22,13 @@ agent 选择动作
                                       │
 human pause ─► 中断 runner ─► plan revision + review + task rN ─► resume
                                       │
-Cursor stop hook ─────────────────────┤
+adapter STOP ─────────────────────────┤
   ├─ verified + fingerprint 未变 ─► 允许结束
   ├─ 还有预算 ─► followup_message ─► DIAGNOSE / REPAIR
   └─ 预算耗尽 ─► 允许 Auto-Stop
 ```
 
-源码安装在 `~/.cursor/harness/`；每个工作项目的运行状态放在 `.harness/`：
+CLI 通过 `agent-loop-harness` 调用；每个工作项目的运行状态放在 `.harness/`：
 
 ```text
 .harness/
@@ -63,7 +63,7 @@ Cursor stop hook ─────────────────────
 - Goal Review 的 action / time / failure 触发，以及 continue / replan / stop 与 preCompact adapter。
 
 [`protocol.py`](../harness/protocol.py) 定义状态机；storage / runner / journal / plan 各持一个职责，
-[`core.py`](../harness/core.py) 只做 orchestration 与兼容 façade。[`harness-stop.py`](../.cursor/hooks/harness-stop.py)
-把状态接到 Cursor `stop.followup_message`。完整强制边界仍需外部 driver 拥有 agent 生命周期；
-离开 Cursor 时优先评估 BOUND。
+[`core.py`](../harness/core.py) 只做 orchestration 与兼容 façade。[`adapters/core.py`](../adapters/core.py)
+把共享动作接到内部 hook protocol，Cursor codec 再翻译成 `stop.followup_message`。完整强制边界仍需
+宿主 hook 或外部 driver 拥有 agent 生命周期。
 

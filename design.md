@@ -1,18 +1,19 @@
 # agent-loop Design
 
-Plan Revision: 3
+Plan Revision: 4
 Plan Review: approved
 
 ## Goal
 
 让 agent-loop 可以持续演进而不靠向常驻 rule、skill 和单体 Harness 追加分支：新能力有稳定的归属，
-已有行为有一个可执行的状态机定义，Cursor 只是其中一个 adapter。
+已有行为有一个可执行的状态机定义，Cursor、Codex CLI 或自定义 driver 都只承担边界接线。
 
 ## 结论
 
-架构收敛为三层：**Stable Kernel / Policies / Adapters**。工作文档默认只有一份 plan document，
+架构收敛为三层：**Stable Kernel / Policies / Adapters**。平台事件先归一为内部 hook protocol，
+平台 codec 只翻译输入与输出，不拥有控制逻辑。工作文档默认只有一份 plan document，
 需要拆分时只增加 linked sub-exp，不另造 feature / exp 两套生命周期。Kernel 只拥有状态、事件、转移与 guard；
-skills 只解释某个状态下怎么做；Cursor hooks 只接平台事件。新增需求先归类，再决定是配置、policy、
+skills 只解释某个状态下怎么做；platform adapters 只接原生事件。新增需求先归类，再决定是配置、policy、
 adapter 还是确实需要扩展 kernel。
 
 ## Architecture
@@ -34,14 +35,14 @@ adapter 还是确实需要扩展 kernel。
                               │ actions
               ┌───────────────┴────────────────┐
               │            Adapters             │
-              │ Cursor hooks / runner / git     │
+              │ platform codecs / runner / git  │
               │ verifier / stdout journal       │
               └─────────────────────────────────┘
 ```
 
 ### Stable Kernel
 
-Kernel 不知道 plan 文档怎么写、实验用什么指标，也不知道 Cursor 的 hook JSON。它只处理：
+Kernel 不知道 plan 文档怎么写、实验用什么指标，也不知道任何平台的 hook JSON。它只处理：
 
 | State | 含义 |
 |---|---|
@@ -113,7 +114,7 @@ Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profil
 - 距上次 review 已完成 3 次 runner action；
 - 距上次 review 超过 60 分钟；
 - 长命令结束、verify fail、evidence stale；
-- Cursor `preCompact`。
+- adapter `COMPACT` 事件。
 
 下一动作开始前，Policy 必须落盘四项：当前 Goal、新 evidence、下一动作为何推进 Goal、
 `continue / replan / stop`。`continue` 更新 review 计数并 resume；`replan` 进入现有 revision /
@@ -122,29 +123,44 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 
 ### Adapters
 
+平台事件先经过统一边界，Kernel 和 Policies 不解析原生 payload：
+
+```text
+native event → platform codec → HookRequest → adapter core → HookResponse → platform codec
+```
+
+`HookRequest` 只使用 `TOOL_USED / COMPACT / STOP` 与 workspace、tool、status；
+`HookResponse` 只使用 `ALLOW / CONTEXT / CONTINUE`。新增平台只实现两端 codec 和安装配置，
+不在共享 core 中增加平台分支。自己的 driver 可以直接发送内部 request，不需要 codec。
+
 | Adapter | 职责 |
 |---|---|
 | `harness/runner.py` | subprocess、process-tree kill、timeout、输出采集 |
 | `harness/journal.py` | 有界 artifacts 与 `runs.jsonl` |
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
-| `harness/protocol.py` | state / event / transition；不依赖 Cursor |
-| `.cursor/hooks/harness-stop.py` | Cursor stop payload ↔ completion gate |
-| `.cursor/hooks/memory-lookup.py` | Cursor Read payload ↔ memory retrieval |
+| `harness/protocol.py` | state / event / transition；不依赖平台 |
+| `adapters/protocol.py` | 平台无关的 hook request / response |
+| `adapters/core.py` | memory、Goal Review、completion gate 的事件处理 |
+| `adapters/cursor/hooks/` | Cursor payload / output codec |
 | `scripts/sync-to-cursor.ps1` | 安装 user-level adapter |
 
 `harness/core.py` 只保留兼容 façade 与 orchestration，不再容纳平台 hook 或大段底层实现。
+
+没有 lifecycle hooks 的壳仍可使用 rules、skills 和 Harness，属于 portable mode；只有 adapter
+能接收 `STOP` 并回传 `CONTINUE` 时，才属于能强制 completion gate 的 enforced mode。
 
 ## Sources of truth
 
 | 内容 | 唯一真相源 |
 |---|---|
-| Goal、当前结论、决策、task、`rN` | plan document + `.cursor/task.md` |
+| Goal、当前结论、决策、task、`rN` | plan document + `.agent-loop/task.md` |
 | runtime phase、budget、当前 run | `.harness/state.json` |
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
-| 长期事实与结论 | `.cursor/memory/` |
+| 长期事实与结论 | `.agent-loop/memory/` |
 | 状态与转移是否合法 | `harness/protocol.py` |
 
-`.harness/state.json` 不复制 backlog；memory 不复制 stdout；README 不复制本设计。
+`.cursor/task.md` 与 `.cursor/memory/` 只作为旧项目读取兼容，不再写入。`.harness/state.json`
+不复制 backlog；memory 不复制 stdout；README 不复制本设计。
 
 ## Extension rule
 
@@ -152,16 +168,17 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 
 1. 项目差异能否用 config / profile 表达？能就不改代码。
 2. 只是某个状态下的做法？放 policy / skill。
-3. 只是接一个平台或工具？放 adapter。
+3. 只是接一个平台或工具？先映射内部 hook protocol，再放 platform codec。
 4. 只有出现新的生命周期状态、事件或不可绕过 guard，才改 Kernel。
 
-每次扩展必须同时删除被替代路径。contract test 测 transition 与 guard，不匹配说明文案。
+每次扩展必须同时删除被替代路径。Kernel contract test 测 transition 与 guard；platform adapter
+用原生 payload fixture 测 codec，不复制共享动作测试。
 
 ## Public repository contract
 
 - Apache-2.0 是代码、rules、skills 与文档的发行许可证；
 - `CONTRIBUTING.md` 与 `AI_POLICY.md` 定义贡献边界，Kernel 变更先走 Issue / RFC；
-- `.cursor/task.md`、`.cursor/memory/`、`.harness/` 是 maintainer runtime，不进入发行内容；
+- `.agent-loop/`、`.harness/` 是 maintainer runtime，不进入发行内容；
 - GitHub Issues / Milestones 是公开 backlog，`ROADMAP.md` 只写 Now / Next / Later；
 - `SECURITY.md` 与 GitHub Private Vulnerability Reporting 承接 hook、命令执行和日志泄漏问题；
 - 支持范围、breaking schema 和迁移方式由 README / CHANGELOG / SemVer 对外声明。
@@ -181,8 +198,11 @@ agent-loop/
 │   ├── plan.py               # Plan Revision / pause gate
 │   ├── core.py               # orchestration façade
 │   └── run.py                # CLI
-├── .cursor/skills/           # Policies
-├── .cursor/hooks/            # Cursor adapters
+├── skills/                   # Policies
+├── adapters/
+│   ├── protocol.py           # platform-neutral hook boundary
+│   ├── core.py               # shared hook actions
+│   └── cursor/hooks/         # Cursor codec
 └── study/                    # 调研与设计依据，不承担当前架构定义
 ```
 
@@ -195,16 +215,15 @@ agent-loop/
 - README 只保留安装、最短使用路径、边界与文档入口。
 - plan document 统一 Goal / 当前结论 / 下一步决策 / Experiment Log，详细实验只拆 linked sub-exp；
 - Goal Review 由 action / elapsed / failure / stale / preCompact 事件触发，复用 PAUSED 与 revision gate。
+- task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；
+- native hook payload 由 platform codec 归一为 `HookRequest / HookResponse`；
 - public baseline 提供 Apache-2.0、CI、贡献 / 安全 / AI policy、Issue / PR 模板与安全卸载；
   maintainer runtime state 不再进入发行内容。
-
-本次重构后，`core.py` 从 767 个非空行降到 467，常驻 loop rule 从 82 降到 48，README 从
-大约 150 个物理行降到约 80；删除的是重复 owner 和解释路径，不是判据。
 
 ## Non-goals
 
 - 不做动态 plugin loader；目录和 import 边界足够。
 - 不把扁平 task 变成 DAG。
-- 不让 Harness 接管未显式交给 runner 的全部 Cursor tool call。
+- 不让 Harness 接管未显式交给 runner 的全部 host tool call。
 - 不为行数目标删判据；重构只删除重复 owner 与重复路径。
 

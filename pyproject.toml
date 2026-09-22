@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cursor-agent-loop"
+name = "agent-loop"
 version = "0.1.0"
-description = "A reviewed, evidence-driven agent control loop for Cursor"
+description = "A reviewed, evidence-driven control loop for coding agents"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
@@ -25,5 +25,5 @@ Issues = "https://github.com/ZJLi2013/agent-loop/issues"
 agent-loop-harness = "harness.run:main"
 
 [tool.setuptools.packages.find]
-include = ["harness*"]
+include = ["harness*", "adapters*"]
 

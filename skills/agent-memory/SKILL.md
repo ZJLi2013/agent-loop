@@ -1,7 +1,7 @@
 ---
 name: agent-memory
 description: >-
-  项目记忆：`.cursor/memory/` 下 INDEX / facts / episodes / lessons 四个文件，
+  项目记忆：`.agent-loop/memory/` 下 INDEX / facts / episodes / lessons 四个文件，
   索引常驻、内容定向读取，写入挂在每个有意义的转换上。hook 在读 task.md 时强制注入索引。
   Use when setting up project memory, recording an outcome or a disproved hypothesis,
   looking up whether something was already tried, or when a remembered value turns out stale.
@@ -17,14 +17,14 @@ description: >-
 
 **边界**：本 skill 管「后面还要用的值、结论、教训」。任务状态归 `task-state`；
 单次实验的详细过程与读数归 `experiment-design`（memory 里只放它的提炼 + 链接）；
-procedural memory 就是 `.cursor/skills/` 本身，不在这里重复索引。
+procedural memory 就是 `skills/` 本身，不在这里重复索引。
 
 ## 四个文件
 
-**记忆属于被开发的那个项目，不属于本库。** agent 的持久状态统一在 `.cursor/` 下：
+**记忆属于被开发的那个项目，不属于本库。** agent 的持久状态统一在 `.agent-loop/` 下：
 
 ```text
-<项目>/.cursor/
+<项目>/.agent-loop/
   task.md        # 任务状态（归 task-state）
   progress.md    # 交接笔记（归 task-state）
   memory/
@@ -43,7 +43,7 @@ procedural memory 就是 `.cursor/skills/` 本身，不在这里重复索引。
 
 ## 读：hook 强制，不靠自觉
 
-`.cursor/hooks.json` 把 `memory-lookup.py` 挂在 `postToolUse` / `Read` 上。
+平台 adapter 把内部 `TOOL_USED` 事件接到 `memory-lookup`。
 **读 `task.md` 是 SELECT 必然发生的动作**，所以这一步不是模型的选择：
 
 ```text
@@ -100,7 +100,7 @@ hook 检测到超限会直接告警，届时把条目并粗（指向小节而不
 （写进来只会和源头漂移）。
 
 `lessons.md` 上限 15 条，**上限是在强制筛选**。计数晋升：`[x1]` 记一次、`[x2]` 又犯、
-`[x3]` 晋升为 `.cursor/rules/` 里的永久规则并**从 lessons 删掉**——两处都留，读者不知道信哪个。
+`[x3]` 晋升为常驻 rule 并**从 lessons 删掉**——两处都留，读者不知道信哪个。
 
 ## 验：过期比缺失更坏
 
@@ -116,4 +116,4 @@ INDEX 带 anchor，RETRIEVE 是**定向读取**而不是搜索，所以不需要
 本库量级下精确查找就够，而把 key-value 塞进语义检索会取回相邻的那一条——
 问 node-a 的路径，返回 node-b 的。
 
-调研依据与未做的部分见 [`study/memory.md`](../../../study/memory.md)。
+调研依据与未做的部分见 [`study/memory.md`](../../study/memory.md)。
