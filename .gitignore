@@ -35,6 +35,14 @@ adapters/cursor/hooks/*.log
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+.pytest_cache/
+pytest-cache-files-*/
+.venv/
+
+# Other agents' scratch dirs and pager's default local state
+.codex/
+.pager/
 
 # OS
 .DS_Store

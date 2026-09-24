@@ -46,6 +46,19 @@ Goal → Plan → Human Review
 一轮交接：verify 通过 → stop hook 要 worker 跑 `agent-loop-harness review` → reviewer 只读证据，
 改写 `task.md` 并写决策 → `continue` 时 worker 只能以事实错误异议一次，否则直接做下一个 task。
 
+## 人不在电脑前
+
+需要 human 的检查点可以经 [`tools/pager`](tools/pager/)（`pip install -e tools/pager`）发到手机：plan 待批、reviewer 选
+`ask_human`、reviewer 连续失败、预算用尽时，worker 不停下，而是跑 `agent-loop-harness page` 发邮件并挂着等回复；
+reviewer 选 `stop` 时只发通知。init 前写 `.agent-loop/pager.json`：
+
+```json
+{"argv": ["python", "-m", "pager"], "project": "my-project", "address": "you@example.com"}
+```
+
+回复 `OK` 批准当前检查点，`DO <文字>` 作为 human 纠偏交给 worker（改 plan 后再发一次待批），
+`NO` / `STOP` 停下。pager 不能唤醒已退出的 agent，所以电脑、网络和 agent 会话都要保持在线。
+
 ## 架构
 
 核心分三层：

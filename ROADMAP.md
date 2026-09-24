@@ -20,6 +20,10 @@ The roadmap describes direction, not delivery dates. Concrete work belongs in Gi
 
 ## Later
 
+- generalize external tools: reviewer (`.agent-loop/reviewer.json`) and pager (`tools/pager`, `.agent-loop/pager.json`) are both
+  config-declared commands locked at init and invoked at a lifecycle point (task boundary, human checkpoint);
+  fold them into one registry of `{lifecycle point, argv, input contract, output contract}` once a third tool
+  appears — declared commands, not a dynamic plugin loader;
 - evaluate an external driver for complete tool-call control outside Cursor;
 - evaluate BOUND or another supervisor instead of duplicating external-agent orchestration;
 - add project profiles only when multiple real projects need different policies.

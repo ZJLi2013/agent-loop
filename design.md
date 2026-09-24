@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 5
+Plan Revision: 6
 Plan Review: approved
 
 ## Goal
@@ -135,6 +135,23 @@ reviewer 是项目 `.agent-loop/reviewer.json` 里的一条命令，init 时锁�
 强于 worker。reviewer 只读落盘证据，改 plan / task，并写 `continue | ask_human | stop` 决策；
 worker 只能以事实错误异议一次，仍分歧即 `ask_human`。调研见 [`study/multi_agent.md`](study/multi_agent.md)。
 
+### Human checkpoints on the phone
+
+配置 `.agent-loop/pager.json` 时，gate 在需要 human 的检查点不让 worker 停下，而是要求 `harness page`：
+经 pager CLI 把检查点发到手机，挂着等回复，再把回复映射成 Harness 动作。repo 绑定在 agent-loop 一侧：
+task id 形如 `<project>.<task>.<kind>.<utc>`，pager 状态放项目自己的 `.harness/pager-state.json`。
+
+| 检查点 | `OK` | `DO <文字>` | `NO` / `STOP` |
+|---|---|---|---|
+| `plan_review`：plan 为 proposed | 写 `Plan Review: approved` 并 resume | human 纠偏 | 停 |
+| `ask_human`：reviewer 交回 | 采纳 reviewer 提议 | human 纠偏 | 停 |
+| `review_failed` / `budget` | 停 | human 纠偏 | 停 |
+| `done`：reviewer 选 stop | 只发通知，不等回复 | | |
+
+human 纠偏 = `pause --require-revision`，worker 按 `work-planning` 改 plan 为 proposed，下一次 stop 再发
+`plan_review`。`DO` 的文字只作为指令交给 worker，不拼进命令。pager 不能唤醒已退出的 agent：worker 在
+检查点挂在 `page` 上等待。
+
 ### Adapters
 
 平台事件先经过统一边界，Kernel 和 Policies 不解析原生 payload：
@@ -154,6 +171,7 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
 | `harness/review.py` | task 边界 reviewer：prompt、执行、决策校验与 follow-up |
 | `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录 |
+| `harness/page.py` | human 检查点经 pager 发到手机，回复映射成 Harness 动作 |
 | `harness/protocol.py` | state / event / transition；不依赖平台 |
 | `adapters/protocol.py` | 平台无关的 hook request / response |
 | `adapters/core.py` | memory、Goal Review、completion gate 的事件处理 |
@@ -215,6 +233,8 @@ agent-loop/
 │   ├── core.py               # orchestration façade
 │   └── run.py                # CLI
 ├── skills/                   # Policies
+├── tools/
+│   └── pager/                # 独立包：邮件往返；Harness 只经 CLI 调用
 ├── adapters/
 │   ├── protocol.py           # platform-neutral hook boundary
 │   ├── core.py               # shared hook actions

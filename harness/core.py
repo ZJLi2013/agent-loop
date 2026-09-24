@@ -32,6 +32,7 @@ from harness.plan import (
     resume,
     task_plan_revision,
 )
+from harness.page import load_pager, page_followup
 from harness.protocol import Event, Phase, TransitionError, apply_event
 from harness.review import load_reviewer, review_followup
 from harness.runner import execute_process
@@ -156,6 +157,7 @@ def initialize(
             "on_failure": bool(goal_review_on_failure),
         },
         "reviewer": load_reviewer(root),
+        "pager": load_pager(root),
         "created_at": created_at,
     }
     phase = Phase.PROPOSED if review == "proposed" else Phase.READY
@@ -438,12 +440,12 @@ def completion_gate(root: Path) -> str | None:
                     f"{request['reason']}. Use work-planning and record "
                     "continue / replan / stop."
                 )
-            return None
+            return page_followup(root, config, state)
         if state.get("phase") in {
             Phase.PAUSED.value,
             Phase.PROPOSED.value,
         }:
-            return None
+            return page_followup(root, config, state)
 
         plan_ready, plan_reason = plan_can_run(root, config, state)
         if not plan_ready:
@@ -482,7 +484,9 @@ def completion_gate(root: Path) -> str | None:
             if reviewed or state.get("verified_fingerprint") == workspace_fingerprint(
                 root
             ):
-                return review_followup(root, config, state, state_path)
+                return review_followup(
+                    root, config, state, state_path
+                ) or page_followup(root, config, state)
             _transition(state, Event.EVIDENCE_STALE)
             schedule_goal_review(root, "goal_review_due: evidence stale")
             _transition(state, Event.PAUSE_REQUESTED)
@@ -497,7 +501,7 @@ def completion_gate(root: Path) -> str | None:
 
         if phase == Phase.STOPPED:
             if state.get("stop_report_requested"):
-                return None
+                return page_followup(root, config, state)
             state["stop_report_requested"] = True
             state["updated_at"] = utc_now()
             atomic_write_json(state_path, state)

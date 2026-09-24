@@ -1,0 +1,23 @@
+[project]
+name = "pager"
+version = "0.1.0"
+description = "On-call pager: desk agent pages you, you ACK"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+pager = "pager.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["pager*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

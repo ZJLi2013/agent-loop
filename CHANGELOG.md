@@ -16,6 +16,10 @@ All notable user-facing changes are documented here. This project follows Semant
 - Project memory with forced retrieval through a Cursor hook.
 - Task-boundary reviewer: after verification, a configurable reviewer command (`.agent-loop/reviewer.json`)
   rewrites the next task and decides `continue`, `ask_human`, or `stop`.
+- Human checkpoints on the phone: with `.agent-loop/pager.json`, plan approval, reviewer `ask_human`, reviewer
+  failure, and budget exhaustion are paged through the pager CLI, and the reply maps to a Harness action.
+- `tools/pager`: the email pager ships in this repository as its own package; the Graph client is injected
+  through `PAGER_GRAPH_SCRIPTS`.
 
 ### Changed
 
