@@ -45,6 +45,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 | 人类可读输出 | `write-for-humans` rule |
 | 对外披露 / 脱敏 / 去私料 | `external-output-boundary` rule |
 | Harness runtime / evidence | `harness/` |
+| task 边界 reviewer 的 prompt 与决策格式 | `harness/review.py` |
 | 平台事件接线 | `adapters/<platform>/` |
 
 Bugbot 不读 rules 或 skills。PR 上的 review 标准只能放目标 repo 的 `.cursor/BUGBOT.md` 或

@@ -6,10 +6,12 @@
 平台无关的 agent 控制环：**默认继续，但不允许未 review 的计划、旧 revision 或未验证证据继续驱动任务。**
 
 ```text
-Goal → Plan → Human Review → Run → Verify → Done
-                    ↑          │
-                    └─ Pause / Reconcile
+Goal → Plan → Human Review → Run → Verify → Reviewer → next task / Done
+                    ↑          │                 │
+                    └─ Pause / Reconcile ◄───────┘ ask_human
 ```
+
+worker 执行 task；task 验证通过后，下一步由 reviewer（可配置的另一个模型）决定，调度由 Harness 状态机完成。
 
 核心分三层：
 
@@ -95,6 +97,20 @@ agent-loop-harness resume
 默认每 3 次 action、60 分钟、失败或 context compact 后触发 Goal Review；用
 `goal-review --decision continue|replan|stop --evidence "<结论>"` 处理。
 
+task 边界的下一步可以交给另一个模型：init 前写 `.agent-loop/reviewer.json`，任意能在项目目录
+读写文件的 CLI 都行，原则上 reviewer 强于 worker。例：Cursor 里的 agent 当 worker，WSL 里的 Codex 当 reviewer：
+
+```json
+{
+  "argv": ["wsl.exe", "--", "bash", "-lc",
+           "codex exec -s workspace-write 'Read .harness/review/prompt.md and follow it exactly.'"],
+  "timeout_seconds": 1800
+}
+```
+
+verify 通过后 stop hook 会要求 `agent-loop-harness review`；reviewer 改写 `task.md` 并写
+`continue | ask_human | stop`，worker 只能以事实错误异议一次。
+
 最小可运行样例见 [`examples/minimal-project/`](examples/minimal-project/)。
 
 ## 边界
@@ -114,6 +130,8 @@ agent-loop-harness resume
 | [`study/harness.md`](study/harness.md) | runner、journal、Verifier 与边界 |
 | [`study/planning-contract.md`](study/planning-contract.md) | 渐进计划、review 与人工纠偏 |
 | [`study/memory.md`](study/memory.md) | facts / episodes / lessons 的检索设计 |
+| [`study/multi_agent.md`](study/multi_agent.md) | 现有 multi-agent loop 对比与 worker / reviewer 分工 |
+| [`case_study/robojev-nox.md`](case_study/robojev-nox.md) | 一天 11 个 task 边界的跨模型纠偏记录 |
 | [`skills/README.md`](skills/README.md) | Policy 索引与唯一 owner |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献流程、新 feature 准入与测试 |
 | [`AI_POLICY.md`](AI_POLICY.md) | AI-assisted contribution 披露 |

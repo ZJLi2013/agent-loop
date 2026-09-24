@@ -82,3 +82,6 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 task 通过后把 Experiment Log 的关键 evidence 提炼到「当前结论」，更新下一步决策；
 细节留在 log / sub-exp。全部完成时 plan document 是 as-built，不需要再复制一份总结。
+
+项目配置了 reviewer 时，「更新下一步决策」归 reviewer（`harness review`），worker 只按 gate 提示
+做事实核对；prompt 与决策格式见 `harness/review.py`。

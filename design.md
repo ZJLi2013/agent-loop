@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 4
+Plan Revision: 5
 Plan Review: approved
 
 ## Goal
@@ -121,6 +121,20 @@ Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profil
 review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模型 turn，timer 只写 pause request，
 反思发生在安全轮询点或命令结束后。
 
+### Task boundary review
+
+task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。调度是确定的，不用 LLM：
+
+| 时刻 | 调用 |
+|---|---|
+| task 执行、自修、重试 | worker（宿主里的 agent） |
+| task `VERIFIED` 且配置了 reviewer | reviewer：`harness review`，经 runner 执行、journal 记账 |
+| reviewer 选 `ask_human` / `stop` | human |
+
+reviewer 是项目 `.agent-loop/reviewer.json` 里的一条命令，init 时锁进 config；模型与宿主无关，原则上
+强于 worker。reviewer 只读落盘证据，改 plan / task，并写 `continue | ask_human | stop` 决策；
+worker 只能以事实错误异议一次，仍分歧即 `ask_human`。调研见 [`study/multi_agent.md`](study/multi_agent.md)。
+
 ### Adapters
 
 平台事件先经过统一边界，Kernel 和 Policies 不解析原生 payload：
@@ -138,6 +152,8 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 | `harness/runner.py` | subprocess、process-tree kill、timeout、输出采集 |
 | `harness/journal.py` | 有界 artifacts 与 `runs.jsonl` |
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
+| `harness/review.py` | task 边界 reviewer：prompt、执行、决策校验与 follow-up |
+| `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录 |
 | `harness/protocol.py` | state / event / transition；不依赖平台 |
 | `adapters/protocol.py` | 平台无关的 hook request / response |
 | `adapters/core.py` | memory、Goal Review、completion gate 的事件处理 |

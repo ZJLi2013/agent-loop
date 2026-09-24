@@ -33,6 +33,7 @@ from harness.plan import (
     task_plan_revision,
 )
 from harness.protocol import Event, Phase, TransitionError, apply_event
+from harness.review import load_reviewer, review_followup
 from harness.runner import execute_process
 from harness.storage import (
     CONFIG_FILE,
@@ -154,6 +155,7 @@ def initialize(
             "after_seconds": float(goal_review_after_seconds),
             "on_failure": bool(goal_review_on_failure),
         },
+        "reviewer": load_reviewer(root),
         "created_at": created_at,
     }
     phase = Phase.PROPOSED if review == "proposed" else Phase.READY
@@ -474,8 +476,13 @@ def completion_gate(root: Path) -> str | None:
 
         phase = Phase(str(state["phase"]))
         if phase == Phase.VERIFIED:
-            if state.get("verified_fingerprint") == workspace_fingerprint(root):
-                return None
+            reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
+                "last_run_id"
+            )
+            if reviewed or state.get("verified_fingerprint") == workspace_fingerprint(
+                root
+            ):
+                return review_followup(root, config, state, state_path)
             _transition(state, Event.EVIDENCE_STALE)
             schedule_goal_review(root, "goal_review_due: evidence stale")
             _transition(state, Event.PAUSE_REQUESTED)

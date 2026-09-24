@@ -25,6 +25,7 @@ adapters/cursor/hooks/*.log
 .agent-loop/task.md
 .agent-loop/progress.md
 .agent-loop/memory/
+.agent-loop/reviewer.json
 
 # Legacy runtime read compatibility
 .cursor/task.md

@@ -26,6 +26,7 @@ from harness.core import (  # noqa: E402
     run_command,
     verify,
 )
+from harness.review import run_review  # noqa: E402
 
 
 def _command(value: list[str]) -> list[str]:
@@ -79,6 +80,10 @@ def build_parser() -> argparse.ArgumentParser:
     execute.add_argument("command", nargs=argparse.REMAINDER)
 
     commands.add_parser("verify", help="run the locked verifier")
+    review = commands.add_parser(
+        "review", help="run the configured reviewer at the task boundary"
+    )
+    review.add_argument("--objection", help="one factual error in the last decision")
     pause = commands.add_parser("pause", help="pause before the next action")
     pause.add_argument("--reason", required=True)
     pause.add_argument("--require-revision", action="store_true")
@@ -145,6 +150,10 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
             return 0 if state["phase"] == "verified" else 1
+        if args.action == "review":
+            outcome = run_review(root, objection=args.objection)
+            print(json.dumps(outcome, ensure_ascii=False, indent=2))
+            return 0 if outcome["review"]["decision"] else 1
         if args.action == "pause":
             request = request_pause(
                 root,
