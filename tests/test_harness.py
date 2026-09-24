@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from harness.core import (
     HarnessError,
@@ -15,6 +18,7 @@ from harness.core import (
     load_runtime,
     run_command,
     verify,
+    workspace_fingerprint,
 )
 
 
@@ -177,6 +181,52 @@ class HarnessTest(unittest.TestCase):
         self.assertFalse(result["verification_passed"])
         self.assertEqual(state["phase"], "paused")
         self.assertEqual(state["last_outcome"], "reject")
+
+
+class WorkspaceFingerprintTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        (self.root / "code.py").write_text("x = 1\n")
+        self.scratch = self.root / "sub" / ".codex" / "tmp" / "apply_patch"
+        self.scratch.parent.mkdir(parents=True)
+        self.scratch.write_text("locked\n")
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def fingerprint(self) -> str:
+        original = Path.open
+
+        def locked_open(path: Path, *args: object, **kwargs: object):
+            if ".codex" in path.parts:
+                raise OSError("The file cannot be accessed by the system")
+            return original(path, *args, **kwargs)
+
+        with mock.patch.object(Path, "open", locked_open):
+            return workspace_fingerprint(self.root)
+
+    def assert_scratch_ignored(self) -> None:
+        before = self.fingerprint()
+        self.scratch.write_text("changed\n")
+        self.assertEqual(self.fingerprint(), before)
+        (self.root / "code.py").write_text("x = 2\n")
+        self.assertNotEqual(self.fingerprint(), before)
+
+    def test_fallback_skips_nested_foreign_runtime(self) -> None:
+        self.assert_scratch_ignored()
+
+    @unittest.skipUnless(shutil.which("git"), "git is required")
+    def test_git_path_skips_nested_foreign_runtime(self) -> None:
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com"]
+        for args in (["init", "-q"], ["add", "code.py"], ["commit", "-q", "-m", "init"]):
+            subprocess.run(git + args, cwd=self.root, check=True, capture_output=True)
+
+        with mock.patch(
+            "harness.fingerprint._fallback_fingerprint",
+            side_effect=AssertionError("fell back to the tree walk"),
+        ):
+            self.assert_scratch_ignored()
 
 
 if __name__ == "__main__":
