@@ -11,6 +11,8 @@ The roadmap describes direction, not delivery dates. Concrete work belongs in Gi
 
 ## Next
 
+- add a task decision contract (`pass`, `fail_to`, `budget`) and block `READY` until all three are valid;
+- route expected negative results to an explicit next task/action instead of relying on generic DIAGNOSE;
 - add a supported macOS/Linux sync path;
 - add installer dry-run and diagnostics;
 - publish minimal-project and policy/adapter examples;
