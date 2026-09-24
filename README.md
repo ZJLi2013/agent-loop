@@ -6,12 +6,47 @@
 平台无关的 agent 控制环：**默认继续，但不允许未 review 的计划、旧 revision 或未验证证据继续驱动任务。**
 
 ```text
-Goal → Plan → Human Review → Run → Verify → Reviewer → next task / Done
-                    ↑          │                 │
-                    └─ Pause / Reconcile ◄───────┘ ask_human
+Goal → Plan → Human Review
+                   │
+                   ▼
+     ┌──► worker   ：Run → Verify（锁定 verifier）
+     │                     │ VERIFIED
+     │ continue            ▼
+     └─── reviewer ：读落盘证据 → 纠正结论 → 改写下一个 task
+                           │
+                           └─ ask_human / stop ─► human
+
+     human 纠偏随时可 pause；plan revision 不一致时拒绝继续
 ```
 
-worker 执行 task；task 验证通过后，下一步由 reviewer（可配置的另一个模型）决定，调度由 Harness 状态机完成。
+## worker + reviewer
+
+像实验室里的研究员和导师：研究员把实验做完、数据落盘；导师不看过程，只看数据，决定下一个实验做什么。
+导师拿不准方向时，才去找出资人（human）。
+
+| 角色 | 推荐配置 | 在哪跑 | 负责 | 不做 |
+|---|---|---|---|---|
+| worker | Opus 5 | Cursor agent | 执行、自修、重试、跑 verifier | 给自己的下一步拍板 |
+| reviewer | gpt-6 | Codex CLI（经 WSL） | 核对结论、改写下一个 task、给出 `continue / ask_human / stop` | 改代码、跑实验 |
+| 调度 | Harness 状态机 | stop hook + runner | 决定什么时候叫谁 | 任何判断 |
+| human | 项目 owner | — | 定 Goal、批 plan、回答 `ask_human` | — |
+
+模型不写死，原则是 reviewer 强于 worker。reviewer 是项目里的一条命令，init 前写进
+`.agent-loop/reviewer.json`；不写这个文件，就是只有 worker 的单 agent 模式。`.harness/review/prompt.md`
+由 Harness 在每次 review 前按当前项目生成，不需要自己写；下面这份配置各项目通用：
+
+```json
+{
+  "argv": ["wsl.exe", "--", "bash", "-lc",
+           "codex exec -s workspace-write 'Read .harness/review/prompt.md and follow it exactly.'"],
+  "timeout_seconds": 1800
+}
+```
+
+一轮交接：verify 通过 → stop hook 要 worker 跑 `agent-loop-harness review` → reviewer 只读证据，
+改写 `task.md` 并写决策 → `continue` 时 worker 只能以事实错误异议一次，否则直接做下一个 task。
+
+## 架构
 
 核心分三层：
 
@@ -97,19 +132,7 @@ agent-loop-harness resume
 默认每 3 次 action、60 分钟、失败或 context compact 后触发 Goal Review；用
 `goal-review --decision continue|replan|stop --evidence "<结论>"` 处理。
 
-task 边界的下一步可以交给另一个模型：init 前写 `.agent-loop/reviewer.json`，任意能在项目目录
-读写文件的 CLI 都行，原则上 reviewer 强于 worker。例：Cursor 里的 agent 当 worker，WSL 里的 Codex 当 reviewer：
-
-```json
-{
-  "argv": ["wsl.exe", "--", "bash", "-lc",
-           "codex exec -s workspace-write 'Read .harness/review/prompt.md and follow it exactly.'"],
-  "timeout_seconds": 1800
-}
-```
-
-verify 通过后 stop hook 会要求 `agent-loop-harness review`；reviewer 改写 `task.md` 并写
-`continue | ask_human | stop`，worker 只能以事实错误异议一次。
+要让 reviewer 接管 task 边界，init 前放好 `.agent-loop/reviewer.json`（见上文「worker + reviewer」）。
 
 最小可运行样例见 [`examples/minimal-project/`](examples/minimal-project/)。
 
