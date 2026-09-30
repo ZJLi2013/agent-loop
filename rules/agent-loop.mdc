@@ -30,19 +30,20 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 
 ## 硬不变量
 
-- `.agent-loop/task.md` 是 backlog 唯一真相源；不建第二份任务清单。
+- `.agent-loop/task.md` 是 active backlog 唯一真相源；`.agent-loop/archive/` 只存 closed history，
+  不建第二份任务清单。
 - 等待 review 时允许「若干 `📝 proposed` + 零行 doing」；否则有且只有一行 `🔬 doing`。
 - plan document `Plan Revision`、task `rN` 与 Harness runtime revision 必须一致；review 未批准不执行。
 - 改动必须让当前检查点从不通过变成通过；否则先按 `task-state` 改状态，不能顺手做。
 - `🚧 blocked` 链长 ≥ 2 停下重拆；失败先按 `when-to-stop` 自修到上限。
 - human 只问进展时读状态与 evidence 回答；纠正 Goal / scope / 优先级时先 Harness pause，
   再由 `work-planning` 更新 Goal、RECONCILE tasks、review、resume。
-- `task.md` 清空即 DONE：报告并停。review、提上游、写博客等不会自动发生。
+- `task.md` 没有 active task 即 DONE：closed 行归档后报告并停。review、提上游、写博客等不会自动发生。
 
 ## 横穿全环
 
-- memory：具体值第二次用到就写；入命令前从 `facts.md` 读；task 变绿、假设被推翻、方案被否决时
-  写 `episodes.md` 并同步 INDEX。
+- memory：具体值第二次用到就写；入命令前从 `facts.md` 读；task CLOSE 只为未来仍需检索的结论写
+  `episodes.md` 指针，假设被推翻、方案被否决时写长期条目并同步 INDEX。
 - Harness：项目存在启用中的 `.harness/state.json` 时，耗时或改变验收证据的命令经 runner；
   结束前运行锁定 verifier。stop hook 拒绝未验证、证据 stale 或预算不清的完成声明。
 

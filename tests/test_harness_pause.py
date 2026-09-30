@@ -19,6 +19,8 @@ from harness.core import (
     resume,
     run_command,
 )
+from harness.plan import task_plan_revision
+from harness.records import archive_closed_tasks
 
 
 class HarnessPauseTest(unittest.TestCase):
@@ -83,6 +85,18 @@ class HarnessPauseTest(unittest.TestCase):
         _, state = load_runtime(self.root)
 
         self.assertEqual(state["phase"], "ready")
+
+    def test_closed_task_revision_remains_readable_from_archive(self) -> None:
+        self.write_task(2)
+        task = self.root / ".agent-loop" / "task.md"
+        task.write_text(
+            task.read_text(encoding="utf-8").replace("🔬 doing", "✅ done"),
+            encoding="utf-8",
+        )
+
+        archive_closed_tasks(self.root)
+
+        self.assertEqual(task_plan_revision(self.root, "t1"), 2)
 
     def test_human_correction_requires_new_approved_revision(self) -> None:
         self.write_plan(1, "approved")

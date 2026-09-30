@@ -80,8 +80,21 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 ## CLOSE
 
-task 通过后把 Experiment Log 的关键 evidence 提炼到「当前结论」，更新下一步决策；
-细节留在 log / sub-exp。全部完成时 plan document 是 as-built，不需要再复制一份总结。
+**CLOSE 不只是追加摘要，还要让已闭合记录退出活跃工作集。**
+
+task 通过后：
+
+1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」与下一步决策；
+2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，
+   移到 linked archive，活跃表只留一个 task 级指针；
+3. 通知 `task-state` 归档 closed task 与旧交接快照，通知 `agent-memory` 只保留未来仍会改变选择的
+   结论、`disproved / rejected` 与证据指针。
+
+Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界与
+archive index。原始 run / artifact 与 sub-exp 不删，但不再默认加载。具体格式分别归
+`experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
+
+active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。
 
 项目配置了 reviewer 时，「更新下一步决策」归 reviewer：锁定 verifier 通过后 Harness 自动运行
 `harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/review.py`。

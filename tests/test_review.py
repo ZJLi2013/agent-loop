@@ -17,13 +17,27 @@ from harness.core import (
 from harness.review import run_review
 
 DECISION = ".harness/review/decision.json"
+REWRITTEN_TASKS = """| P | id | rev | task | check | status | fail |
+|---|---|---|---|---|---|---|
+| P0 | t1 | — | first | check | ✅ done | 0 |
+| P0 | t2 | — | next | check | ⬜ todo | 0 |
+"""
 
 
 def reviewer_writing(decision: dict[str, object] | str) -> list[str]:
     text = decision if isinstance(decision, str) else json.dumps(decision)
     code = (
         "from pathlib import Path; "
-        "Path('.agent-loop/task.md').write_text('rewritten by reviewer'); "
+        f"Path('.agent-loop/task.md').write_text({REWRITTEN_TASKS!r}, encoding='utf-8'); "
+        f"Path({DECISION!r}).write_text({text!r})"
+    )
+    return [sys.executable, "-c", code]
+
+
+def reviewer_decision_only(decision: dict[str, object]) -> list[str]:
+    text = json.dumps(decision)
+    code = (
+        "from pathlib import Path; "
         f"Path({DECISION!r}).write_text({text!r})"
     )
     return [sys.executable, "-c", code]
@@ -34,7 +48,10 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         (self.root / ".agent-loop").mkdir()
-        (self.root / ".agent-loop" / "task.md").write_text("| t1 |\n")
+        (self.root / ".agent-loop" / "task.md").write_text(
+            REWRITTEN_TASKS.replace("✅ done", "🔬 doing"),
+            encoding="utf-8",
+        )
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -97,10 +114,13 @@ class TaskBoundaryReviewTest(unittest.TestCase):
 
         self.assertEqual(result["automatic_review"]["decision"], "continue")
         self.assertEqual(state["review"]["next_task"], "t2")
-        self.assertEqual(
-            (self.root / ".agent-loop" / "task.md").read_text(),
-            "rewritten by reviewer",
-        )
+        active = (self.root / ".agent-loop" / "task.md").read_text(encoding="utf-8")
+        archive = (
+            self.root / ".agent-loop" / "archive" / "tasks.md"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("| t1 |", active)
+        self.assertIn("| t2 |", active)
+        self.assertIn("| t1 |", archive)
 
     def test_pending_review_blocks_execution_and_next_task(self) -> None:
         self.init(
@@ -185,6 +205,18 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIsNone(completion_gate(self.root))
         _, state = load_runtime(self.root)
         self.assertEqual(state["review"]["attempts"], 2)
+
+    def test_review_requires_current_task_to_close(self) -> None:
+        self.init(
+            reviewer_decision_only(
+                {"decision": "continue", "next_task": "t2", "why": "next"}
+            )
+        )
+
+        outcome = run_review(self.root)
+
+        self.assertIsNone(outcome["review"]["decision"])
+        self.assertIn("must mark task t1", outcome["review"]["error"])
 
     def test_review_requires_fresh_verification(self) -> None:
         self.init(reviewer_writing({"decision": "stop", "why": "done"}))

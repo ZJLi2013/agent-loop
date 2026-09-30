@@ -146,6 +146,13 @@ Next Step（按优先级）。然后清理一次性脚本与中间文件（保�
 ### Phase 4 — Experiment Log 与归档
 
 plan document 的 Experiment Log 每轮维护一行摘要：
-`| Exp | 假设 | 状态 | 关键结果 | 结论 / sub-exp |`。
+`| Exp | 假设 | 状态 | 关键结果 | 结论 / evidence |`。
+
+状态只用 `active / promoted / superseded by Exp-X / rejected / archived`。单轮结束时更新这一行；
+task CLOSE 时由 `work-planning` 把多轮合并为一个 task 结论并移出活跃表。原始 run、artifact 与
+sub-exp 保持不可变，archive 只保存指针，不复制输出。
+
+`rejected` 只用于结果会阻止未来重试的否定发现；环境错误、被后续实验覆盖的读数分别归原始 run
+与 `superseded`，不能都堆进长期排除项。
 
 

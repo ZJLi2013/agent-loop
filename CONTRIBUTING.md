@@ -41,8 +41,8 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
 ```
 
-Do not commit `.harness/`, `.agent-loop/task.md`, `.agent-loop/progress.md`, `.agent-loop/memory/`, hook logs, transcripts,
-credentials, hostnames, or private performance data.
+Do not commit `.harness/`, `.agent-loop/task.md`, `.agent-loop/progress.md`, `.agent-loop/archive/`,
+`.agent-loop/memory/`, hook logs, transcripts, credentials, hostnames, or private performance data.
 
 ## Pull requests
 

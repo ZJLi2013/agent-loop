@@ -13,10 +13,10 @@ Descriptions stay in context; bodies load only when the current event matches.
 
 | Skill | Owns |
 |---|---|
-| `work-planning` | Goal → plan document → proposed task → review；Goal Review 与 RECONCILE |
-| `task-state` | `task.md` schema、检查点、失败计数、交接 |
-| `experiment-design` | 实验假设、决策门、验收阶梯、exp 记录 |
-| `agent-memory` | facts / episodes / lessons 的准入、检索与写回 |
+| `work-planning` | Goal → plan document → proposed task → review；Goal Review、RECONCILE 与 task / Goal CLOSE |
+| `task-state` | 活跃 `task.md`、closed-task archive、检查点、失败计数、当前交接快照 |
+| `experiment-design` | 实验假设、决策门、验收阶梯、单轮 exp 记录 |
+| `agent-memory` | facts / episodes / lessons 的准入、检索、写回与去重 |
 | `agent-heartbeat` | 超过 60 秒命令的进度与心跳 |
 
 状态、事件和 guard 归 `harness/protocol.py`；常驻 `agent-loop` rule 只把状态路由到上表。

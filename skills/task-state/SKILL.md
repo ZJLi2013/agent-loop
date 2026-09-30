@@ -14,8 +14,8 @@ description: >-
 ## `task.md` 是任务状态的唯一真相源
 
 一个项目一份，放在 **`.agent-loop/task.md`**——和 `.agent-loop/memory/`、`.agent-loop/progress.md` 同一个
-home，也避开仓库自带的 `task.md` / `TODO.md`。**不要另建 `tasks.json`，也不要在别处维护第二份
-backlog**——两份任务状态必然漂移，而且每轮都要付一次读过期上下文的税。
+home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执行状态；closed history 放
+`.agent-loop/archive/tasks.md`，并从活跃文件链接过去。archive 是历史，不是第二份 backlog。
 
 ```markdown
 # <项目> Tasks
@@ -30,9 +30,10 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 | P0 | t6 | r2 | 修 Y 的 schema 漂移 | `validate.py` 退出码 0 | 🔬 doing | 0 |
 | P0 | t4 | r2 | 量 Y 的端到端延迟 | p50 ≤ 基线 1.1× | ⬜ todo | 0 |
 | P1 | t5 | — | 清理 X 的旧路径 | grep 不到 `legacy_x` | ⬜ todo | 0 |
-| — | t2 | — | 复现 baseline | 输出与 README 同量级 | ✅ done | 0 |
 
 <!-- 每个 task 一行。范围、方案、分析一律写在它链接的设计/实验文档里。 -->
+
+Closed: [archive/tasks.md](archive/tasks.md)
 ```
 
 **一行需要换行才读得完，就是细节没下沉。** `task.md` 每轮都被完整读一遍。
@@ -40,6 +41,10 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。
 `proposed` 表示还在 Human Review Gate，批准前不执行；`dropped` 要在行尾链接说明为什么放弃——
 被否决的候选是长期决定，删掉它下次还会有人重提。
+
+`✅ done / ❌ dropped` 是 CLOSE 转换时的瞬时状态：结论与 evidence 写回后，把整行移到
+`archive/tasks.md`。活跃 `task.md` 最多保留最近一个 closed task 的一行指针；超过 5 条 closed 行
+说明 consolidation 漏执行，先归档再 SELECT。
 
 `rev` 把 task 绑定到 plan document 的 `Plan Revision: N`，写作 `rN`；不属于 plan
 的维护项写 `—`。human 修改 Goal 后 revision 必须递增，旧 revision 的 task 逐项 blocked / dropped，
@@ -84,16 +89,17 @@ backlog**——两份任务状态必然漂移，而且每轮都要付一次读�
 
 ## 跨 session 交接
 
-三份东西分工不同，**区别在追加还是覆盖**：
+四份东西分工不同，**活跃状态覆盖，历史证据归档**：
 
 | 文件 | 内容 | 写法 | 归属 |
 |---|---|---|---|
 | `.agent-loop/memory/facts.md` | 现在该用哪个节点 / 容器 / 路径 | **覆盖**，只有当前值 | `agent-memory` |
 | `task.md` | 做到哪了、哪条被挡住 | 改状态列 | 本 skill |
-| `.agent-loop/progress.md` | 这一轮发生了什么、下一步第一条命令 | **追加**，带时间戳 | 本 skill |
+| `.agent-loop/progress.md` | 当前唯一接手点、下一步第一条命令 | **覆盖** | 本 skill |
+| `.agent-loop/archive/progress-YYYY-MM.md` | 已失效的接手点 | **追加**，仅按需读取 | 本 skill |
 
-**具体的值不要只写进交接笔记**——它按时间追加，三天后就被后面的记录埋掉，
-这正是「跑久了忘掉节点名」的成因。
+写新交接前把旧快照追加到当月 archive，再覆盖 `progress.md`。旧的“下一步第一条命令”不能和
+当前命令同时出现在活跃文件。**具体值仍不要只写进交接笔记**；它们归可验证、可覆盖的 facts。
 
 交接笔记的格式：
 

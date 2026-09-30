@@ -1,7 +1,7 @@
 # agent-loop Design
 
-Plan Revision: 7
-Plan Review: approved
+Plan Revision: 8
+Plan Review: unreviewed
 
 ## Goal
 
@@ -19,6 +19,18 @@ adapter 还是确实需要扩展 kernel。
 task 边界 reviewer 必须由 Harness 调用，不能只在 stop hook 里提示 worker 自己运行：
 `verify` 通过且配置了 reviewer 时立即执行 review；review 决策落盘前拒绝下一个 task。
 固定时间 review 不采用——证据尚未形成时没有决策价值，task 边界已经是稳定、可执行的触发点。
+
+## 下一步决策
+
+t9 已实现：experiment、task、progress 与 memory 在 task / Goal CLOSE 时从活跃工作集退役；
+配置 reviewer 时 Harness 自动归档 closed task，并拒绝未关闭当前 task 的决策。下一项仍在
+Human Review Gate：t23 统一结论落点，不由本轮自动执行。
+
+## Experiment Log
+
+| Exp | 假设 | 状态 | 关键结果 | 结论 / evidence |
+|---|---|---|---|---|
+| t9-e1 | CLOSE 时改变记录生命周期，可以缩小新 session 的默认上下文且不损失追溯 | promoted | agent-loop 的 active `task.md` 估算字符数 2,347 → 1,198（−49%），4 条 closed 明细仍可从 archive 读取；reviewer / pager / revision guard 集成问题已修复；core 56 + pager 37 tests 通过 | 假设成立；[案例](case_study/agent-loop-record-growth.md) |
 
 ## Architecture
 
@@ -111,6 +123,11 @@ Experiment Log
 或需要并行维护时，才拆 linked `sub-exp/<id>.md`；plan document 始终保留结论与链接。
 Harness 参数叫 `plan_doc`，不关心文件名是 feature、exp 还是其它名字。
 
+task CLOSE 时，Experiment Log 的多轮记录合并为一个 task 结论；已收口内容进入 linked archive，
+不继续占用活跃表。Goal CLOSE / pivot 时冻结 plan 为 as-built。原始 run、artifact 与 sub-exp 不删，
+但只按 evidence 指针读取。closed task 与旧交接快照同样移出活跃 `.agent-loop/task.md` /
+`progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
+
 ### Goal attention refresh
 
 Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profile 在这些事件后要求 refresh：
@@ -176,6 +193,7 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 | `harness/journal.py` | 有界 artifacts 与 `runs.jsonl` |
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
 | `harness/review.py` | task 边界 reviewer：prompt、执行、决策校验与 follow-up |
+| `harness/records.py` | reviewer 决策后把 closed task 移出 active backlog，并保留 archive |
 | `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录 |
 | `harness/page.py` | human 检查点经 pager 发到手机，回复映射成 Harness 动作 |
 | `harness/protocol.py` | state / event / transition；不依赖平台 |
@@ -193,7 +211,8 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 
 | 内容 | 唯一真相源 |
 |---|---|
-| Goal、当前结论、决策、task、`rN` | plan document + `.agent-loop/task.md` |
+| Goal、当前结论、决策、active task、`rN` | plan document + `.agent-loop/task.md` |
+| closed task 与旧交接点 | `.agent-loop/archive/`（只按需读取） |
 | runtime phase、budget、当前 run | `.harness/state.json` |
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
 | 长期事实与结论 | `.agent-loop/memory/` |
@@ -236,6 +255,7 @@ agent-loop/
 │   ├── runner.py             # subprocess adapter
 │   ├── journal.py            # execution evidence
 │   ├── plan.py               # Plan Revision / pause gate
+│   ├── records.py            # closed-task archive
 │   ├── core.py               # orchestration façade
 │   └── run.py                # CLI
 ├── skills/                   # Policies
@@ -260,6 +280,8 @@ agent-loop/
 - 锁定 verifier 通过后由 Harness 自动运行 task-boundary reviewer；review 决策落盘前禁止执行命令
   或初始化下一 task，`continue` 只能进入 reviewer 点名的 task。
 - task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；
+- task / Goal CLOSE 把 closed task、旧交接与已收口实验移出活跃工作集；reviewer 决策后 Harness
+  自动归档 closed task，计划 revision 仍可从 archive 校验；
 - native hook payload 由 platform codec 归一为 `HookRequest / HookResponse`；
 - public baseline 提供 Apache-2.0、CI、贡献 / 安全 / AI policy、Issue / PR 模板与安全卸载；
   maintainer runtime state 不再进入发行内容。

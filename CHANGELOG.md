@@ -20,6 +20,8 @@ All notable user-facing changes are documented here. This project follows Semant
   failure, and budget exhaustion are paged through the pager CLI, and the reply maps to a Harness action.
 - `tools/pager`: the email pager ships in this repository as its own package; the Graph client is injected
   through `PAGER_GRAPH_SCRIPTS`.
+- Record lifecycle policy: task / Goal CLOSE promotes current conclusions while moving closed tasks, old
+  handoffs, and superseded experiment summaries out of the default context into linked archives.
 
 ### Changed
 

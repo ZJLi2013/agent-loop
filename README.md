@@ -153,7 +153,8 @@ agent-loop-harness resume
 ## 边界
 
 - Harness 只硬控显式交给 runner 的命令；其它 host tool call 仍由宿主管理。
-- `task.md` 是 backlog 唯一真相源；`.harness/` 只存有界 runtime evidence。
+- `task.md` 只保存 active backlog；closed task 与旧交接点归档到 `.agent-loop/archive/`，不默认加载。
+- `.harness/` 只存有界 runtime evidence。
 - `.agent-loop/task.md` 与 `.agent-loop/memory/` 是项目本地 runtime；旧 `.cursor/` 路径只读兼容。
 - checkpoint / rollback 复用 git，不自动覆盖用户工作树。
 - 没有 lifecycle hooks 的宿主属于 portable mode，不能强制 completion gate；外部进程掌握 agent
@@ -167,8 +168,10 @@ agent-loop-harness resume
 | [`study/harness.md`](study/harness.md) | runner、journal、Verifier 与边界 |
 | [`study/planning-contract.md`](study/planning-contract.md) | 渐进计划、review 与人工纠偏 |
 | [`study/memory.md`](study/memory.md) | facts / episodes / lessons 的检索设计 |
+| [`study/experiment-record-lifecycle.md`](study/experiment-record-lifecycle.md) | 实验、task、交接与 memory 的退役规则 |
 | [`study/multi_agent.md`](study/multi_agent.md) | 现有 multi-agent loop 对比与 worker / reviewer 分工 |
 | [`case_study/robojev-nox.md`](case_study/robojev-nox.md) | 一天 11 个 task 边界的跨模型纠偏记录 |
+| [`case_study/agent-loop-record-growth.md`](case_study/agent-loop-record-growth.md) | agent-loop 自身跨 session 的记录增长与迁移 |
 | [`skills/README.md`](skills/README.md) | Policy 索引与唯一 owner |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献流程、新 feature 准入与测试 |
 | [`AI_POLICY.md`](AI_POLICY.md) | AI-assisted contribution 披露 |

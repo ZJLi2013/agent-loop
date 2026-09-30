@@ -10,6 +10,7 @@ from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import pause_request
 from harness.project import memory_dir, runtime_dir, task_file
 from harness.protocol import Phase
+from harness.records import archive_closed_tasks, archived_task_ids
 from harness.runner import execute_process
 from harness.storage import (
     HARNESS_DIR,
@@ -41,8 +42,9 @@ PROMPT = """# Task boundary review
 ## 要做的事
 
 1. 核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。
-2. 在 task 列表里把 {task_id} 标为完成；写好下一个 task：最多一个未验证假设、验收检查点、
-   失败去向、预算。只展开最近 1–2 项，新 task 的 `rev` 沿用当前 plan revision。
+2. 在 task 列表里把 {task_id} 标为 `✅ done`；Harness 会把 closed 行移到
+   `.agent-loop/archive/tasks.md`。写好下一个 task：最多一个未验证假设、验收检查点、失败去向、
+   预算。只展开最近 1–2 项，新 task 的 `rev` 沿用当前 plan revision。
 3. 选择 decision：
    - `continue`：Goal 与 scope 不变，下一个 task 已写好；
    - `ask_human`：需要改 Goal / scope，或要在有显著权衡的方案间选型；
@@ -205,6 +207,16 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             decision, error = _read_decision(decision_path)
         else:
             decision, error = None, f"reviewer {result['outcome']}"
+        archived = []
+        if decision:
+            archived = archive_closed_tasks(root)
+            if str(state["task_id"]) not in archived_task_ids(root):
+                decision = None
+                error = (
+                    f"reviewer must mark task {state['task_id']} as "
+                    "✅ done or ❌ dropped"
+                )
+        result["archived_tasks"] = archived
 
         review = {
             "verify_run_id": previous["verify_run_id"],

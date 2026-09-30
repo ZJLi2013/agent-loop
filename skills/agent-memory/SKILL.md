@@ -64,7 +64,7 @@ hook 覆盖不到的时刻（临时问一句、中途换方向），靠 `INDEX.m
 
 | 转换 | 写哪儿 | 不写会怎样 |
 |---|---|---|
-| task → `✅` | `episodes.md#experiments`：结论一行 + 证据链接 | 结论埋在 Experiment Log，下次找不到 |
+| task → `✅` | 结论先收口到项目文档；只有未来检索仍需要时，`episodes.md#experiments` 留一行指针 | 结论埋在 Experiment Log，或在两处形成两份真值 |
 | **假设被推翻** | `episodes.md#disproved` | **最贵也最容易丢**，下次还有人再试一遍 |
 | 方案被否决 | `episodes.md#rejected` | 三周后有人重提同一个方案 |
 | task → `🚧` | `episodes.md`：挡在什么上、解开条件 | 重排期时不知道它为什么还在那儿 |
@@ -88,10 +88,14 @@ hook 检测到超限会直接告警，届时把条目并粗（指向小节而不
 
 | 段 | 老化 | 处置 |
 |---|---|---|
-| `experiments` | 会老化 | Goal 关闭、结论已收口到 plan document 后，这一行冗余，可剪 |
+| `experiments` | 会老化 | task CLOSE 后先去重；Goal 关闭、结论已收口到项目文档后剪掉重复行 |
 | `disproved` / `rejected` | **不老化** | 长期决定。删一条排除项，三周后就有人重提同一个方案 |
 
 给它设统一行数上限是错的——那会逼着删掉最该留的那部分。
+
+memory consolidation 的判据不是“旧”，而是“是否还会改变未来选择”：项目文档已经承接、只复述成功
+历史的 experiment 行删除；能阻止重复试错的否定结论继续保留。原始 evidence 留在项目 archive /
+Harness artifacts，memory 不复制。
 
 ## 准入与上限
 

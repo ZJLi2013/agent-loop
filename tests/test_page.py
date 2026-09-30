@@ -30,8 +30,14 @@ if args[0] == "serve":
 
 def reviewer_writing(decision: dict[str, object]) -> list[str]:
     text = json.dumps(decision)
+    tasks = (
+        "| P | id | rev | task | check | status | fail |\n"
+        "|---|---|---|---|---|---|---|\n"
+        "| P0 | t1 | r1 | demo | check | ✅ done | 0 |\n"
+    )
     code = (
         "from pathlib import Path; "
+        f"Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'); "
         f"Path('.harness/review/decision.json').write_text({text!r})"
     )
     return [sys.executable, "-c", code]
