@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 6
+Plan Revision: 7
 Plan Review: approved
 
 ## Goal
@@ -15,6 +15,10 @@ Plan Review: approved
 需要拆分时只增加 linked sub-exp，不另造 feature / exp 两套生命周期。Kernel 只拥有状态、事件、转移与 guard；
 skills 只解释某个状态下怎么做；platform adapters 只接原生事件。新增需求先归类，再决定是配置、policy、
 adapter 还是确实需要扩展 kernel。
+
+task 边界 reviewer 必须由 Harness 调用，不能只在 stop hook 里提示 worker 自己运行：
+`verify` 通过且配置了 reviewer 时立即执行 review；review 决策落盘前拒绝下一个 task。
+固定时间 review 不采用——证据尚未形成时没有决策价值，task 边界已经是稳定、可执行的触发点。
 
 ## Architecture
 
@@ -128,12 +132,14 @@ task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下�
 | 时刻 | 调用 |
 |---|---|
 | task 执行、自修、重试 | worker（宿主里的 agent） |
-| task `VERIFIED` 且配置了 reviewer | reviewer：`harness review`，经 runner 执行、journal 记账 |
+| task verifier 通过且配置了 reviewer | Harness 立即运行 reviewer，经 runner 执行、journal 记账 |
 | reviewer 选 `ask_human` / `stop` | human |
 
 reviewer 是项目 `.agent-loop/reviewer.json` 里的一条命令，init 时锁进 config；模型与宿主无关，原则上
-强于 worker。reviewer 只读落盘证据，改 plan / task，并写 `continue | ask_human | stop` 决策；
-worker 只能以事实错误异议一次，仍分歧即 `ask_human`。调研见 [`study/multi_agent.md`](study/multi_agent.md)。
+强于 worker。`harness verify` 通过后在同一 orchestration 中自动调用 reviewer；决策落盘前，
+runner 与下一 task 初始化都被 guard 拒绝。reviewer 只读落盘证据，改 plan / task，并写
+`continue | ask_human | stop` 决策；worker 只能以事实错误异议一次，仍分歧即 `ask_human`。
+调研见 [`study/multi_agent.md`](study/multi_agent.md)。
 
 ### Human checkpoints on the phone
 
@@ -251,6 +257,8 @@ agent-loop/
 - README 只保留安装、最短使用路径、边界与文档入口。
 - plan document 统一 Goal / 当前结论 / 下一步决策 / Experiment Log，详细实验只拆 linked sub-exp；
 - Goal Review 由 action / elapsed / failure / stale / preCompact 事件触发，复用 PAUSED 与 revision gate。
+- 锁定 verifier 通过后由 Harness 自动运行 task-boundary reviewer；review 决策落盘前禁止执行命令
+  或初始化下一 task，`continue` 只能进入 reviewer 点名的 task。
 - task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；
 - native hook payload 由 platform codec 归一为 `HookRequest / HookResponse`；
 - public baseline 提供 Apache-2.0、CI、贡献 / 安全 / AI policy、Issue / PR 模板与安全卸载；

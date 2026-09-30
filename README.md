@@ -28,7 +28,7 @@ Goal → Plan → Human Review
 |---|---|---|---|---|
 | worker | Opus 5 | Cursor agent | 执行、自修、重试、跑 verifier | 给自己的下一步拍板 |
 | reviewer | gpt-6 | Codex CLI（经 WSL） | 核对结论、改写下一个 task、给出 `continue / ask_human / stop` | 改代码、跑实验 |
-| 调度 | Harness 状态机 | stop hook + runner | 决定什么时候叫谁 | 任何判断 |
+| 调度 | Harness 状态机 | verifier + reviewer runner + stop hook | 决定什么时候叫谁 | 任何判断 |
 | human | 项目 owner | — | 定 Goal、批 plan、回答 `ask_human` | — |
 
 模型不写死，原则是 reviewer 强于 worker。reviewer 是项目里的一条命令，init 前写进
@@ -43,8 +43,9 @@ Goal → Plan → Human Review
 }
 ```
 
-一轮交接：verify 通过 → stop hook 要 worker 跑 `agent-loop-harness review` → reviewer 只读证据，
-改写 `task.md` 并写决策 → `continue` 时 worker 只能以事实错误异议一次，否则直接做下一个 task。
+一轮交接：`agent-loop-harness verify` 通过 → Harness 自动运行 reviewer → reviewer 只读证据，
+改写 `task.md` 并写决策 → `continue` 时 worker 只能以事实错误异议一次，否则直接做 reviewer
+选中的下一个 task。review 决策落盘前，Harness 拒绝新命令和下一个 task。
 
 ## 人不在电脑前
 

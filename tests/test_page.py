@@ -15,7 +15,6 @@ from harness.core import (
 )
 from harness.page import run_page
 from harness.plan import pause_request
-from harness.review import run_review
 
 FAKE_PAGER = """
 import json, sys
@@ -97,7 +96,6 @@ class PagerCheckpointTest(unittest.TestCase):
         )
         self.init()
         verify(self.root)
-        run_review(self.root)
 
     def test_proposed_plan_is_paged_and_ok_approves_and_resumes(self) -> None:
         self.init(review="proposed")

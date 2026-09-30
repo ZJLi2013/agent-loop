@@ -36,5 +36,6 @@
   Cursor 里用不到的模型（如 Codex 里的 gpt-6）走 `wsl.exe -- bash -lc "codex exec ..."`。
 - **reviewer 只读落盘证据。** 不给 worker 的对话；新上下文本身是收益的一部分。
 - **worker 只能以事实错误异议一次**（路径、数字、已做过、跑不了、超预算），仍分歧即 `ask_human`。
-- **挂在已有的 completion gate 上。** Cursor stop hook 在 `VERIFIED` 后返回 CONTINUE，要求 worker
-  跑 `review`；reviewer 经 runner 执行，受超时约束并记入 journal，不在 hook 里同步等待。
+- **挂在 verifier orchestration 上。** `harness verify` 通过后直接运行 reviewer；reviewer 经 runner
+  执行，受超时约束并记入 journal。completion gate 只负责 reviewer 失败后的重试提示，以及把
+  `continue / ask_human / stop` 决策交回 worker，不再依赖 worker 主动发起第一次 review。

@@ -34,7 +34,7 @@ from harness.plan import (
 )
 from harness.page import load_pager, page_followup
 from harness.protocol import Event, Phase, TransitionError, apply_event
-from harness.review import load_reviewer, review_followup
+from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
 from harness.storage import (
     CONFIG_FILE,
@@ -120,6 +120,27 @@ def initialize(
             raise HarnessError(
                 f"task {old.get('task_id')} is still active; finish or disable it first"
             )
+        if old.get("active") and old.get("phase") == Phase.VERIFIED.value:
+            old_config = read_json(base / CONFIG_FILE)
+            if old_config.get("reviewer"):
+                prior_review = old.get("review") or {}
+                if (
+                    prior_review.get("verify_run_id") != old.get("last_run_id")
+                    or not prior_review.get("decision")
+                ):
+                    raise HarnessError(
+                        f"task {old.get('task_id')} is awaiting reviewer decision"
+                    )
+                if prior_review["decision"] != "continue":
+                    raise HarnessError(
+                        "reviewer did not authorize another task: "
+                        f"{prior_review['decision']}"
+                    )
+                if prior_review.get("next_task") != task_id:
+                    raise HarnessError(
+                        f"reviewer selected {prior_review.get('next_task')}, "
+                        f"not {task_id}"
+                    )
 
     revision: int | None = None
     review: str | None = None
@@ -264,6 +285,26 @@ def run_command(
             state["updated_at"] = utc_now()
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
             raise HarnessError(f"runner is paused: {plan_reason}")
+        if (
+            state.get("phase") == Phase.VERIFIED.value
+            and config.get("reviewer")
+        ):
+            review = state.get("review") or {}
+            if (
+                review.get("verify_run_id") != state.get("last_run_id")
+                or not review.get("decision")
+            ):
+                raise HarnessError(
+                    f"task {state['task_id']} is awaiting reviewer decision"
+                )
+            if review["decision"] == "continue":
+                raise HarnessError(
+                    f"task {state['task_id']} is complete; initialize reviewer-selected "
+                    f"task {review.get('next_task')} before executing another command"
+                )
+            raise HarnessError(
+                f"reviewer chose {review['decision']}; execution remains blocked"
+            )
         attention_reason = goal_review_reason(
             config, state, {"outcome": "pass"}
         )
@@ -359,7 +400,15 @@ def run_command(
             state["actions_since_goal_review"] = int(
                 state.get("actions_since_goal_review", 0)
             ) + 1
-            if state.get("phase") != Phase.STOPPED.value:
+            reviewer_boundary = (
+                kind == "verify"
+                and result.get("verification_passed") is True
+                and bool(config.get("reviewer"))
+            )
+            if (
+                state.get("phase") != Phase.STOPPED.value
+                and not reviewer_boundary
+            ):
                 attention_reason = goal_review_reason(config, state, result)
                 if attention_reason:
                     schedule_goal_review(root, attention_reason)
@@ -400,12 +449,18 @@ def _matches_contract(
 def verify(root: Path) -> dict[str, Any]:
     config, _ = load_runtime(root)
     verifier = config["verifier"]
-    return run_command(
+    result = run_command(
         root,
         list(verifier["argv"]),
         kind="verify",
         timeout_seconds=float(verifier["timeout_seconds"]),
     )
+    if result.get("verification_passed") and config.get("reviewer"):
+        _, state = load_runtime(root)
+        if state.get("phase") == Phase.VERIFIED.value:
+            outcome = run_review(root)
+            result["automatic_review"] = outcome["review"]
+    return result
 
 
 def disable(root: Path) -> dict[str, Any]:

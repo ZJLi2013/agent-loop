@@ -11,6 +11,7 @@ from harness.core import (
     completion_gate,
     initialize,
     load_runtime,
+    run_command,
     verify,
 )
 from harness.review import run_review
@@ -38,7 +39,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def init(self, argv: list[str] | None) -> None:
+    def init(self, argv: list[str] | None, *, run_verifier: bool = True) -> None:
         if argv is not None:
             (self.root / ".agent-loop" / "reviewer.json").write_text(
                 json.dumps({"argv": argv, "timeout_seconds": 30})
@@ -48,7 +49,15 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             task_id="t1",
             verifier_argv=[sys.executable, "-c", "print('OK')"],
         )
-        verify(self.root)
+        if run_verifier:
+            config, _ = load_runtime(self.root)
+            verifier = config["verifier"]
+            run_command(
+                self.root,
+                list(verifier["argv"]),
+                kind="verify",
+                timeout_seconds=float(verifier["timeout_seconds"]),
+            )
 
     def test_without_reviewer_verified_task_completes(self) -> None:
         self.init(None)
@@ -74,6 +83,66 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
+
+    def test_verify_automatically_runs_reviewer(self) -> None:
+        self.init(
+            reviewer_writing(
+                {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
+            ),
+            run_verifier=False,
+        )
+
+        result = verify(self.root)
+        _, state = load_runtime(self.root)
+
+        self.assertEqual(result["automatic_review"]["decision"], "continue")
+        self.assertEqual(state["review"]["next_task"], "t2")
+        self.assertEqual(
+            (self.root / ".agent-loop" / "task.md").read_text(),
+            "rewritten by reviewer",
+        )
+
+    def test_pending_review_blocks_execution_and_next_task(self) -> None:
+        self.init(
+            reviewer_writing(
+                {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
+            )
+        )
+
+        with self.assertRaisesRegex(HarnessError, "awaiting reviewer decision"):
+            run_command(
+                self.root,
+                [sys.executable, "-c", "print('must not run')"],
+                kind="exec",
+            )
+        with self.assertRaisesRegex(HarnessError, "awaiting reviewer decision"):
+            initialize(
+                self.root,
+                task_id="t2",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+
+    def test_review_allows_only_the_selected_next_task(self) -> None:
+        self.init(
+            reviewer_writing(
+                {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
+            ),
+            run_verifier=False,
+        )
+        verify(self.root)
+
+        with self.assertRaisesRegex(HarnessError, "selected t2, not t3"):
+            initialize(
+                self.root,
+                task_id="t3",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+        _, state = initialize(
+            self.root,
+            task_id="t2",
+            verifier_argv=[sys.executable, "-c", "print('OK')"],
+        )
+        self.assertEqual(state["task_id"], "t2")
 
     def test_objection_reruns_reviewer_once(self) -> None:
         self.init(reviewer_writing(

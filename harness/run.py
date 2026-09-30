@@ -145,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["outcome"] == "pass" else 1
         if args.action == "verify":
             result = verify(root)
-            _, state = load_runtime(root)
+            config, state = load_runtime(root)
             print(
                 json.dumps(
                     {"result": result, "state": state},
@@ -153,7 +153,15 @@ def main(argv: list[str] | None = None) -> int:
                     indent=2,
                 )
             )
-            return 0 if state["phase"] == "verified" else 1
+            review = state.get("review") or {}
+            review_passed = (
+                not config.get("reviewer")
+                or (
+                    review.get("verify_run_id") == state.get("last_run_id")
+                    and bool(review.get("decision"))
+                )
+            )
+            return 0 if state["phase"] == "verified" and review_passed else 1
         if args.action == "review":
             outcome = run_review(root, objection=args.objection)
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
