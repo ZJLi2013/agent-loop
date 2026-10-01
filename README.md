@@ -119,7 +119,8 @@ copy "$agentLoopRepo\skills\agent-memory\templates\*.md" .agent-loop\memory\
 1. 先写一份 plan document 与最近 1–2 个 `📝 proposed` task；
 2. 等待 `approve / revise / continue automatically`；
 3. 每次只推进一个未验证假设；
-4. 用独立 verifier 决定是否完成。
+4. task 结束时回读完整 diff，精炼文档并清理一次性脚本；
+5. 用独立 verifier 验证最终 workspace。
 
 要启用 Harness，plan document 写：
 

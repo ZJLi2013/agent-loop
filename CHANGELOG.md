@@ -22,6 +22,8 @@ All notable user-facing changes are documented here. This project follows Semant
   through `PAGER_GRAPH_SCRIPTS`.
 - Record lifecycle policy: task / Goal CLOSE promotes current conclusions while moving closed tasks, old
   handoffs, and superseded experiment summaries out of the default context into linked archives.
+- CLOSE self-audit: before the locked verifier, the worker rereads the task diff, removes transitional
+  documentation and one-off scripts, and leaves only durable facts, decision analysis, conclusions, and evidence.
 
 ### Changed
 

@@ -34,6 +34,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
   不建第二份任务清单。
 - 等待 review 时允许「若干 `📝 proposed` + 零行 doing」；否则有且只有一行 `🔬 doing`。
 - plan document `Plan Revision`、task `rN` 与 Harness runtime revision 必须一致；review 未批准不执行。
+- locked verifier 前先按 `experiment-design` 完成 CLOSE self-audit；verifier 必须看到精炼后的最终 workspace。
 - 改动必须让当前检查点从不通过变成通过；否则先按 `task-state` 改状态，不能顺手做。
 - `🚧 blocked` 链长 ≥ 2 停下重拆；失败先按 `when-to-stop` 自修到上限。
 - human 只问进展时读状态与 evidence 回答；纠正 Goal / scope / 优先级时先 Harness pause，

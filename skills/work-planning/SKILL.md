@@ -82,7 +82,13 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 **CLOSE 不只是追加摘要，还要让已闭合记录退出活跃工作集。**
 
-task 通过后：
+CLOSE 分两段：
+
+1. **locked verifier 前**：worker 按 `experiment-design` 的 CLOSE self-audit 回读本 task 完整 diff，
+   精炼文档并处理临时脚本。
+2. **verifier 通过后**：收口结论、归档已闭合记录；配置 reviewer 时下一步决策仍归 reviewer。
+
+verifier 通过后：
 
 1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」与下一步决策；
 2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，

@@ -1,7 +1,7 @@
 # agent-loop Design
 
-Plan Revision: 8
-Plan Review: unreviewed
+Plan Revision: 9
+Plan Review: approved
 
 ## Goal
 
@@ -22,15 +22,16 @@ task 边界 reviewer 必须由 Harness 调用，不能只在 stop hook 里提示
 
 ## 下一步决策
 
-t9 已实现：experiment、task、progress 与 memory 在 task / Goal CLOSE 时从活跃工作集退役；
-配置 reviewer 时 Harness 自动归档 closed task，并拒绝未关闭当前 task 的决策。下一项仍在
-Human Review Gate：t23 统一结论落点，不由本轮自动执行。
+t27 已把 self-audit 加入现有 task CLOSE，不新增 Kernel state 或 Harness gate。worker 在 locked
+verifier 前完整回读本 task 的 diff，精炼文档并处理临时脚本；最终 workspace 再交给 verifier。
+下一项仍在 Human Review Gate：t23。
 
 ## Experiment Log
 
 | Exp | 假设 | 状态 | 关键结果 | 结论 / evidence |
 |---|---|---|---|---|
 | t9-e1 | CLOSE 时改变记录生命周期，可以缩小新 session 的默认上下文且不损失追溯 | promoted | agent-loop 的 active `task.md` 估算字符数 2,347 → 1,198（−49%），4 条 closed 明细仍可从 archive 读取；reviewer / pager / revision guard 集成问题已修复；core 56 + pager 37 tests 通过 | 假设成立；[案例](case_study/agent-loop-record-growth.md) |
+| t27-e1 | 把 self-audit 绑定现有 CLOSE，足以清理 task 内过程内容而无需新 gate | promoted | 回读完整 diff 后只剩 7 个持久 Policy / 入口文档，无未跟踪文件或临时脚本；重复实现说明归并到 `experiment-design`；core 56 + pager 37 tests 通过 | 假设成立：保持纯 Policy |
 
 ## Architecture
 
@@ -127,6 +128,10 @@ task CLOSE 时，Experiment Log 的多轮记录合并为一个 task 结论；已
 不继续占用活跃表。Goal CLOSE / pivot 时冻结 plan 为 as-built。原始 run、artifact 与 sub-exp 不删，
 但只按 evidence 指针读取。closed task 与旧交接快照同样移出活跃 `.agent-loop/task.md` /
 `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
+
+CLOSE self-audit 是 `experiment-design` 的 Policy 步骤，不增加状态：worker 在 locked verifier 前回读
+本 task 的完整 diff，删除过程性文案和一次性脚本，保留事实、决策分析、结论与 evidence。verifier
+因此只验证最终 workspace；验证后再由 `work-planning` / reviewer 收口结论与下一步。
 
 ### Goal attention refresh
 
@@ -282,6 +287,8 @@ agent-loop/
 - task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；
 - task / Goal CLOSE 把 closed task、旧交接与已收口实验移出活跃工作集；reviewer 决策后 Harness
   自动归档 closed task，计划 revision 仍可从 archive 校验；
+- task CLOSE 在 locked verifier 前执行 self-audit，完整回读 diff 并精炼文档、清理一次性脚本；
+  这是 Policy 步骤，不增加 Kernel state；
 - native hook payload 由 platform codec 归一为 `HookRequest / HookResponse`；
 - public baseline 提供 Apache-2.0、CI、贡献 / 安全 / AI policy、Issue / PR 模板与安全卸载；
   maintainer runtime state 不再进入发行内容。

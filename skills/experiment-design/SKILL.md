@@ -134,14 +134,24 @@ Experiment Log；只有 `work-planning` 判定需要拆分时才写 linked sub-e
 
 error 与意外行为立即记；多轮迭代用表格追踪 `| 轮次 | 问题 | 修复 |`。
 
-### Phase 3 — 写回
+### Phase 3 — CLOSE self-audit
 
-结果（原始表格）→ 分析（假设成立与否、与 baseline 的 delta、意外发现）→ 结论（一句话）→
-Next Step（按优先级）。然后清理一次性脚本与中间文件（保留输出与日志）、删掉设计阶段的过渡内容、
-过一遍上面两节的自检。
+执行结束、locked verifier 开始前，**完整回读本 task 修改过的文件**，以 `git diff`、未跟踪文件和
+Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 diff 就是 audit 产物。
 
-删草稿后最常残留三样：**平均着墨的分级标题**、**「原先以为 X、实测是 Y」的衔接句**，
-以及**为了自包含而复述到 sub-exp 的结论**（该留在 plan document，这里放链接）。
+逐项处理：
+
+1. 文档只保留关键事实、会改变选择的分析、结论与 evidence 链接；
+2. 删除设计阶段的过渡内容、被结果覆盖的假设、重复读数、旧 Next Step 与临时 TODO；
+3. 当前 task 创建的一次性脚本与中间文件删除（原始输出与日志保留）；仍会复用的脚本移到正式目录，
+   改成稳定入口并纳入测试；
+4. 再读最终 diff：删掉一段内容不会改变未来判断或下一条命令，就不恢复。
+
+不知道归属的文件不删；先留下一行边界并按 `when-to-stop` 处理。最常残留的是平均着墨的分级标题、
+「原先以为 X、实测是 Y」的衔接句，以及为了自包含而复述到 sub-exp 的结论。
+
+audit 后再按「结果（原始表格）→ 分析（与 baseline 的 delta、意外发现）→ 结论（一句话）→
+Next Step」写回；locked verifier 必须看到精炼后的最终 workspace。
 
 ### Phase 4 — Experiment Log 与归档
 
