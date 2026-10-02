@@ -10,7 +10,8 @@ from typing import Any
 
 from harness.errors import HarnessError
 from harness.journal import append_journal, new_run_id, prune_artifacts
-from harness.plan import request_pause, resume
+from harness.plan import plan_metadata, request_pause, resume
+from harness.plan_review import plan_review_record, plan_review_ready, run_plan_review
 from harness.project import runtime_dir, task_file
 from harness.protocol import Phase
 from harness.review import MAX_REVIEWS
@@ -84,6 +85,20 @@ def _open_rows(root: Path) -> str:
     return "\n".join(rows[:6])
 
 
+def _plan_review_summary(root: Path, config: dict[str, Any]) -> str:
+    plan_doc = config.get("plan_doc")
+    if not plan_doc:
+        return ""
+    revision, _ = plan_metadata(root, str(plan_doc))
+    if revision is None:
+        return ""
+    record = plan_review_record(root, str(plan_doc), revision)
+    if not record or record.get("error"):
+        return ""
+    findings = "\n".join(f"- {item}" for item in record.get("findings", []))
+    return f"independent reviewer：{record['summary']}\n{findings}".rstrip()
+
+
 def _checkpoint(
     root: Path, config: dict[str, Any], state: dict[str, Any]
 ) -> dict[str, str] | None:
@@ -100,7 +115,10 @@ def _checkpoint(
                 "kind": "plan_review",
                 "key": f"plan_review:{digest}",
                 "title": f"批准 plan？{plan_doc}",
-                "body": f"{_goal(plan)}\n\n{_open_rows(root)}",
+                "body": (
+                    f"{_goal(plan)}\n\n{_plan_review_summary(root, config)}"
+                    f"\n\n{_open_rows(root)}"
+                ),
             }
 
     review = state.get("review") or {}
@@ -223,8 +241,8 @@ def _apply(
     if verb == "OK" and kind == "ask_human":
         return (
             "Human accepted the reviewer's proposal via pager. Apply it with "
-            "work-planning: Plan Revision +1, write the tasks, Plan Review: approved, "
-            "then initialize the Harness for the next task.",
+            "work-planning: Plan Revision +1, write the tasks, Plan Review: proposed, "
+            "then run independent plan review before human approval.",
             False,
         )
     return f"Human replied {verb} via pager. Stop at this checkpoint.", False
@@ -232,6 +250,18 @@ def _apply(
 
 def run_page(root: Path) -> dict[str, Any]:
     root = root.resolve()
+    config, _ = load_runtime(root)
+    plan_doc = config.get("plan_doc")
+    if config.get("reviewer") and plan_doc:
+        revision, review = plan_metadata(root, str(plan_doc))
+        if revision is not None and review == "proposed":
+            reviewed, _ = plan_review_ready(root, str(plan_doc), revision)
+            if not reviewed:
+                run_plan_review(
+                    root,
+                    plan_doc=str(plan_doc),
+                    reviewer_config=config["reviewer"],
+                )
     with state_lock(root):
         config, state = load_runtime(root)
         pager = config.get("pager")

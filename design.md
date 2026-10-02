@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 9
+Plan Revision: 12
 Plan Review: approved
 
 ## Goal
@@ -16,15 +16,19 @@ Plan Review: approved
 skills 只解释某个状态下怎么做；platform adapters 只接原生事件。新增需求先归类，再决定是配置、policy、
 adapter 还是确实需要扩展 kernel。
 
-task 边界 reviewer 必须由 Harness 调用，不能只在 stop hook 里提示 worker 自己运行：
-`verify` 通过且配置了 reviewer 时立即执行 review；review 决策落盘前拒绝下一个 task。
-固定时间 review 不采用——证据尚未形成时没有决策价值，task 边界已经是稳定、可执行的触发点。
+独立 reviewer 在两个确定性边界运行：Plan Revision 提交后、human 批准前审 task 准入；task
+`VERIFIED` 后审证据解释与下一步。plan reviewer 只向 human 提供风险意见，不能批准 plan、关闭 task
+或授权执行；human 保留 `approve / revise / stop` 权限。每个 plan identity + revision 只审一次，
+初始化、resume、pager 与无人值守批准都不能绕过有效记录。task reviewer 继续由 Harness 在 verify
+后调用，并只报告会改变 `continue / ask_human / stop` 或下一条命令的问题。
+固定时间与文件修改 review 不采用——它们没有稳定的决策边界。
+Codex、Cursor 等宿主的会话与缓存目录不属于项目状态，也不进入 agent-loop 的生命周期。
 
 ## 下一步决策
 
-t27 已把 self-audit 加入现有 task CLOSE，不新增 Kernel state 或 Harness gate。worker 在 locked
-verifier 前完整回读本 task 的 diff，精炼文档并处理临时脚本；最终 workspace 再交给 verifier。
-下一项仍在 Human Review Gate：t23。
+memory 收敛是 task / Goal CLOSE 的 Policy 步骤，不增加状态、hook 或清理脚本。成功实验在项目文档
+承接后退役，长期否定结论归入 `disproved / rejected`，当前状态只留在 plan / task；维护 legacy
+memory 时整体迁到 `.agent-loop/memory/`，不保留两份真值。当前没有后续实现 task。
 
 ## Experiment Log
 
@@ -32,6 +36,11 @@ verifier 前完整回读本 task 的 diff，精炼文档并处理临时脚本；
 |---|---|---|---|---|
 | t9-e1 | CLOSE 时改变记录生命周期，可以缩小新 session 的默认上下文且不损失追溯 | promoted | agent-loop 的 active `task.md` 估算字符数 2,347 → 1,198（−49%），4 条 closed 明细仍可从 archive 读取；reviewer / pager / revision guard 集成问题已修复；core 56 + pager 37 tests 通过 | 假设成立；[案例](case_study/agent-loop-record-growth.md) |
 | t27-e1 | 把 self-audit 绑定现有 CLOSE，足以清理 task 内过程内容而无需新 gate | promoted | 回读完整 diff 后只剩 7 个持久 Policy / 入口文档，无未跟踪文件或临时脚本；重复实现说明归并到 `experiment-design`；core 56 + pager 37 tests 通过 | 假设成立：保持纯 Policy |
+| t28-e1 | 收紧现有 reviewer Policy 足以阻止微步骤重审，无需扩展 Kernel | superseded by t30 | prompt 契约测试与 core 56 tests 通过；schema、CLI、状态机未变 | task 边界能抑制微步骤重审，但不能在投入资源前审 task 准入 |
+| t29-e1 | RoboTwin 的高频 review 来自项目调用路径，而非 Harness 缺少 gate | promoted | 临时脚本把判据修改、因果讨论和跳步都设为 review 点；移除后只保留根 Codex home，旧状态已备份 | 假设成立：项目采用标准 task-boundary review 即可 |
+| t30-e1 | 每个 Plan Revision 一次独立准入 review 能补齐开跑前缺口，且无需新 Kernel state | promoted | 5 个 contract tests 通过：revision 去重、换 revision 重审、失败持久化、越权修改拦截、未配置兼容 | 假设成立：report adapter 独立于 task result review；下一步接 activation guard |
+| t31-e1 | activation guard 能覆盖所有批准路径而不增加 lifecycle state | promoted | 25 个 plan / pause / pager 集成测试与 68 个全量测试通过；init、resume、pager、unattended 均要求当前 revision report | 假设成立：Policy 定义准入，adapter 产出 report，Harness 只守顺序 |
+| t32-e1 | CLOSE Policy 足以控制 memory 增长，无需自动清理器 | promoted | RoboTwin `episodes.md` 13.6 KB → 2.1 KB（−85%），legacy 8 个文件迁出，只保留 canonical 四文件；69 个全量测试通过 | 假设成立；[案例](case_study/robotwin-memory-consolidation.md) |
 
 ## Architecture
 
@@ -147,12 +156,18 @@ Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profil
 review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模型 turn，timer 只写 pause request，
 反思发生在安全轮询点或命令结束后。
 
-### Task boundary review
+### Independent review boundaries
 
-task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。调度是确定的，不用 LLM：
+每个 Plan Revision 提交后先运行 plan reviewer，再由 human 决定 `approve / revise / stop`。
+report 以 plan identity + revision 去重；reviewer 只有建议权。init、resume、pager 和无人值守
+`unreviewed` 都要求有效 report。
+
+task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。两类调度都由确定性
+边界触发，不用 LLM 判断是否需要 review：
 
 | 时刻 | 调用 |
 |---|---|
+| Plan Revision 提交、human 批准前 | reviewer 给 task 准入意见 |
 | task 执行、自修、重试 | worker（宿主里的 agent） |
 | task verifier 通过且配置了 reviewer | Harness 立即运行 reviewer，经 runner 执行、journal 记账 |
 | reviewer 选 `ask_human` / `stop` | human |
@@ -197,6 +212,7 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 | `harness/runner.py` | subprocess、process-tree kill、timeout、输出采集 |
 | `harness/journal.py` | 有界 artifacts 与 `runs.jsonl` |
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
+| `harness/plan_review.py` | plan reviewer：prompt、report 校验与 revision 去重 |
 | `harness/review.py` | task 边界 reviewer：prompt、执行、决策校验与 follow-up |
 | `harness/records.py` | reviewer 决策后把 closed task 移出 active backlog，并保留 archive |
 | `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录 |
@@ -282,6 +298,8 @@ agent-loop/
 - README 只保留安装、最短使用路径、边界与文档入口。
 - plan document 统一 Goal / 当前结论 / 下一步决策 / Experiment Log，详细实验只拆 linked sub-exp；
 - Goal Review 由 action / elapsed / failure / stale / preCompact 事件触发，复用 PAUSED 与 revision gate。
+- 每个 submitted Plan Revision 在 human 批准前运行一次独立 plan review；reviewer 只有建议权，
+  init、resume、pager 与无人值守路径都不能绕过有效 report。
 - 锁定 verifier 通过后由 Harness 自动运行 task-boundary reviewer；review 决策落盘前禁止执行命令
   或初始化下一 task，`continue` 只能进入 reviewer 点名的 task。
 - task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；

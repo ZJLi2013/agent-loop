@@ -27,7 +27,7 @@ Goal → Plan → Human Review
 | 角色 | 推荐配置 | 在哪跑 | 负责 | 不做 |
 |---|---|---|---|---|
 | worker | Opus 5 | Cursor agent | 执行、自修、重试、跑 verifier | 给自己的下一步拍板 |
-| reviewer | gpt-6 | Codex CLI（经 WSL） | 核对结论、改写下一个 task、给出 `continue / ask_human / stop` | 改代码、跑实验 |
+| reviewer | gpt-6 | Codex CLI（经 WSL） | plan 准入意见；核对 task 结论并决定下一步 | 批准 plan、改代码、跑实验 |
 | 调度 | Harness 状态机 | verifier + reviewer runner + stop hook | 决定什么时候叫谁 | 任何判断 |
 | human | 项目 owner | — | 定 Goal、批 plan、回答 `ask_human` | — |
 
@@ -43,9 +43,11 @@ Goal → Plan → Human Review
 }
 ```
 
-一轮交接：`agent-loop-harness verify` 通过 → Harness 自动运行 reviewer → reviewer 只读证据，
-改写 `task.md` 并写决策 → `continue` 时 worker 只能以事实错误异议一次，否则直接做 reviewer
-选中的下一个 task。review 决策落盘前，Harness 拒绝新命令和下一个 task。
+reviewer 只在两个边界运行：每个 Plan Revision 提交后、human 批准前给出一次准入意见；task
+通过 verifier 后核对证据、改写下一 task，并给出 `continue / ask_human / stop`。plan reviewer
+不能批准 plan；task reviewer 的决策落盘前，Harness 拒绝新命令和下一个 task。
+实验记录的一次修改、判据的一个版本或一轮讨论不单独触发 review。
+模型 CLI 的会话、日志和缓存目录也不属于 agent-loop 的项目状态。
 
 ## 人不在电脑前
 
@@ -117,21 +119,25 @@ copy "$agentLoopRepo\skills\agent-memory\templates\*.md" .agent-loop\memory\
 然后直接描述 Goal。agent 会：
 
 1. 先写一份 plan document 与最近 1–2 个 `📝 proposed` task；
-2. 等待 `approve / revise / continue automatically`；
-3. 每次只推进一个未验证假设；
-4. task 结束时回读完整 diff，精炼文档并清理一次性脚本；
-5. 用独立 verifier 验证最终 workspace。
+2. 配置 reviewer 时，每个 Plan Revision 先取得独立准入意见；
+3. 等待 `approve / revise / continue automatically`；
+4. 每次只推进一个未验证假设；
+5. task 结束时回读完整 diff，精炼文档并清理一次性脚本；
+6. 用独立 verifier 验证最终 workspace。
 
 要启用 Harness，plan document 写：
 
 ```text
 Plan Revision: 1
-Plan Review: approved
+Plan Review: proposed
 ```
 
-`task.md` 的 `rev` 列绑定同一个 `r1`，然后初始化：
+`task.md` 的 `rev` 列绑定同一个 `r1`。配置 reviewer 时先运行 plan review；未配置时由 human
+直接审批：
 
 ```powershell
+agent-loop-harness plan-review --plan-doc docs\plan.md
+# human 读 report 后把 Plan Review 改为 approved
 agent-loop-harness init --task t1 --plan-doc docs\plan.md `
   --timeout 300 --max-attempts 3 -- python -m pytest -q
 ```
@@ -147,7 +153,8 @@ agent-loop-harness resume
 默认每 3 次 action、60 分钟、失败或 context compact 后触发 Goal Review；用
 `goal-review --decision continue|replan|stop --evidence "<结论>"` 处理。
 
-要让 reviewer 接管 task 边界，init 前放好 `.agent-loop/reviewer.json`（见上文「worker + reviewer」）。
+要让 reviewer 接管 plan 与 task 两个边界，plan review 前放好 `.agent-loop/reviewer.json`
+（见上文「worker + reviewer」）。
 
 最小可运行样例见 [`examples/minimal-project/`](examples/minimal-project/)。
 
@@ -156,7 +163,8 @@ agent-loop-harness resume
 - Harness 只硬控显式交给 runner 的命令；其它 host tool call 仍由宿主管理。
 - `task.md` 只保存 active backlog；closed task 与旧交接点归档到 `.agent-loop/archive/`，不默认加载。
 - `.harness/` 只存有界 runtime evidence。
-- `.agent-loop/task.md` 与 `.agent-loop/memory/` 是项目本地 runtime；旧 `.cursor/` 路径只读兼容。
+- `.agent-loop/task.md` 与 `.agent-loop/memory/` 是项目本地 runtime；旧 `.cursor/` 路径只读兼容，
+  下一次维护 memory 时整体迁移，不双写。
 - checkpoint / rollback 复用 git，不自动覆盖用户工作树。
 - 没有 lifecycle hooks 的宿主属于 portable mode，不能强制 completion gate；外部进程掌握 agent
   生命周期时可评估 [BOUND](https://github.com/Danny-de-bree/bound)。

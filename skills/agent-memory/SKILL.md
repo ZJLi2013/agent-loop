@@ -36,6 +36,8 @@ procedural memory 就是 `skills/` 本身，不在这里重复索引。
 
 初始化：把 [templates/](templates/) 四个文件拷过去，删掉示例行。hook 按 cwd 解析这个路径，
 所以在哪个项目跑就读那个项目的记忆；本库自身不需要有（除非你也在长周期地开发它）。
+旧 `.cursor/memory/` 只读兼容；下一次维护 memory 时把四个文件整体迁到 `.agent-loop/memory/`
+并删除旧目录，不能双写或分文件留在两处。
 
 **`INDEX.md` 是这里最要紧的一个文件。** 它不放内容，只放「有什么 + 在哪」——
 没法让 agent 去搜一个它不知道存在的东西，但可以永远把目录摆在它眼前。
@@ -96,6 +98,16 @@ hook 检测到超限会直接告警，届时把条目并粗（指向小节而不
 memory consolidation 的判据不是“旧”，而是“是否还会改变未来选择”：项目文档已经承接、只复述成功
 历史的 experiment 行删除；能阻止重复试错的否定结论继续保留。原始 evidence 留在项目 archive /
 Harness artifacts，memory 不复制。
+
+task / Goal CLOSE 时按下面顺序收敛：
+
+1. 同一 task 的多轮成功实验最多留一条证据指针；项目文档已能直接定位结论时整条删除。
+2. 被推翻的假设移到 `disproved`，被否决的方案移到 `rejected`，不再同时留在 `experiments`。
+3. 当前状态、预算、排期和被覆盖决定从 episodes 删除；它们只属于 plan / `task.md`。
+4. 更新 `INDEX.md` 的小节指针，不给每次实验单独建索引。
+
+`experiments` 超过 10 条 task 级指针是漏执行 CLOSE 的告警，不是截断线；先按上述规则合并，
+不能按日期删除。`current decisions` 不是 episodes 的合法小节。
 
 ## 准入与上限
 

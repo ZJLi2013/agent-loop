@@ -33,6 +33,7 @@ from harness.plan import (
     task_plan_revision,
 )
 from harness.page import load_pager, page_followup
+from harness.plan_review import plan_review_ready, run_plan_review
 from harness.protocol import Event, Phase, TransitionError, apply_event
 from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
@@ -109,6 +110,7 @@ def initialize(
 
     root = root.resolve()
     base = harness_dir(root)
+    reviewer = load_reviewer(root)
     state_path = base / STATE_FILE
     if state_path.exists():
         old = read_json(state_path)
@@ -151,6 +153,18 @@ def initialize(
             raise HarnessError(
                 f"task {task_id} binds r{task_revision}, plan is r{revision}"
             )
+        if reviewer:
+            ready, reason = plan_review_ready(root, plan_doc, revision)
+            if not ready:
+                if review == "approved":
+                    raise HarnessError(
+                        f"{reason}; set Plan Review to proposed before approval"
+                    )
+                run_plan_review(
+                    root,
+                    plan_doc=plan_doc,
+                    reviewer_config=reviewer,
+                )
 
     created_at = utc_now()
     config: dict[str, Any] = {
@@ -177,7 +191,7 @@ def initialize(
             "after_seconds": float(goal_review_after_seconds),
             "on_failure": bool(goal_review_on_failure),
         },
-        "reviewer": load_reviewer(root),
+        "reviewer": reviewer,
         "pager": load_pager(root),
         "created_at": created_at,
     }
@@ -285,6 +299,21 @@ def run_command(
             state["updated_at"] = utc_now()
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
             raise HarnessError(f"runner is paused: {plan_reason}")
+        if config.get("reviewer") and config.get("plan_doc"):
+            reviewed, review_reason = plan_review_ready(
+                root,
+                str(config["plan_doc"]),
+                int(state["plan_revision"]),
+            )
+            if not reviewed:
+                request_pause(
+                    root,
+                    reason=review_reason or "plan review is incomplete",
+                )
+                _transition(state, Event.PAUSE_REQUESTED)
+                state["updated_at"] = utc_now()
+                atomic_write_json(harness_dir(root) / STATE_FILE, state)
+                raise HarnessError(f"runner is paused: {review_reason}")
         if (
             state.get("phase") == Phase.VERIFIED.value
             and config.get("reviewer")

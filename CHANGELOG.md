@@ -14,6 +14,8 @@ All notable user-facing changes are documented here. This project follows Semant
 - Bounded command runner, execution journal, independent verifier, and Cursor completion gate.
 - Runtime pause/resume and event-driven Goal Review.
 - Project memory with forced retrieval through a Cursor hook.
+- Plan-boundary reviewer: each submitted Plan Revision receives one advisory review before human approval;
+  initialization, resume, pager approval, and unattended activation all enforce the report.
 - Task-boundary reviewer: after verification, the Harness automatically runs a configurable reviewer command
   (`.agent-loop/reviewer.json`), which rewrites the next task and decides `continue`, `ask_human`, or `stop`.
 - Human checkpoints on the phone: with `.agent-loop/pager.json`, plan approval, reviewer `ask_human`, reviewer
@@ -31,6 +33,10 @@ All notable user-facing changes are documented here. This project follows Semant
 - Policies and hook actions moved behind platform-neutral `skills/` and adapter protocol boundaries.
 - Reviewer dispatch moved from a stop-hook instruction to the verifier orchestration; execution and next-task
   initialization remain blocked until the reviewer writes a decision.
+- Reviewer dispatch uses submitted Plan Revisions and verified tasks as its two decision boundaries; individual
+  edits do not trigger review, and model CLI sessions and caches remain outside agent-loop project state.
+- Memory CLOSE now retires successful experiment history already carried by project documents, keeps
+  `disproved` / `rejected` decisions, and migrates maintained legacy memory to `.agent-loop/memory/`.
 
 ### Fixed
 

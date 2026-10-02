@@ -4,8 +4,9 @@
 
 ## 结论
 
-**agent-loop 只要两个 agent 角色，调度留在代码里。** worker 执行 task，reviewer 在 task 边界决定下一步；
-「什么时候叫谁」是一张固定的状态表，由 Harness 的状态机执行，不另设 LLM 调度 agent。
+**agent-loop 只要两个 agent 角色，调度留在代码里。** worker 执行 task；reviewer 在 Plan Revision
+提交后审准入，在 task 边界决定下一步。「什么时候叫谁」由 Harness 的确定性边界决定，不另设
+LLM 调度 agent。
 
 依据来自 [RoboJEV × Nox-4B case](../case_study/robojev-nox.md)：11 个 task 边界里，决策几乎每次都被
 改写，执行一次都没有。需要判断的只有边界这一个时刻，所以 LLM 调度器只会多出一个会漂移的判断点。
@@ -27,6 +28,7 @@
 
 | 时刻 | 调用 |
 |---|---|
+| Plan Revision 提交、human 批准前 | reviewer：task 准入意见；不能批准 plan |
 | task 执行、自修、重试 | worker：宿主里的 agent |
 | task `VERIFIED` 且配置了 reviewer | reviewer：`harness review` |
 | reviewer 选 `ask_human` / `stop` | human |
@@ -35,6 +37,8 @@
 - **模型不写死。** reviewer 是 `.agent-loop/reviewer.json` 里的一条命令，原则上强于 worker。
   Cursor 里用不到的模型（如 Codex 里的 gpt-6）走 `wsl.exe -- bash -lc "codex exec ..."`。
 - **reviewer 只读落盘证据。** 不给 worker 的对话；新上下文本身是收益的一部分。
+- **review 的单位是 submitted Plan Revision 或 verified task。** 文件修改、判据措辞和讨论轮次
+  不触发；同一 Plan Revision 只审一次。
 - **worker 只能以事实错误异议一次**（路径、数字、已做过、跑不了、超预算），仍分歧即 `ask_human`。
 - **挂在 verifier orchestration 上。** `harness verify` 通过后直接运行 reviewer；reviewer 经 runner
   执行，受超时约束并记入 journal。completion gate 只负责 reviewer 失败后的重试提示，以及把

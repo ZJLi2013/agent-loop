@@ -27,6 +27,7 @@ from harness.core import (  # noqa: E402
     verify,
 )
 from harness.page import run_page  # noqa: E402
+from harness.plan_review import run_plan_review  # noqa: E402
 from harness.review import run_review  # noqa: E402
 
 
@@ -85,6 +86,10 @@ def build_parser() -> argparse.ArgumentParser:
         "review", help="run the configured reviewer at the task boundary"
     )
     review.add_argument("--objection", help="one factual error in the last decision")
+    plan_review = commands.add_parser(
+        "plan-review", help="review one submitted Plan Revision"
+    )
+    plan_review.add_argument("--plan-doc", required=True)
     commands.add_parser(
         "page", help="send the pending human checkpoint to the phone and wait"
     )
@@ -166,6 +171,10 @@ def main(argv: list[str] | None = None) -> int:
             outcome = run_review(root, objection=args.objection)
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 0 if outcome["review"]["decision"] else 1
+        if args.action == "plan-review":
+            outcome = run_plan_review(root, plan_doc=args.plan_doc)
+            print(json.dumps(outcome, ensure_ascii=False, indent=2))
+            return 0
         if args.action == "page":
             outcome = run_page(root)
             print(json.dumps(outcome, ensure_ascii=False, indent=2))

@@ -11,6 +11,7 @@ from harness.core import (
     completion_gate,
     initialize,
     load_runtime,
+    resume,
     verify,
 )
 from harness.page import run_page
@@ -30,6 +31,9 @@ if args[0] == "serve":
 
 def reviewer_writing(decision: dict[str, object]) -> list[str]:
     text = json.dumps(decision)
+    report = json.dumps(
+        {"verdict": "accept", "summary": "plan ready", "findings": []}
+    )
     tasks = (
         "| P | id | rev | task | check | status | fail |\n"
         "|---|---|---|---|---|---|---|\n"
@@ -37,8 +41,11 @@ def reviewer_writing(decision: dict[str, object]) -> list[str]:
     )
     code = (
         "from pathlib import Path; "
-        f"Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'); "
-        f"Path('.harness/review/decision.json').write_text({text!r})"
+        "p=Path('.harness/review/prompt.md').read_text(encoding='utf-8'); "
+        f"(Path('.harness/plan-review/report.json').write_text({report!r}) "
+        "if '# Plan revision review' in p else "
+        f"(Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'), "
+        f"Path('.harness/review/decision.json').write_text({text!r})))"
     )
     return [sys.executable, "-c", code]
 
@@ -100,7 +107,9 @@ class PagerCheckpointTest(unittest.TestCase):
         (self.root / ".agent-loop" / "reviewer.json").write_text(
             json.dumps({"argv": reviewer_writing(decision)})
         )
-        self.init()
+        self.init(review="proposed")
+        self.write_plan(1, "approved")
+        resume(self.root)
         verify(self.root)
 
     def test_proposed_plan_is_paged_and_ok_approves_and_resumes(self) -> None:
@@ -121,6 +130,19 @@ class PagerCheckpointTest(unittest.TestCase):
         self.assertEqual(outcome["reply"]["verb"], "OK")
         self.assertIn("not independently verified", completion_gate(self.root) or "")
 
+    def test_plan_page_includes_independent_review_summary(self) -> None:
+        (self.root / ".agent-loop" / "reviewer.json").write_text(
+            json.dumps({"argv": reviewer_writing({"decision": "stop", "why": "unused"})})
+        )
+        self.init(review="proposed")
+        self.reply("OK")
+
+        run_page(self.root)
+
+        send = self.calls()[0]
+        body = send[send.index("--body") + 1]
+        self.assertIn("independent reviewer：plan ready", body)
+
     def test_do_on_ask_human_becomes_correction_then_revised_plan_is_paged(self) -> None:
         self.review_with({"decision": "ask_human", "why": "scope question"})
         self.assertIn("ask_human", completion_gate(self.root) or "")
@@ -138,6 +160,15 @@ class PagerCheckpointTest(unittest.TestCase):
 
         self.write_plan(2, "proposed")
         self.assertIn("plan_review", completion_gate(self.root) or "")
+
+    def test_ok_on_ask_human_requires_revised_plan_review(self) -> None:
+        self.review_with({"decision": "ask_human", "why": "scope question"})
+        self.reply("OK")
+
+        outcome = run_page(self.root)
+
+        self.assertIn("Plan Review: proposed", outcome["message"])
+        self.assertIn("independent plan review", outcome["message"])
 
     def test_reviewer_stop_only_notifies(self) -> None:
         self.review_with({"decision": "stop", "why": "goal reached"})

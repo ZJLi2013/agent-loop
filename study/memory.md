@@ -65,7 +65,8 @@ episodic 固化成 semantic（「用户在 1/5、1/12、2/1 都改了日期格�
 | 具体值变了 | 覆盖 `facts.md`（换节点、换 ckpt） | 就是「忘掉节点名」那个病 |
 | pivot | 原方向为什么放弃 | 三周后有人提议回到原方向 |
 
-覆盖 vs 追加分开：facts 覆盖，episodes 与排除项追加。
+覆盖与生命周期分开：facts 覆盖；episodes 的成功实验在 CLOSE 时合并或删除，
+`disproved / rejected` 追加保留。
 
 ### 三、闭合点是「回写索引」
 
@@ -81,7 +82,7 @@ episodic 固化成 semantic（「用户在 1/5、1/12、2/1 都改了日期格�
 <工作项目>/.agent-loop/memory/
   INDEX.md       # 常驻索引，带 anchor，上限 30 行
   facts.md       # 覆盖
-  episodes.md    # 追加：experiments / disproved / rejected
+  episodes.md    # experiments 可退役；disproved / rejected 追加保留
   lessons.md     # 追加，上限 15 条，[x1]/[x2]/[x3] 晋升
 
 agent-loop/
@@ -125,8 +126,10 @@ raw = sys.stdin.buffer.read().decode("utf-8-sig", errors="replace")
 由此得到一条通用判据：**hook / 集成类的验收必须走真实事件**。手动喂 stdin 只测了脚本逻辑，
 绕开了调用方的编码、cwd 与相对路径——这三处都出过静默失效。
 
-**v1 未做**：CONSOLIDATE 仍是人工；hook 只覆盖 `task.md` 一个触发点；
-episodes 的写入仍依赖 agent 遵守转换表，没有 hook 强制。
+**CONSOLIDATE 是 CLOSE Policy，不是后台任务。** 同一 task 的成功实验最多留一条指针，
+项目文档已承接时删除；否定结论归入 `disproved / rejected`；状态、预算与排期不进 episodes。
+`experiments` 超过 10 条 task 级指针表示 CLOSE 漏执行。hook 只覆盖 `task.md` 一个触发点，
+episodes 的写入与收敛仍依赖 agent 遵守转换表，没有增加状态或自动清理器。
 
 ## 让手工清单不烂的三样东西
 

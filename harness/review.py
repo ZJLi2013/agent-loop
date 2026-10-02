@@ -39,6 +39,12 @@ PROMPT = """# Task boundary review
 
 按需打开 plan / task 引用的原始证据。结论以原始证据为准，不以 worker 的摘要为准。
 {extra}
+## Review contract
+
+review 的单位是这个 verified task，不是实验记录的一次修改、判据的一个版本或一轮讨论。
+只指出会改变 `continue / ask_human / stop` 或下一条命令的问题；没有新 evidence 时不重新审查
+已接受的判据。没有这类问题就直接完成交接，不扩写一般性建议。
+
 ## 要做的事
 
 1. 核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。

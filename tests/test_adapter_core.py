@@ -71,6 +71,34 @@ class AdapterCoreTest(unittest.TestCase):
         self.assertEqual(response.action, HookAction.CONTEXT)
         self.assertIn("legacy decision", response.message or "")
 
+    def test_canonical_memory_wins_over_legacy_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / ".agent-loop"
+            memory = runtime / "memory"
+            memory.mkdir(parents=True)
+            task = runtime / "task.md"
+            task.write_text("## Goal\ncanonical project\n", encoding="utf-8")
+            (memory / "INDEX.md").write_text(
+                "- canonical decision\n", encoding="utf-8"
+            )
+            legacy = root / ".cursor" / "memory"
+            legacy.mkdir(parents=True)
+            (legacy / "INDEX.md").write_text(
+                "- stale legacy decision\n", encoding="utf-8"
+            )
+
+            response = handle(
+                HookRequest(
+                    event=HookEvent.TOOL_USED,
+                    workspace_roots=(root,),
+                    tool_input={"path": str(task)},
+                )
+            )
+
+        self.assertIn("canonical decision", response.message or "")
+        self.assertNotIn("stale legacy decision", response.message or "")
+
 
 if __name__ == "__main__":
     unittest.main()

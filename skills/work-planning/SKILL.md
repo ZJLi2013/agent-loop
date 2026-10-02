@@ -45,10 +45,12 @@ Plan Review: proposed
 1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。
 2. 一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
-4. 正常模式用平台的结构化提问能力给 human：
-   `approve / revise / continue automatically`。批准前不实验、不改实现。
-5. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
-   `Plan Review: unreviewed`。
+4. 配置 reviewer 时，先对当前 Plan Revision 运行独立 plan review；报告按 plan 路径与
+   revision 去重。reviewer 只给准入意见，不能批准 plan 或授权执行。
+5. 再用平台的结构化提问能力给 human：`approve / revise / continue automatically`。
+   reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
+6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
+   `Plan Review: unreviewed`，但配置 reviewer 时仍须完成独立 plan review。
 
 远期路线只作为 plan 中的候选。每项拿到 evidence 后再生成下一项，不一次写死整条路线。
 
@@ -74,7 +76,7 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 1. `pause --require-revision --reason "<纠偏>"`；
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
 3. 旧 task 逐项保留、blocked 或 dropped；新 task 绑定新 `rN`；
-4. human review 后恢复唯一 doing，再 `resume`。
+4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`。
 
 对话里的「明白」不算 RECONCILE；四步落盘后才继续。
 

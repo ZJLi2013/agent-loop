@@ -146,6 +146,36 @@ def plan_can_run(
 
 
 def resume(root: Path) -> dict[str, Any]:
+    from harness.plan_review import plan_review_ready, run_plan_review
+
+    root = root.resolve()
+    config, state = load_runtime(root)
+    plan_doc = config.get("plan_doc")
+    if config.get("reviewer") and plan_doc:
+        revision, review = current_plan(root, config)
+        if revision is None:
+            raise HarnessError("configured plan document has no revision")
+        reviewed, _ = plan_review_ready(root, str(plan_doc), revision)
+        if not reviewed:
+            run_plan_review(
+                root,
+                plan_doc=str(plan_doc),
+                reviewer_config=config["reviewer"],
+            )
+            if review == "approved":
+                path = (root / str(plan_doc)).resolve()
+                content = path.read_text(encoding="utf-8")
+                path.write_text(
+                    _PLAN_REVIEW_RE.sub(
+                        "Plan Review: proposed", content, count=1
+                    ),
+                    encoding="utf-8",
+                )
+                raise HarnessError(
+                    "independent plan review completed after approval; "
+                    "inspect the report and approve again"
+                )
+
     with state_lock(root):
         config, state = load_runtime(root)
         request = pause_request(root)
