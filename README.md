@@ -51,16 +51,17 @@ reviewer 只在两个边界运行：每个 Plan Revision 提交后、human 批�
 
 ## 人不在电脑前
 
-需要 human 的检查点可以经 [`tools/pager`](tools/pager/)（`pip install -e tools/pager`）发到手机：plan 待批、reviewer 选
-`ask_human`、reviewer 连续失败、预算用尽时，worker 不停下，而是跑 `agent-loop-harness page` 发邮件并挂着等回复；
-reviewer 选 `stop` 时只发通知。init 前写 `.agent-loop/pager.json`：
+需要 human 的检查点可以经 [`tools/pager`](tools/pager/) 发到 Outlook 或飞书：plan 待批、
+reviewer 选 `ask_human`、reviewer 连续失败、预算用尽时，worker 运行
+`agent-loop-harness page` 并等待回复；reviewer 选 `stop` 时只发通知。
 
-```json
-{"argv": ["python", "-m", "pager"], "project": "my-project", "address": "you@example.com"}
-```
+回复 `OK` 批准当前检查点，`DO <文字>` 作为 human 纠偏交给 worker，`NO` / `STOP` 停下。
+飞书还支持直接输入自然语言。pager 不能唤醒已退出的 agent，所以电脑、网络和 agent 会话
+都要保持在线。
 
-回复 `OK` 批准当前检查点，`DO <文字>` 作为 human 纠偏交给 worker（改 plan 后再发一次待批），
-`NO` / `STOP` 停下。pager 不能唤醒已退出的 agent，所以电脑、网络和 agent 会话都要保持在线。
+- Outlook 安装与 Graph 配置：[`tools/pager/README.md`](tools/pager/README.md)
+- 飞书应用、长连接、smoke 与 Harness 配置：
+  [`tools/pager/docs/feishu.md`](tools/pager/docs/feishu.md)
 
 ## 架构
 

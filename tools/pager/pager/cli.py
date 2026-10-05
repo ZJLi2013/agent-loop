@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Callable, Sequence
 
+from pager.feishu_transport import from_env as feishu_from_env
 from pager.graph_transport import GraphTransport
 from pager.protocol import Command, render_page
 from pager.runner import PollError, listen
@@ -22,7 +23,11 @@ def _parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
-        "--address", default=os.getenv("PAGER_CONTROL_ADDRESS")
+        "--address",
+        default=(
+            os.getenv("PAGER_CONTROL_ADDRESS")
+            or os.getenv("PAGER_FEISHU_CHAT_ID")
+        ),
     )
     common.add_argument(
         "--state",
@@ -75,7 +80,12 @@ def _load_graph_client():
     return GraphClient()
 
 
-def _default_transport(address: str, state_path: Path) -> GraphTransport:
+def _default_transport(address: str, state_path: Path) -> Transport:
+    transport = os.getenv("PAGER_TRANSPORT", "graph").casefold()
+    if transport == "feishu":
+        return feishu_from_env(address, state_path)
+    if transport != "graph":
+        raise SystemExit("PAGER_TRANSPORT must be graph or feishu")
     return GraphTransport(
         _load_graph_client(),
         control_address=address,
@@ -108,7 +118,8 @@ def run(
     args = _parser().parse_args(argv)
     if not args.address:
         raise SystemExit(
-            "PAGER_CONTROL_ADDRESS or --address is required"
+            "PAGER_CONTROL_ADDRESS, PAGER_FEISHU_CHAT_ID, or --address "
+            "is required"
         )
     transport = transport_factory(args.address, args.state)
 

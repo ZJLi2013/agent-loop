@@ -2,8 +2,8 @@
 
 Pager 是工作电脑和手机之间的“值班机”：
 
-1. 工作电脑上的 agent 用 Outlook 发来进展或审批请求。
-2. 人在手机 Outlook 回复 `OK`、`NO`、`STOP` 或 `DO ...`。
+1. 工作电脑上的 agent 用 Outlook 或飞书发来进展或审批请求。
+2. 人在手机上回复显式命令或自然语言。
 3. agent 读取回复，继续执行或停在安全检查点。
 
 ## 需要部署吗？
@@ -139,3 +139,9 @@ python -m pytest tools/pager/tests -q
 
 实现边界见 [design.md](design.md)，agent 操作约定见
 [docs/agent-runbook.md](docs/agent-runbook.md)。
+
+## 飞书长连接
+
+飞书使用企业自建应用的 WebSocket 长连接，不需要公网入口；普通文本可直接作为自然语言
+`DO`。应用准备、安装、smoke 与 Harness 配置见
+[docs/feishu.md](docs/feishu.md)。

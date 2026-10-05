@@ -1,7 +1,8 @@
 # Existing agent runbook
 
-This path assumes the work computer, Graph login, and the current agent session
-remain alive. Pager transports commands; it does not launch or recover an agent.
+This path assumes the work computer, transport login, and the current agent
+session remain alive. Pager transports commands; it does not launch or recover
+an agent.
 
 ## Setup
 
@@ -12,6 +13,10 @@ $env:PAGER_STATE_PATH = "$HOME\.pager\<workspace>.json"
 
 Use one state file per workspace. A task id is single-use and should contain the
 workspace, purpose, and UTC timestamp.
+
+For Feishu, set `PAGER_TRANSPORT=feishu`, the app credentials,
+`PAGER_FEISHU_CHAT_ID`, and `PAGER_FEISHU_ALLOWED_SENDER_IDS` instead. Use a
+dedicated chat and keep all values local.
 
 ## Control loop
 
@@ -41,7 +46,8 @@ workspace, purpose, and UTC timestamp.
      interrupt a command already running.
 
    `OK`, `NO`, and `STOP` must be the only token on the first non-empty line.
-   `DO` requires text after it. An invalid reply leaves the page pending.
+   `DO` requires text after it. Feishu treats any other non-empty message as a
+   natural-language `DO`; email leaves an invalid reply pending.
 
 4. Send the result, then send a new standby page with a new task id. A valid
    reply closes the old task id; later replies to that thread are ignored.

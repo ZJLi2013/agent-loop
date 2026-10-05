@@ -16,8 +16,12 @@
     → agent 解释结构化指令并执行
 ```
 
-Pager 通过 `PAGER_GRAPH_SCRIPTS` 注入本机已登录的 Graph 客户端，不保存 token。邮件主题携带
+Graph transport 通过 `PAGER_GRAPH_SCRIPTS` 注入本机已登录的客户端，不保存 token。邮件主题携带
 task id；回复必须来自控制邮箱，并与原邮件共享 `conversationId`。
+
+Feishu transport 通过官方 SDK 建立 WebSocket 长连接。事件 callback 只把文本消息入队，
+`poll()` 沿用相同的 `Transport` 契约；出站使用普通文本消息 API。它只接受配置的 chat ID
+与 sender open ID，凭据只从本机环境变量读取。
 
 ## Command protocol
 
@@ -30,6 +34,9 @@ task id；回复必须来自控制邮箱，并与原邮件共享 `conversationId
 `bodyPreview` 读取，避开 Outlook HTML 中的分类标签和引用历史。
 
 一条有效回复会关闭对应 task id。下一轮必须使用新的 task id 和邮件线程。
+
+Feishu 没有依赖邮件线程做关联，因此每个 state file 只允许一个 pending task。显式命令
+沿用上述协议，其它非空文本映射为 `DO`。CardKit 逐 token 输出不属于首版。
 
 ## State and delivery
 
@@ -46,7 +53,7 @@ heartbeat 通知，通知不创建 pending task。收到 command 后 `serve` 输
 
 ## Boundaries
 
-- 工作电脑、网络、Graph 登录和现有 agent 会话必须保持可用。
+- 工作电脑、网络、transport 登录和现有 agent 会话必须保持可用。
 - Pager 不启动、唤醒或恢复 agent；`serve` 也不是系统服务。
 - 邮件在 agent 执行前已被消费；agent 随后崩溃可能丢失该任务。
 - `STOP` 不能中断已经运行的长命令。

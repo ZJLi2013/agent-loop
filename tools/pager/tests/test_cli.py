@@ -1,5 +1,6 @@
 import json
 
+import pager.cli as cli
 from pager.cli import run
 from pager.protocol import Command, Verb, render_page
 from pager.transport import FakeTransport
@@ -21,6 +22,27 @@ class SequenceTransport:
         if isinstance(outcome, BaseException):
             raise outcome
         return outcome
+
+
+def test_default_transport_selects_feishu_from_environment(
+    monkeypatch, tmp_path
+):
+    expected = FakeTransport()
+    captured = {}
+
+    def factory(address, state_path):
+        captured["address"] = address
+        captured["state_path"] = state_path
+        return expected
+
+    monkeypatch.setenv("PAGER_TRANSPORT", "feishu")
+    monkeypatch.setattr(cli, "feishu_from_env", factory)
+    state_path = tmp_path / "state.json"
+
+    result = cli._default_transport("chat-1", state_path)
+
+    assert result is expected
+    assert captured == {"address": "chat-1", "state_path": state_path}
 
 
 def test_send_outputs_stable_json(capsys, tmp_path):

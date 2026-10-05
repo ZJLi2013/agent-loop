@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 12
+Plan Revision: 13
 Plan Review: approved
 
 ## Goal
@@ -26,9 +26,13 @@ Codex、Cursor 等宿主的会话与缓存目录不属于项目状态，也不�
 
 ## 下一步决策
 
-memory 收敛是 task / Goal CLOSE 的 Policy 步骤，不增加状态、hook 或清理脚本。成功实验在项目文档
-承接后退役，长期否定结论归入 `disproved / rejected`，当前状态只留在 plan / task；维护 legacy
-memory 时整体迁到 `.agent-loop/memory/`，不保留两份真值。当前没有后续实现 task。
+Pager 已增加 Feishu 长连接 transport adapter，未改 Harness、pager `Transport` 契约或 lifecycle。
+SDK WebSocket 接收消息并入队，普通文本映射为 `DO`，同时保留 `OK / NO / STOP / DO`；
+发送方和 chat 均使用 allowlist，凭据只从本机环境变量读取。同一 transport 只允许一个
+pending task，避免自然文本被错误关联。CardKit 逐 token 输出不进入首版。
+
+当前没有后续实现 task。⚠️ 真实 Feishu app 凭据、权限和 chat / sender ID 尚未提供，
+端到端消息收发需在这些本机配置就绪后验证。
 
 ## Experiment Log
 
@@ -41,7 +45,7 @@ memory 时整体迁到 `.agent-loop/memory/`，不保留两份真值。当前没
 | t30-e1 | 每个 Plan Revision 一次独立准入 review 能补齐开跑前缺口，且无需新 Kernel state | promoted | 5 个 contract tests 通过：revision 去重、换 revision 重审、失败持久化、越权修改拦截、未配置兼容 | 假设成立：report adapter 独立于 task result review；下一步接 activation guard |
 | t31-e1 | activation guard 能覆盖所有批准路径而不增加 lifecycle state | promoted | 25 个 plan / pause / pager 集成测试与 68 个全量测试通过；init、resume、pager、unattended 均要求当前 revision report | 假设成立：Policy 定义准入，adapter 产出 report，Harness 只守顺序 |
 | t32-e1 | CLOSE Policy 足以控制 memory 增长，无需自动清理器 | promoted | RoboTwin `episodes.md` 13.6 KB → 2.1 KB（−85%），legacy 8 个文件迁出，只保留 canonical 四文件；69 个全量测试通过 | 假设成立；[案例](case_study/robotwin-memory-consolidation.md) |
-
+| t33-e1 | Feishu 长连接可以作为独立 transport 提供自然语言双向控制，无需扩展 Kernel | promoted | pager 46 tests 与 locked verifier 通过；`lark-oapi` 1.7.3 的 Client 与 message builder 实测可构造；live app 凭据尚未提供 | 假设成立；端到端联调等待本机凭据 |
 ## Architecture
 
 ```text
