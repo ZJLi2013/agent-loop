@@ -41,6 +41,7 @@ All notable user-facing changes are documented here. This project follows Semant
 ### Fixed
 
 - Workspace fingerprint skips nested `.codex/` scratch directories, whose locked files crashed verify on Windows.
+- Closed-task archiving no longer drops a row whose task id was already used by an earlier Goal.
 
 [Unreleased]: https://github.com/ZJLi2013/agent-loop/commits/main
 

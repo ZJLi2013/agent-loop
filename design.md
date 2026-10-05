@@ -1,6 +1,6 @@
 # agent-loop Design
 
-Plan Revision: 13
+Plan Revision: 14
 Plan Review: approved
 
 ## Goal
@@ -31,8 +31,11 @@ SDK WebSocket 接收消息并入队，普通文本映射为 `DO`，同时保留 
 发送方和 chat 均使用 allowlist，凭据只从本机环境变量读取。同一 transport 只允许一个
 pending task，避免自然文本被错误关联。CardKit 逐 token 输出不进入首版。
 
-当前没有后续实现 task。⚠️ 真实 Feishu app 凭据、权限和 chat / sender ID 尚未提供，
+⚠️ 真实 Feishu app 凭据、权限和 chat / sender ID 尚未提供，
 端到端消息收发需在这些本机配置就绪后验证。
+
+r14（human 2026-10-06 批准）：closed-task 归档按 task id 去重，跨 Goal 重用 id 时新行既离开
+active 又不进 archive。t34 已改为按整行去重，未引入新状态或配置；当前没有后续实现 task。
 
 ## Experiment Log
 
@@ -46,6 +49,7 @@ pending task，避免自然文本被错误关联。CardKit 逐 token 输出不�
 | t31-e1 | activation guard 能覆盖所有批准路径而不增加 lifecycle state | promoted | 25 个 plan / pause / pager 集成测试与 68 个全量测试通过；init、resume、pager、unattended 均要求当前 revision report | 假设成立：Policy 定义准入，adapter 产出 report，Harness 只守顺序 |
 | t32-e1 | CLOSE Policy 足以控制 memory 增长，无需自动清理器 | promoted | RoboTwin `episodes.md` 13.6 KB → 2.1 KB（−85%），legacy 8 个文件迁出，只保留 canonical 四文件；69 个全量测试通过 | 假设成立；[案例](case_study/robotwin-memory-consolidation.md) |
 | t33-e1 | Feishu 长连接可以作为独立 transport 提供自然语言双向控制，无需扩展 Kernel | promoted | pager 46 tests 与 locked verifier 通过；`lark-oapi` 1.7.3 的 Client 与 message builder 实测可构造；live app 凭据尚未提供 | 假设成立；端到端联调等待本机凭据 |
+| t34-e1 | 按整行去重足以修复跨 Goal 同 id 丢行，无需引入 Goal 维度的 key | promoted | 复现测试修复前失败（新 t1 离开 active 但未进 archive），修复后通过；`(id, rev)` 不够，robotRSI 两个 plan 都有 `t1 r1` | 假设成立：只有崩溃重入会产生重复行，而它们逐字相同 |
 ## Architecture
 
 ```text

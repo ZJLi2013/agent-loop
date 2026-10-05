@@ -68,10 +68,6 @@ def archive_closed_tasks(root: Path) -> list[str]:
         return []
 
     archive_path = runtime_dir(root) / ARCHIVE_DIR / TASK_ARCHIVE
-    existing = archived_task_ids(root)
-    new_rows = [
-        line for line in closed_rows if (_task_id(line) or "") not in existing
-    ]
     if archive_path.exists():
         archive = archive_path.read_text(encoding="utf-8").rstrip()
     else:
@@ -90,6 +86,9 @@ def archive_closed_tasks(root: Path) -> list[str]:
                 *table_headers,
             ]
         )
+    # Task ids restart across Goals; only an identical row is a duplicate.
+    existing = {line.strip() for line in archive.splitlines()}
+    new_rows = [line for line in closed_rows if line.strip() not in existing]
     if new_rows:
         archive = f"{archive}\n" + "\n".join(new_rows)
     _atomic_write(archive_path, f"{archive}\n")

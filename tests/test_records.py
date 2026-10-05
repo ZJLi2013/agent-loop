@@ -60,6 +60,29 @@ class RecordLifecycleTest(unittest.TestCase):
 
             self.assertEqual(after, before)
 
+    def test_reused_task_id_from_previous_goal_is_still_archived(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / ".agent-loop"
+            (runtime / "archive").mkdir(parents=True)
+            old_row = "| P0 | t1 | r1 | previous goal | check | ✅ done | 0 |"
+            (runtime / "archive" / "tasks.md").write_text(
+                "# Closed Tasks\n\n"
+                "| P | id | rev | task | check | status | fail |\n"
+                "|---|---|---|---|---|---|---|\n"
+                f"{old_row}\n",
+                encoding="utf-8",
+            )
+            (runtime / "task.md").write_text(TASKS, encoding="utf-8")
+
+            archive_closed_tasks(root)
+            archive = (runtime / "archive" / "tasks.md").read_text(
+                encoding="utf-8"
+            )
+
+            self.assertIn(old_row, archive)
+            self.assertIn("| t1 | r1 | finished |", archive)
+
 
 if __name__ == "__main__":
     unittest.main()
