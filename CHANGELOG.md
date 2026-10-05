@@ -26,6 +26,8 @@ All notable user-facing changes are documented here. This project follows Semant
   handoffs, and superseded experiment summaries out of the default context into linked archives.
 - CLOSE self-audit: before the locked verifier, the worker rereads the task diff, removes transitional
   documentation and one-off scripts, and leaves only durable facts, decision analysis, conclusions, and evidence.
+- Domain research for research-type experiments: the design template asks for field precedent before the run,
+  negative or surprising results are compared with field conclusions, and both reviewers check for it.
 
 ### Changed
 

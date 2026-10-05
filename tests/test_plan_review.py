@@ -74,6 +74,10 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(
             plan_review_record(self.root, "plan.md", 1)["summary"], "ready"
         )
+        prompt = (self.root / ".harness" / "review" / "prompt.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("领域先例", prompt)
 
     def test_new_revision_runs_a_new_review(self) -> None:
         self.configure(

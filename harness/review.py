@@ -51,6 +51,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 2. 在 task 列表里把 {task_id} 标为 `✅ done`；Harness 会把 closed 行移到
    `.agent-loop/archive/tasks.md`。写好下一个 task：最多一个未验证假设、验收检查点、失败去向、
    预算。只展开最近 1–2 项，新 task 的 `rev` 沿用当前 plan revision。
+   结果为否定或意外、或下一个 task 要换方向时，先核对 plan 是否已对照领域结论与业界已有解法；
+   没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
 3. 选择 decision：
    - `continue`：Goal 与 scope 不变，下一个 task 已写好；
    - `ask_human`：需要改 Goal / scope，或要在有显著权衡的方案间选型；

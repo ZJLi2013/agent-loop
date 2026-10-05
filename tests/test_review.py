@@ -99,6 +99,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("review 的单位是这个 verified task", prompt)
         self.assertIn("会改变 `continue / ask_human / stop`", prompt)
         self.assertIn("没有新 evidence 时不重新审查", prompt)
+        self.assertIn("业界已有解法", prompt)
         followup = completion_gate(self.root) or ""
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
