@@ -2,6 +2,7 @@
 .cline_storage/
 
 # Private configs (real hostnames, credentials, etc.)
+configs/
 .agent-loop/configs/
 .cursor/configs/
 

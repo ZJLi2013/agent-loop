@@ -9,11 +9,12 @@ set -euo pipefail
 #
 # Defaults:
 #   input-list.txt         = ./input-list.txt
-#   gpu_nodes.list         = .cursor/configs/gpu_nodes.list
+#   gpu_nodes.list         = <agent-loop>/configs/gpu_nodes.list
 #
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INPUT_FILE="${1:-./input-list.txt}"
-NODES_FILE="${2:-.cursor/configs/gpu_nodes.list}"
+NODES_FILE="${2:-$SCRIPT_DIR/../../../configs/gpu_nodes.list}"
 REMOTE_WORKDIR="/tmp/overnight-tests"
 LOCAL_RESULTS="./overnight-results/$(date +%Y%m%d)"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -34,7 +35,7 @@ fi
 
 if [ ! -f "$NODES_FILE" ]; then
   err "Node list not found: $NODES_FILE"
-  echo "Create it: cp .cursor/configs/gpu_nodes.list.example .cursor/configs/gpu_nodes.list"
+  echo "Create <agent-loop>/configs/gpu_nodes.list or pass its path as the second argument."
   exit 1
 fi
 
@@ -190,7 +191,6 @@ log "=== All repos processed. Results in $LOCAL_RESULTS ==="
 log "Summary: $SUMMARY_FILE"
 
 # Phase 6: Generate report
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ -f "$SCRIPT_DIR/analyze-results.py" ]; then
   log "Generating report..."
   python3 "$SCRIPT_DIR/analyze-results.py" "$LOCAL_RESULTS" --output "$LOCAL_RESULTS/report.md"

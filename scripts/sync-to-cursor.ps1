@@ -131,16 +131,6 @@ if (Test-Path $hooksSrc) {
     }
 }
 
-# --- 私有配置（可选，文件不存在就跳过）---
-$cfg = "$repo\.agent-loop\configs\node_inventory.yaml"
-if (Test-Path $cfg) {
-    New-Item -ItemType Directory -Force "$env:USERPROFILE\.agent-loop\configs" | Out-Null
-    $t = "$env:USERPROFILE\.agent-loop\configs\node_inventory.yaml"
-    Remove-Item $t -Force -ErrorAction SilentlyContinue
-    cmd /c "mklink /H `"$t`" `"$cfg`"" | Out-Null
-    Write-Host "Linked node_inventory.yaml" -ForegroundColor Green
-}
-
 # --- 验证：看链接类型，不是看文件在不在 ---
 Write-Host "`n--- Verify ---" -ForegroundColor Cyan
 "rules/ LinkType = $((Get-Item $rulesDest).LinkType)   (必须是 Junction)"
