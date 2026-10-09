@@ -56,7 +56,7 @@
                                                              全部通过 ─► DONE
   ─────────────────────────────────────────────────────────────────────────
   横穿全环：.agent-loop/memory/（值第二次用到就写，要用就读）
-            agent-heartbeat（命令 > 60s）
+            agent-heartbeat（detach 长任务）
             Harness（显式命令 timeout / journal；stop 前独立 Verify）
   环之外：code-review / upstream-contribute / research-to-blog /
           code-to-kernel-diagram / remote-exec —— user 明确要了才走

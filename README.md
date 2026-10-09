@@ -180,6 +180,7 @@ agent-loop-harness resume
 | [`study/memory.md`](study/memory.md) | facts / episodes / lessons 的检索设计 |
 | [`study/experiment-record-lifecycle.md`](study/experiment-record-lifecycle.md) | 实验、task、交接与 memory 的退役规则 |
 | [`study/multi_agent.md`](study/multi_agent.md) | 现有 multi-agent loop 对比与 worker / reviewer 分工 |
+| [`study/heartbeat.md`](study/heartbeat.md) | 心跳取了哪三条社区做法、哪几条没取 |
 | [`case_study/robojev-nox.md`](case_study/robojev-nox.md) | 一天 11 个 task 边界的跨模型纠偏记录 |
 | [`case_study/agent-loop-record-growth.md`](case_study/agent-loop-record-growth.md) | agent-loop 自身跨 session 的记录增长与迁移 |
 | [`skills/README.md`](skills/README.md) | Policy 索引与唯一 owner |

@@ -74,8 +74,9 @@ session 名统一 `<repo>-<日期>`，`exec bash` 让任务结束后 session 不
 ```bash
 NODE="user@gpu-node"; SESSION="myrepo-$(date +%Y%m%d-%H%M)"; LOG="/tmp/overnight-tests/logs/$SESSION.log"
 ssh -A $NODE "tmux new-session -d -s $SESSION \
-  'mkdir -p $(dirname $LOG) && bash /tmp/overnight-tests/run_task.sh 2>&1 | tee $LOG; \
-   echo \"=== END \$(date) EXIT=\$? ===\" | tee -a $LOG; exec bash'"
+  'mkdir -p $(dirname $LOG) && set -o pipefail; \
+   bash /tmp/overnight-tests/run_task.sh 2>&1 | tee $LOG; rc=\${PIPESTATUS[0]}; \
+   printf \"%s\n\" \$rc > $LOG.exit.tmp; mv $LOG.exit.tmp $LOG.exit; exec bash'"
 ```
 
 | 目的 | 命令 |
@@ -154,6 +155,6 @@ running 但 > 90 天的僵尸容器可以 stop + rm，跳过 `node-exporter|prom
 ## 相关
 
 - `task-state`：把 session 名、日志路径、恢复命令写进交接笔记，跨 session 接手靠它不靠本 skill。
-- `agent-heartbeat`：轮询 `capture-pane` / `tail log` 时输出心跳与进度。
+- `agent-heartbeat`：远端日志用它的 `scripts/watch.sh`，不要另写观察脚本。
 - `upstream-contribute`：远端测出的兼容性修复要提 PR 时，body 生成与 GPU 型号脱敏走它。
 - 批量夜间测多个 repo 的具体流程见 [reference.md](reference.md)。

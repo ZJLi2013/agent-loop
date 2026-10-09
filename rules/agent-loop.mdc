@@ -26,7 +26,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 | 已批准 task 要跑实验 / 验证 | `experiment-design` |
 | 失败、重试、预算或停机判断 | `when-to-stop` |
 | 具体值、旧结论、否决项可能相关 | `agent-memory` |
-| 单条命令预计超过 60 秒 | `agent-heartbeat` |
+| detach 的远端任务，或单条命令预计超过 30 分钟 | `agent-heartbeat` |
 
 ## 硬不变量
 
