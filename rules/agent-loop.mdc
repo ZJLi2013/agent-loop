@@ -56,7 +56,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 
 user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时，直到 user 再次说话：
 
-- Human Review Gate 按 KISS 自批准，plan document 标 `Plan Review: unreviewed`；
+- Human Review Gate 选择最简单可逆方案自批准，plan document 标 `Plan Review: unreviewed`；
 - 自批准只替代 human 点击，不跳过独立 reviewer；task 之间不得自动继续或写远端串联脚本；
 - 不问选择题，记录选中理由与放弃项；有显著权衡时标 `⚠️ 待确认`；
 - blocked task 跳过做下一条，全部 blocked 才停；不可逆操作仍跳过；
