@@ -41,6 +41,8 @@ All notable user-facing changes are documented here. This project follows Semant
   before initialization.
 - Memory CLOSE now retires successful experiment history already carried by project documents, keeps
   `disproved` / `rejected` decisions, and migrates maintained legacy memory to `.agent-loop/memory/`.
+- The focused minimal-code rule replaces the vague KISS rule and rejects speculative abstractions, fallback
+  paths, compatibility shims, and unrelated cleanup during implementation.
 
 ### Fixed
 

@@ -308,6 +308,7 @@ agent-loop/
 - `protocol.py` 持有状态与合法转移，transition tests 不依赖说明文案；
 - storage / runner / journal / plan 已从 `core.py` 拆出，现有 import 继续由 core façade 提供；
 - `agent-loop.mdc` 只留状态路由、硬不变量、横切 guard 与无人值守开关；
+- `minimal-code.mdc` 只管实现 diff 的必要性；注释与 commit 风格仍归 `code-hygiene.mdc`；
 - skills index 只留 Policy owner，纠偏与 Goal Review 只在 `work-planning` 定义；
 - README 只保留安装、最短使用路径、边界与文档入口。
 - plan document 统一 Goal / 当前结论 / 下一步决策 / Experiment Log，详细实验只拆 linked sub-exp；
