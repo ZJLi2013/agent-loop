@@ -104,10 +104,28 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("没有新 evidence 时不重新审查", prompt)
         self.assertIn("业界已有解法", prompt)
         self.assertIn("本地设计文档", prompt)
+        self.assertIn("交给被测方", prompt)
+        self.assertIn("实际产物与设计不一致", prompt)
+        self.assertNotIn("review-checklist.md", prompt)
         followup = completion_gate(self.root) or ""
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
+
+    def test_repo_checklist_is_listed_as_input(self) -> None:
+        (self.root / ".agent-loop" / "review-checklist.md").write_text(
+            "- item\n", encoding="utf-8"
+        )
+        self.init(reviewer_writing(
+            {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
+        ))
+
+        run_review(self.root)
+
+        prompt = (self.root / ".harness" / "review" / "prompt.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(".agent-loop/review-checklist.md", prompt)
 
     def test_verify_automatically_runs_reviewer(self) -> None:
         self.init(

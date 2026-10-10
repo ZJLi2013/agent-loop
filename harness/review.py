@@ -8,7 +8,7 @@ from harness.errors import HarnessError
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import pause_request
-from harness.project import memory_dir, runtime_dir, task_file
+from harness.project import memory_dir, review_checklist, runtime_dir, task_file
 from harness.protocol import Phase
 from harness.records import active_task_status, archive_closed_tasks, archived_task_ids
 from harness.runner import execute_process
@@ -48,6 +48,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 ## 要做的事
 
 1. 核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。
+   同时核对实际交给被测方的题目、数据、样本或请求（落盘的产物，不是摘要）与设计一致，且仍在测
+   Goal 要测的东西；有 repo 检查表时逐条对照。
 2. 在 task 列表里把 {task_id} 标为 `✅ done`；Harness 会把 closed 行移到
    `.agent-loop/archive/tasks.md`。写好下一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
    失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。只展开最近 1–2 项，新 task
@@ -56,7 +58,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
 3. 选择 decision：
    - `continue`：Goal 与 scope 不变，下一个 task 已写好；
-   - `ask_human`：需要改 Goal / scope，或要在有显著权衡的方案间选型；
+   - `ask_human`：需要改 Goal / scope，要在有显著权衡的方案间选型，或实际产物与设计不一致、
+     不在测 Goal 要测的东西（要改设计，由 human 决定修正还是换方向）；
    - `stop`：Goal 已达成，或继续不再改变主线。
 4. 只改 plan document 与 task 列表；不改代码，不跑实验。task 列表保持原有表格、一行一个 task、
    原有状态词；推理与依据写进 plan document，不写进 task 列表。
@@ -112,6 +115,9 @@ def _prompt(
     index = memory_dir(root) / "INDEX.md"
     if index.exists():
         inputs.append(f"- 项目记忆索引：`{_relative(root, index)}`")
+    checklist = review_checklist(root)
+    if checklist is not None:
+        inputs.append(f"- repo 检查表：`{_relative(root, checklist)}`")
     extra = ""
     if objection:
         decision = {key: previous.get(key) for key in ("decision", "next_task", "why")}

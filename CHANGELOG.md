@@ -28,6 +28,9 @@ All notable user-facing changes are documented here. This project follows Semant
   documentation and one-off scripts, and leaves only durable facts, decision analysis, conclusions, and evidence.
 - Domain research for research-type experiments: the design template asks for field precedent before the run,
   negative or surprising results are compared with field conclusions, and both reviewers check for it.
+- Content review: both reviewers check the task's material under test (questions, data, samples, requests)
+  against the Goal, using rendered samples rather than prose; the task reviewer maps a mismatch with the design
+  to `ask_human`. An optional per-repository `.agent-loop/review-checklist.md` is listed as reviewer input.
 
 ### Changed
 
