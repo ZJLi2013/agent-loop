@@ -44,6 +44,20 @@ class GoalRefreshHookTest(unittest.TestCase):
             count = HOOK.request_for({"workspace_roots": [directory]})
         self.assertEqual(count, 0)
 
+    def test_nested_project_is_not_paused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "subproject"
+            initialize(
+                project,
+                task_id="t1",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+            count = HOOK.request_for({"workspace_roots": [directory]})
+            request = pause_request(project)
+
+        self.assertEqual(count, 0)
+        self.assertIsNone(request)
+
 
 if __name__ == "__main__":
     unittest.main()

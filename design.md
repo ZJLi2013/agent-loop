@@ -316,7 +316,8 @@ agent-loop/
   init、resume、pager 与无人值守路径都不能绕过有效 report。
 - 锁定 verifier 通过后由 Harness 自动运行 task-boundary reviewer；review 决策落盘前禁止执行命令
   或初始化下一 task，`continue` 只能生成 `📝 proposed` successor；批准为 `🔬 doing` 后才能初始化。
-- Cursor adapter 向下发现 workspace 内各子项目；active task 缺少同级 Harness 时拒绝完成。
+- Cursor lifecycle hooks 只处理显式 workspace root；active task 缺少同级 Harness 时拒绝完成，
+  不扫描同一 monorepo 中可能由其他 session 驱动的子项目。
 - task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；
 - task / Goal CLOSE 把 closed task、旧交接与已收口实验移出活跃工作集；reviewer 决策后 Harness
   自动归档 closed task，计划 revision 仍可从 archive 校验；
