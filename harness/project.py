@@ -28,6 +28,11 @@ def task_file(root: Path) -> Path:
     return legacy
 
 
+def review_checklist(root: Path) -> Path | None:
+    path = runtime_dir(root) / "review-checklist.md"
+    return path if path.is_file() else None
+
+
 def memory_dir(root: Path) -> Path:
     root = root.resolve()
     current = root / RUNTIME_DIR / "memory"

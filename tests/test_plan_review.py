@@ -79,6 +79,26 @@ class PlanReviewTest(unittest.TestCase):
         )
         self.assertIn("领域先例", prompt)
         self.assertIn("本地设计文档", prompt)
+        self.assertIn("交给被测方", prompt)
+        self.assertIn("渲染样例", prompt)
+        self.assertNotIn("review-checklist.md", prompt)
+
+    def test_repo_checklist_is_listed_as_input(self) -> None:
+        (self.root / ".agent-loop" / "review-checklist.md").write_text(
+            "- item\n", encoding="utf-8"
+        )
+        self.configure(
+            reviewer_writing(
+                {"verdict": "accept", "summary": "ready", "findings": []}
+            )
+        )
+
+        run_plan_review(self.root, plan_doc="plan.md")
+
+        prompt = (self.root / ".harness" / "review" / "prompt.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(".agent-loop/review-checklist.md", prompt)
 
     def test_new_revision_runs_a_new_review(self) -> None:
         self.configure(

@@ -8,7 +8,7 @@ from harness.errors import HarnessError
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_metadata
-from harness.project import task_file
+from harness.project import review_checklist, task_file
 from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
@@ -34,7 +34,7 @@ PROMPT = """# Plan revision review
 - plan document：`{plan_doc}`
 - task 列表：`{task_doc}`
 - revision：`r{revision}`
-
+{checklist}
 按需打开 plan / task 直接引用的证据。
 
 ## 要做的事
@@ -44,7 +44,10 @@ PROMPT = """# Plan revision review
 3. 检查昂贵动作前是否缺少能改变选择的廉价前置。
 4. 研究型 task（方法是否有效、现象成因、方案选型）缺少领域先例，或设计与已知结论冲突却未说明
    理由，报 revise。
-5. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
+5. 审被测内容本身，不只审格式与严谨性：每个 task 交给被测方的题目、数据、样本或请求，设计里要有
+   渲染样例；看样例判断它能否回答 Goal 的问题——答案是否一条查表或阈值即得，被测方是否拿得到做判断
+   所需的信息。有 repo 检查表时逐条对照；没有时先从 Goal 推出这些条件，并在 summary 写明用了哪些。
+6. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
 
 你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。最终决定属于 human。
 不要修改 plan、task 或代码。
@@ -69,6 +72,13 @@ def _plan_path(root: Path, plan_doc: str) -> tuple[Path, str]:
     if not path.is_file():
         raise HarnessError(f"plan document does not exist: {relative}")
     return path, relative
+
+
+def _checklist_line(root: Path) -> str:
+    path = review_checklist(root)
+    if path is None:
+        return ""
+    return f"- repo 检查表：`{path.resolve().relative_to(root.resolve()).as_posix()}`\n"
 
 
 def _review_key(plan_doc: str, revision: int) -> str:
@@ -168,6 +178,7 @@ def run_plan_review(
                 plan_doc=relative,
                 task_doc=task_file(root).resolve().relative_to(root).as_posix(),
                 revision=revision,
+                checklist=_checklist_line(root),
                 report_file=report_path.resolve().relative_to(root).as_posix(),
             ),
             encoding="utf-8",

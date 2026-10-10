@@ -44,6 +44,8 @@ Plan Review: proposed
 
 1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。
 2. 一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
+   交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
+   渲染样例；改它们等于改设计。删除或放宽一道门时，写明它防的风险由哪道检查接替。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
 4. 配置 reviewer 时，先对当前 Plan Revision 运行独立 plan review；报告按 plan 路径与
    revision 去重。reviewer 只给准入意见，不能批准 plan 或授权执行。
