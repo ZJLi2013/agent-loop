@@ -12,7 +12,6 @@ from harness.project import task_file
 from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
-    HARNESS_DIR,
     atomic_write_json,
     harness_dir,
     read_json,
@@ -40,8 +39,8 @@ PROMPT = """# Plan revision review
 
 ## 要做的事
 
-1. 检查最近 1–2 个 proposed task 的验收判据能否支持它声称的结论。
-2. 检查成立与不成立是否指向不同的下一动作。
+1. 检查最近 1–2 个 proposed task 是否各自链接本地设计文档；plan 表格里的一行不算设计。
+2. 检查每个 task 的验收判据能否支持它声称的结论，成立与不成立是否指向不同的下一动作。
 3. 检查昂贵动作前是否缺少能改变选择的廉价前置。
 4. 研究型 task（方法是否有效、现象成因、方案选型）缺少领域先例，或设计与已知结论冲突却未说明
    理由，报 revise。

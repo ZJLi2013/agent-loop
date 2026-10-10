@@ -109,6 +109,9 @@ powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
 
 ## 新项目
 
+对于需要探索、实验或多轮决策的项目，建议先在项目中创建 `plan.md`，再使用 agent-loop；
+`plan.md` 记录 Goal、边界、当前结论与下一步决策，`.agent-loop/task.md` 只保存当前待执行的 task。
+
 初始化项目自己的 memory：
 
 ```powershell
@@ -121,7 +124,7 @@ copy "$agentLoopRepo\skills\agent-memory\templates\*.md" .agent-loop\memory\
 
 1. 先写一份 plan document 与最近 1–2 个 `📝 proposed` task；
 2. 配置 reviewer 时，每个 Plan Revision 先取得独立准入意见；
-3. 等待 `approve / revise / continue automatically`；
+3. 等待 `approve / revise / continue automatically`；批准时把当前 task 改为唯一的 `🔬 doing`；
 4. 每次只推进一个未验证假设；
 5. task 结束时回读完整 diff，精炼文档并清理一次性脚本；
 6. 用独立 verifier 验证最终 workspace。
@@ -134,11 +137,11 @@ Plan Review: proposed
 ```
 
 `task.md` 的 `rev` 列绑定同一个 `r1`。配置 reviewer 时先运行 plan review；未配置时由 human
-直接审批：
+直接审批。配置 reviewer 的 task 还必须从 `task.md` 链接项目内的设计文档：
 
 ```powershell
 agent-loop-harness plan-review --plan-doc docs\plan.md
-# human 读 report 后把 Plan Review 改为 approved
+# human 读 report 后把 Plan Review 改为 approved，并把当前 task 改为 🔬 doing
 agent-loop-harness init --task t1 --plan-doc docs\plan.md `
   --timeout 300 --max-attempts 3 -- python -m pytest -q
 ```
@@ -162,6 +165,9 @@ agent-loop-harness resume
 ## 边界
 
 - Harness 只硬控显式交给 runner 的命令；其它 host tool call 仍由宿主管理。
+- Cursor adapter 会发现 workspace 下各子项目的 `.agent-loop/task.md`；存在 `🔬 doing` 却没有同级
+  `.harness/state.json` 时拒绝完成。
+- detach 作业仍属于启动它的 task；远端脚本不得跨 task 串联，successor 必须等 verifier 与 reviewer。
 - `task.md` 只保存 active backlog；closed task 与旧交接点归档到 `.agent-loop/archive/`，不默认加载。
 - `.harness/` 只存有界 runtime evidence。
 - `.agent-loop/task.md` 与 `.agent-loop/memory/` 是项目本地 runtime；旧 `.cursor/` 路径只读兼容，
@@ -183,6 +189,7 @@ agent-loop-harness resume
 | [`study/heartbeat.md`](study/heartbeat.md) | 心跳取了哪三条社区做法、哪几条没取 |
 | [`case_study/robojev-nox.md`](case_study/robojev-nox.md) | 一天 11 个 task 边界的跨模型纠偏记录 |
 | [`case_study/agent-loop-record-growth.md`](case_study/agent-loop-record-growth.md) | agent-loop 自身跨 session 的记录增长与迁移 |
+| [`case_study/wmforge-r8-chained-tasks.md`](case_study/wmforge-r8-chained-tasks.md) | 自动串联让 task 跳过设计与评审：漏洞链与通用修复 |
 | [`skills/README.md`](skills/README.md) | Policy 索引与唯一 owner |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献流程、新 feature 准入与测试 |
 | [`AI_POLICY.md`](AI_POLICY.md) | AI-assisted contribution 披露 |

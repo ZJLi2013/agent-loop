@@ -10,7 +10,7 @@ from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import pause_request
 from harness.project import memory_dir, runtime_dir, task_file
 from harness.protocol import Phase
-from harness.records import archive_closed_tasks, archived_task_ids
+from harness.records import active_task_status, archive_closed_tasks, archived_task_ids
 from harness.runner import execute_process
 from harness.storage import (
     HARNESS_DIR,
@@ -49,8 +49,9 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 
 1. 核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。
 2. 在 task 列表里把 {task_id} 标为 `✅ done`；Harness 会把 closed 行移到
-   `.agent-loop/archive/tasks.md`。写好下一个 task：最多一个未验证假设、验收检查点、失败去向、
-   预算。只展开最近 1–2 项，新 task 的 `rev` 沿用当前 plan revision。
+   `.agent-loop/archive/tasks.md`。写好下一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
+   失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。只展开最近 1–2 项，新 task
+   的 `rev` 沿用当前 plan revision。
    结果为否定或意外、或下一个 task 要换方向时，先核对 plan 是否已对照领域结论与业界已有解法；
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
 3. 选择 decision：
@@ -216,6 +217,11 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         else:
             decision, error = None, f"reviewer {result['outcome']}"
         archived = []
+        if decision and decision["decision"] == "continue":
+            next_task = str(decision["next_task"])
+            if "📝 proposed" not in (active_task_status(root, next_task) or ""):
+                decision = None
+                error = f"next task {next_task} must be 📝 proposed"
         if decision:
             archived = archive_closed_tasks(root)
             if str(state["task_id"]) not in archived_task_ids(root):

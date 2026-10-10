@@ -2,7 +2,7 @@
 
 > 时间：2026-10-09 至 10-10。执行：Cursor 里的 Claude（agent-loop rules + skills）；reviewer：Codex
 > `gpt-6-astra`，由项目自写的 `codex-review.sh` 手动调用；human 只在对话里给方向。远端一个 8 卡节点，
-> 无人值守跑了一夜。本案例只记录问题，**agent-loop 尚未据此修改**。
+> 无人值守跑了一夜。2026-10-10 已据此补上通用控制环 guard；WMForge 的采样检查项仍由项目拥有。
 
 ## 结论
 
@@ -117,20 +117,19 @@ w19 的设计评审原文甚至写了「只采这 48 个初态合适……重复
 「跨 task 必须停在结果评审」，也没有说「自批准不等于跳过 reviewer」（这一条只写在
 `skills/work-planning/SKILL.md:52–53`）。节点慢（训练 52 s / 步）、不想让 GPU 空转，串联脚本就是最自然的选择。
 
-## 修复方向（未实施）
+## 修复
 
-| 漏洞 | 改法 | 落点 |
+| 漏洞 | 通用修复 | 状态 |
 |---|---|---|
-| 1 | harness 从被编辑的 `task.md` 向上找最近的 `.harness`；子项目有 `🔬 doing` 却无 harness 时，stop hook 告警 | `harness/storage.py`、`harness/core.py`、`adapters/core.py` |
-| 2 | 后台作业登记到唯一一个 task（run id ↔ task id）；跨 task 的串联明文禁止 | `rules/agent-loop.mdc`、`skills/agent-heartbeat`、`skills/remote-exec` |
-| 3 | RUN_STARTED 前置：task 行链接到设计文档，且存在该 task 的设计评审记录 | `harness/protocol.py` 或 runner 入口、`skills/task-state` |
-| 4 | `experiment-design` 增加数据产出类 task 模板：独立单位数、重复数、配额、上限、留出集单位数 | `skills/experiment-design/SKILL.md` |
-| 5 | plan review 增加一条：每个门按独立单位有多少个；数据覆盖相对上一轮的变化 | `harness/plan_review.py` 的 `PROMPT` |
-| 6 | 无人值守条款补两句：自批准不跳过 reviewer；task 之间不自动继续 | `rules/agent-loop.mdc` |
+| 子项目未启用 Harness | Cursor adapter 向下发现各子项目；stop hook 对 `🔬 doing` 且无同级 Harness 的项目拒绝完成 | 已实施 |
+| 后台作业越过 task 边界 | 启动命令经 runner 留下 task id / run id；heartbeat 与 remote-exec 明确 detach 只跨进程，同一 task 未 verify / review 前不能初始化 successor | 已实施；外部脚本内容不可自动审计 |
+| 开跑前没有 task 级设计门 | reviewer prompt 要求 task 链接设计；successor 必须由上一 task reviewer 写成 `📝 proposed`，批准为 `🔬 doing` 后 Harness 才允许初始化 | 已实施 |
+| 数据采集设计缺口 | 独立单位、重复、配额、类别上限与留出集是 WMForge 的领域检查项，不写进通用 `experiment-design` | 项目侧修复 |
+| reviewer 没问数据覆盖 | WMForge reviewer prompt 应按该项目的数据生成过程检查独立单位与覆盖；agent-loop 只要求可评审设计和能支撑结论的判据 | 项目侧修复 |
+| 无人值守自动继续 | 自批准不再跳过 reviewer；明确禁止跨 task 自动继续 | 已实施 |
 
-## 修复前 agent 应自觉做到
+## 项目侧仍需要
 
-- 子项目没有 `.harness/state.json` 时，先告诉 human「本项目没有强制检查」，再决定是否启用。
 - 每个 task（包括采数据、训模型）开跑前写设计文档，并单独送 reviewer；plan 表格的一行不算。
 - 设计里写清门的独立单位：多少个初态 / 训练 run / 场景，而不是多少条片段。
 - 远端串联只用于同一个 task 内部；task 之间停下来写结果、过结果评审。

@@ -34,6 +34,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
   不建第二份任务清单。
 - 等待 review 时允许「若干 `📝 proposed` + 零行 doing」；否则有且只有一行 `🔬 doing`。
 - plan document `Plan Revision`、task `rN` 与 Harness runtime revision 必须一致；review 未批准不执行。
+- 配置 reviewer 时，当前 task 必须从 `task.md` 链接本地设计文档；plan 表格里的一行不算设计。
 - locked verifier 前先按 `experiment-design` 完成 CLOSE self-audit；verifier 必须看到精炼后的最终 workspace。
 - 改动必须让当前检查点从不通过变成通过；否则先按 `task-state` 改状态，不能顺手做。
 - `🚧 blocked` 链长 ≥ 2 停下重拆；失败先按 `when-to-stop` 自修到上限。
@@ -45,14 +46,17 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 
 - memory：具体值第二次用到就写；入命令前从 `facts.md` 读；task CLOSE 只为未来仍需检索的结论写
   `episodes.md` 指针，假设被推翻、方案被否决时写长期条目并同步 INDEX。
-- Harness：项目存在启用中的 `.harness/state.json` 时，耗时或改变验收证据的命令经 runner；
-  结束前运行锁定 verifier。stop hook 拒绝未验证、证据 stale 或预算不清的完成声明。
+- Harness：存在 `🔬 doing` 的项目必须有启用中的 `.harness/state.json`；monorepo 按子项目分别发现。
+  耗时或改变验收证据的命令经 runner，结束前运行锁定 verifier。detach 作业仍绑定启动它的唯一
+  task；只允许同一 task 内串联步骤，跨 task 必须等 verifier 与 reviewer 完成后重新初始化。
+  stop hook 拒绝缺 Harness、未验证、证据 stale 或预算不清的完成声明。
 
 ## 无人值守
 
 user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时，直到 user 再次说话：
 
 - Human Review Gate 按 KISS 自批准，plan document 标 `Plan Review: unreviewed`；
+- 自批准只替代 human 点击，不跳过独立 reviewer；task 之间不得自动继续或写远端串联脚本；
 - 不问选择题，记录选中理由与放弃项；有显著权衡时标 `⚠️ 待确认`；
 - blocked task 跳过做下一条，全部 blocked 才停；不可逆操作仍跳过；
 - 环境重试上限不变；收工把状态、失败计数、待确认项和明早第一条命令写进夜间报告。

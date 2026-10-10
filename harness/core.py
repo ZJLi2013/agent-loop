@@ -24,17 +24,17 @@ from harness.journal import (
 )
 from harness.plan import (
     PAUSE_FILE,
-    current_plan,
     pause_request,
     plan_can_run,
     plan_metadata,
     request_pause,
-    resume,
+    resume as resume,
     task_plan_revision,
 )
 from harness.page import load_pager, page_followup
 from harness.plan_review import plan_review_ready, run_plan_review
 from harness.protocol import Event, Phase, TransitionError, apply_event
+from harness.records import active_task_status
 from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
 from harness.storage import (
@@ -142,6 +142,10 @@ def initialize(
                     raise HarnessError(
                         f"reviewer selected {prior_review.get('next_task')}, "
                         f"not {task_id}"
+                    )
+                if "🔬 doing" not in (active_task_status(root, task_id) or ""):
+                    raise HarnessError(
+                        f"task {task_id} must be approved as 🔬 doing before init"
                     )
 
     revision: int | None = None

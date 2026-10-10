@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 from adapters.core import handle
 from adapters.protocol import HookAction, HookEvent, HookRequest
+from harness.core import initialize
 
 
 class AdapterCoreTest(unittest.TestCase):
@@ -98,6 +100,58 @@ class AdapterCoreTest(unittest.TestCase):
 
         self.assertIn("canonical decision", response.message or "")
         self.assertNotIn("stale legacy decision", response.message or "")
+
+    def test_nested_active_project_without_harness_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            runtime = workspace / "subproject" / ".agent-loop"
+            runtime.mkdir(parents=True)
+            task = runtime / "task.md"
+            task.write_text(
+                "| P | id | rev | task | check | status | fail |\n"
+                "| P0 | t1 | r1 | work | check | 🔬 doing | 0 |\n",
+                encoding="utf-8",
+            )
+
+            response = handle(
+                HookRequest(
+                    event=HookEvent.STOP,
+                    workspace_roots=(workspace,),
+                    status="completed",
+                )
+            )
+
+        self.assertEqual(response.action, HookAction.CONTINUE)
+        self.assertIn("has no Harness state", response.message or "")
+        self.assertIn("subproject", response.message or "")
+
+    def test_nested_harness_receives_completion_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            project = workspace / "subproject"
+            runtime = project / ".agent-loop"
+            runtime.mkdir(parents=True)
+            (runtime / "task.md").write_text(
+                "| P | id | rev | task | check | status | fail |\n"
+                "| P0 | t1 | — | work | check | 🔬 doing | 0 |\n",
+                encoding="utf-8",
+            )
+            initialize(
+                project,
+                task_id="t1",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+
+            response = handle(
+                HookRequest(
+                    event=HookEvent.STOP,
+                    workspace_roots=(workspace,),
+                    status="completed",
+                )
+            )
+
+        self.assertEqual(response.action, HookAction.CONTINUE)
+        self.assertIn("not independently verified", response.message or "")
 
 
 if __name__ == "__main__":

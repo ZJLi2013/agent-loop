@@ -20,15 +20,18 @@ DECISION = ".harness/review/decision.json"
 REWRITTEN_TASKS = """| P | id | rev | task | check | status | fail |
 |---|---|---|---|---|---|---|
 | P0 | t1 | — | first | check | ✅ done | 0 |
-| P0 | t2 | — | next | check | ⬜ todo | 0 |
+| P0 | t2 | — | next | check | 📝 proposed | 0 |
 """
 
 
-def reviewer_writing(decision: dict[str, object] | str) -> list[str]:
+def reviewer_writing(
+    decision: dict[str, object] | str,
+    tasks: str = REWRITTEN_TASKS,
+) -> list[str]:
     text = decision if isinstance(decision, str) else json.dumps(decision)
     code = (
         "from pathlib import Path; "
-        f"Path('.agent-loop/task.md').write_text({REWRITTEN_TASKS!r}, encoding='utf-8'); "
+        f"Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'); "
         f"Path({DECISION!r}).write_text({text!r})"
     )
     return [sys.executable, "-c", code]
@@ -100,6 +103,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("会改变 `continue / ask_human / stop`", prompt)
         self.assertIn("没有新 evidence 时不重新审查", prompt)
         self.assertIn("业界已有解法", prompt)
+        self.assertIn("本地设计文档", prompt)
         followup = completion_gate(self.root) or ""
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
@@ -154,6 +158,17 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             run_verifier=False,
         )
         verify(self.root)
+        with self.assertRaisesRegex(HarnessError, "approved as 🔬 doing"):
+            initialize(
+                self.root,
+                task_id="t2",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+        task = self.root / ".agent-loop" / "task.md"
+        task.write_text(
+            task.read_text(encoding="utf-8").replace("📝 proposed", "🔬 doing"),
+            encoding="utf-8",
+        )
 
         with self.assertRaisesRegex(HarnessError, "selected t2, not t3"):
             initialize(
@@ -221,6 +236,20 @@ class TaskBoundaryReviewTest(unittest.TestCase):
 
         self.assertIsNone(outcome["review"]["decision"])
         self.assertIn("must mark task t1", outcome["review"]["error"])
+
+    def test_continue_requires_proposed_successor(self) -> None:
+        decision = {
+            "decision": "continue",
+            "next_task": "t2",
+            "why": "next",
+        }
+        todo_successor = REWRITTEN_TASKS.replace("📝 proposed", "⬜ todo")
+        self.init(reviewer_writing(decision, todo_successor))
+
+        outcome = run_review(self.root)
+
+        self.assertIsNone(outcome["review"]["decision"])
+        self.assertIn("must be 📝 proposed", outcome["review"]["error"])
 
     def test_review_requires_fresh_verification(self) -> None:
         self.init(reviewer_writing({"decision": "stop", "why": "done"}))

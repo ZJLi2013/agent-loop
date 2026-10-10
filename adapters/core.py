@@ -8,7 +8,7 @@ from typing import Any
 from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
 from harness.core import HarnessError, completion_gate
 from harness.plan import request_pause
-from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir
+from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file
 
 TRIGGER = "task.md"
 STORES = ("facts.md", "episodes.md", "lessons.md")
@@ -31,6 +31,21 @@ def workspace_roots(values: Any) -> tuple[Path, ...]:
     if not isinstance(values, list):
         return ()
     return tuple(_workspace_root(value) for value in values if isinstance(value, str))
+
+
+def project_roots(roots: tuple[Path, ...]) -> tuple[Path, ...]:
+    projects: set[Path] = set()
+    for workspace in roots:
+        for pattern in (
+            f"{RUNTIME_DIR}/{TRIGGER}",
+            f"{LEGACY_RUNTIME_DIR}/{TRIGGER}",
+            ".harness/state.json",
+        ):
+            projects.update(
+                path.parent.parent.resolve()
+                for path in workspace.rglob(pattern)
+            )
+    return tuple(sorted(projects, key=lambda path: str(path).lower()))
 
 
 def _read(path: Path) -> str:
@@ -137,7 +152,7 @@ def memory_context(task_path: Path) -> str | None:
 
 def request_goal_review(roots: tuple[Path, ...]) -> int:
     count = 0
-    for root in roots:
+    for root in project_roots(roots):
         try:
             request_pause(
                 root,
@@ -166,7 +181,17 @@ def handle(request: HookRequest) -> HookResponse:
 
     if request.event == HookEvent.STOP and request.status == "completed":
         messages = []
-        for root in request.workspace_roots:
+        for root in project_roots(request.workspace_roots):
+            task = task_file(root)
+            if (
+                "🔬 doing" in _read(task)
+                and not (root / ".harness" / "state.json").is_file()
+            ):
+                messages.append(
+                    f"Active task in {task} has no Harness state. Initialize this "
+                    "project before running or completing the task."
+                )
+                continue
             try:
                 message = completion_gate(root)
             except HarnessError as exc:

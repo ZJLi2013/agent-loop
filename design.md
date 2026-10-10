@@ -175,8 +175,9 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 report 以 plan identity + revision 去重；reviewer 只有建议权。init、resume、pager 和无人值守
 `unreviewed` 都要求有效 report。
 
-task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。两类调度都由确定性
-边界触发，不用 LLM 判断是否需要 review：
+task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。reviewer 选中的 successor
+保持 `📝 proposed`，human 或无人值守 policy 明确批准为 `🔬 doing` 后才能初始化。
+两类调度都由确定性边界触发，不用 LLM 判断是否需要 review：
 
 | 时刻 | 调用 |
 |---|---|
@@ -232,7 +233,7 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 | `harness/page.py` | human 检查点经 pager 发到手机，回复映射成 Harness 动作 |
 | `harness/protocol.py` | state / event / transition；不依赖平台 |
 | `adapters/protocol.py` | 平台无关的 hook request / response |
-| `adapters/core.py` | memory、Goal Review、completion gate 的事件处理 |
+| `adapters/core.py` | 子项目发现、memory、Goal Review、completion gate 的事件处理 |
 | `adapters/cursor/hooks/` | Cursor payload / output codec |
 | `scripts/sync-to-cursor.ps1` | 安装 user-level adapter |
 
@@ -314,7 +315,8 @@ agent-loop/
 - 每个 submitted Plan Revision 在 human 批准前运行一次独立 plan review；reviewer 只有建议权，
   init、resume、pager 与无人值守路径都不能绕过有效 report。
 - 锁定 verifier 通过后由 Harness 自动运行 task-boundary reviewer；review 决策落盘前禁止执行命令
-  或初始化下一 task，`continue` 只能进入 reviewer 点名的 task。
+  或初始化下一 task，`continue` 只能生成 `📝 proposed` successor；批准为 `🔬 doing` 后才能初始化。
+- Cursor adapter 向下发现 workspace 内各子项目；active task 缺少同级 Harness 时拒绝完成。
 - task、memory 与 configs 统一放在 `.agent-loop/`；旧 `.cursor/` runtime 只读兼容；
 - task / Goal CLOSE 把 closed task、旧交接与已收口实验移出活跃工作集；reviewer 决策后 Harness
   自动归档 closed task，计划 revision 仍可从 archive 校验；

@@ -78,6 +78,7 @@ class PlanReviewTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("领域先例", prompt)
+        self.assertIn("本地设计文档", prompt)
 
     def test_new_revision_runs_a_new_review(self) -> None:
         self.configure(

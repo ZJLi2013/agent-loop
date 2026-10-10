@@ -37,6 +37,8 @@ All notable user-facing changes are documented here. This project follows Semant
   initialization remain blocked until the reviewer writes a decision.
 - Reviewer dispatch uses submitted Plan Revisions and verified tasks as its two decision boundaries; individual
   edits do not trigger review, and model CLI sessions and caches remain outside agent-loop project state.
+- Reviewer-selected successor tasks remain `📝 proposed` and require explicit activation as `🔬 doing`
+  before initialization.
 - Memory CLOSE now retires successful experiment history already carried by project documents, keeps
   `disproved` / `rejected` decisions, and migrates maintained legacy memory to `.agent-loop/memory/`.
 
@@ -44,6 +46,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 - Workspace fingerprint skips nested `.codex/` scratch directories, whose locked files crashed verify on Windows.
 - Closed-task archiving no longer drops a row whose task id was already used by an earlier Goal.
+- Cursor completion gating discovers nested projects in monorepos and rejects an active task with no sibling
+  Harness state.
 
 [Unreleased]: https://github.com/ZJLi2013/agent-loop/commits/main
 
