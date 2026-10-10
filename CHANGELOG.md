@@ -46,8 +46,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 - Workspace fingerprint skips nested `.codex/` scratch directories, whose locked files crashed verify on Windows.
 - Closed-task archiving no longer drops a row whose task id was already used by an earlier Goal.
-- Cursor completion gating discovers nested projects in monorepos and rejects an active task with no sibling
-  Harness state.
+- Cursor lifecycle hooks bind each conversation to the first project task it reads, preventing STOP and
+  preCompact events from affecting projects owned by other sessions.
 
 [Unreleased]: https://github.com/ZJLi2013/agent-loop/commits/main
 

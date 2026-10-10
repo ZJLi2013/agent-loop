@@ -121,7 +121,7 @@ w19 的设计评审原文甚至写了「只采这 48 个初态合适……重复
 
 | 漏洞 | 通用修复 | 状态 |
 |---|---|---|
-| 子项目未启用 Harness | Cursor adapter 向下发现各子项目；stop hook 对 `🔬 doing` 且无同级 Harness 的项目拒绝完成 | 已实施 |
+| 子项目未启用 Harness | 首次读子项目 `task.md` 时绑定 conversation；stop hook 只检查该项目 | 已实施 |
 | 后台作业越过 task 边界 | 启动命令经 runner 留下 task id / run id；heartbeat 与 remote-exec 明确 detach 只跨进程，同一 task 未 verify / review 前不能初始化 successor | 已实施；外部脚本内容不可自动审计 |
 | 开跑前没有 task 级设计门 | reviewer prompt 要求 task 链接设计；successor 必须由上一 task reviewer 写成 `📝 proposed`，批准为 `🔬 doing` 后 Harness 才允许初始化 | 已实施 |
 | 数据采集设计缺口 | 独立单位、重复、配额、类别上限与留出集是 WMForge 的领域检查项，不写进通用 `experiment-design` | 项目侧修复 |

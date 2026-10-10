@@ -101,10 +101,10 @@ class AdapterCoreTest(unittest.TestCase):
         self.assertIn("canonical decision", response.message or "")
         self.assertNotIn("stale legacy decision", response.message or "")
 
-    def test_nested_active_project_without_harness_is_blocked(self) -> None:
+    def test_active_workspace_without_harness_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
-            runtime = workspace / "subproject" / ".agent-loop"
+            runtime = workspace / ".agent-loop"
             runtime.mkdir(parents=True)
             task = runtime / "task.md"
             task.write_text(
@@ -123,9 +123,8 @@ class AdapterCoreTest(unittest.TestCase):
 
         self.assertEqual(response.action, HookAction.CONTINUE)
         self.assertIn("has no Harness state", response.message or "")
-        self.assertIn("subproject", response.message or "")
 
-    def test_nested_harness_receives_completion_gate(self) -> None:
+    def test_nested_project_is_not_scanned(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             project = workspace / "subproject"
@@ -150,8 +149,8 @@ class AdapterCoreTest(unittest.TestCase):
                 )
             )
 
-        self.assertEqual(response.action, HookAction.CONTINUE)
-        self.assertIn("not independently verified", response.message or "")
+        self.assertEqual(response.action, HookAction.ALLOW)
+        self.assertIsNone(response.message)
 
 
 if __name__ == "__main__":

@@ -122,7 +122,11 @@ class PagerCheckpointTest(unittest.TestCase):
         send, serve = self.calls()
         self.assertEqual(send[0], "send")
         self.assertTrue(send[send.index("--task-id") + 1].startswith("demo-project.t1.plan_review."))
-        self.assertEqual(send[send.index("--state") + 1], str(self.root / ".harness" / "pager-state.json"))
+        state_arg = Path(send[send.index("--state") + 1]).resolve()
+        self.assertEqual(
+            state_arg,
+            (self.root / ".harness" / "pager-state.json").resolve(),
+        )
         self.assertEqual(serve[0], "serve")
         self.assertIn("Plan Review: approved", (self.root / "plan.md").read_text(encoding="utf-8"))
         _, state = load_runtime(self.root)
