@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -92,3 +93,25 @@ def roots(payload: dict[str, object]) -> tuple[Path, ...]:
     except OSError:
         return ()
     return (root,) if _inside(root, workspaces) else ()
+
+
+def claim_followup(payload: dict[str, object], message: str) -> bool:
+    scope = _scope_file(payload)
+    if scope is None:
+        return True
+    stable_message = re.sub(r"\d+\.\d+s remain", "*s remain", message)
+    digest = hashlib.sha256(stable_message.encode()).hexdigest()
+    marker = scope.with_suffix(".stop")
+    try:
+        previous = marker.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        previous = None
+    except OSError:
+        return True
+    if previous == digest:
+        return False
+    try:
+        marker.write_text(digest, encoding="utf-8")
+    except OSError:
+        pass
+    return True
