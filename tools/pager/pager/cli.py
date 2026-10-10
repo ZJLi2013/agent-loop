@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import time
+from functools import partial
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -168,9 +169,7 @@ def run(
             )
 
         heartbeat = (
-            lambda: transport.notify(
-                args.heartbeat_title, args.heartbeat_body
-            )
+            partial(transport.notify, args.heartbeat_title, args.heartbeat_body)
             if args.heartbeat_seconds > 0
             else None
         )
