@@ -10,13 +10,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
-from adapters.core import request_goal_review, workspace_roots  # noqa: E402
+from adapters.core import request_goal_review  # noqa: E402
+from adapters.cursor.session_scope import roots  # noqa: E402
 
 
 def request_for(payload: dict[str, object]) -> int:
-    return request_goal_review(
-        workspace_roots(payload.get("workspace_roots"))
-    )
+    return request_goal_review(roots(payload))
 
 
 def main() -> None:

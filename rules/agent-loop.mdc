@@ -46,7 +46,8 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 
 - memory：具体值第二次用到就写；入命令前从 `facts.md` 读；task CLOSE 只为未来仍需检索的结论写
   `episodes.md` 指针，假设被推翻、方案被否决时写长期条目并同步 INDEX。
-- Harness：存在 `🔬 doing` 的项目必须有启用中的 `.harness/state.json`；子项目需作为 workspace root 打开。
+- Harness：存在 `🔬 doing` 的项目必须有启用中的 `.harness/state.json`；Cursor session
+  首次读取 `task.md` 时绑定该项目，lifecycle hook 不扫描同 workspace 的其它项目。
   耗时或改变验收证据的命令经 runner，结束前运行锁定 verifier。detach 作业仍绑定启动它的唯一
   task；只允许同一 task 内串联步骤，跨 task 必须等 verifier 与 reviewer 完成后重新初始化。
   stop hook 拒绝缺 Harness、未验证、证据 stale 或预算不清的完成声明。

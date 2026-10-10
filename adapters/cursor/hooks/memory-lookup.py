@@ -9,10 +9,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
 from adapters.core import handle, workspace_roots  # noqa: E402
+from adapters.cursor.session_scope import bind  # noqa: E402
 from adapters.protocol import HookAction, HookEvent, HookRequest  # noqa: E402
 
 
 def context_for(payload: dict[str, object]) -> str | None:
+    bind(payload)
     response = handle(
         HookRequest(
             event=HookEvent.TOOL_USED,

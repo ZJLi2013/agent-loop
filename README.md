@@ -165,8 +165,8 @@ agent-loop-harness resume
 ## 边界
 
 - Harness 只硬控显式交给 runner 的命令；其它 host tool call 仍由宿主管理。
-- Cursor lifecycle hooks 只处理显式 workspace root，避免同一 monorepo 中其他 session 的 task
-  相互暂停或阻塞；子项目需单独作为 workspace root 打开。
+- Cursor conversation 首次成功读取 `.agent-loop/task.md` 时绑定该项目；STOP 与 preCompact
+  只处理该绑定，避免同一 workspace 中多个 session 相互暂停或阻塞。
 - detach 作业仍属于启动它的 task；远端脚本不得跨 task 串联，successor 必须等 verifier 与 reviewer。
 - `task.md` 只保存 active backlog；closed task 与旧交接点归档到 `.agent-loop/archive/`，不默认加载。
 - `.harness/` 只存有界 runtime evidence。
