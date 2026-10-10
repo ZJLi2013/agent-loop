@@ -68,5 +68,16 @@ class CursorSessionScopeTest(unittest.TestCase):
 
         self.assertEqual(rebound, first.resolve())
 
+    def test_followup_claim_ignores_elapsed_time_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payload = self._payload("one", root, self._task(root))
+            with patch.object(session_scope, "_SCOPES", root / "cache"):
+                session_scope.bind(payload)
+                self.assertTrue(session_scope.claim_followup(payload, "3 attempts, 1800.0s remain"))
+                self.assertFalse(session_scope.claim_followup(payload, "3 attempts, 1790.0s remain"))
+                self.assertTrue(session_scope.claim_followup(payload, "2 attempts, 1790.0s remain"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -43,6 +43,8 @@ class HarnessStopHookTest(unittest.TestCase):
             }
             with patch.object(
                 session_scope, "_SCOPES", root / "session-cache"
+            ), patch(
+                "harness.core._remaining_wall", side_effect=[1800.0, 1790.0]
             ):
                 session_scope.bind(payload)
                 followup = HOOK.followup_for(
@@ -52,8 +54,16 @@ class HarnessStopHookTest(unittest.TestCase):
                         "workspace_roots": [str(root)],
                     }
                 )
+                repeated = HOOK.followup_for(
+                    {
+                        "conversation_id": "active",
+                        "status": "completed",
+                        "workspace_roots": [str(root)],
+                    }
+                )
 
         self.assertIn("not independently verified", followup or "")
+        self.assertIsNone(repeated)
 
     def test_unbound_session_is_not_requeued(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
