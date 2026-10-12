@@ -107,6 +107,11 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("交给被测方", prompt)
         self.assertIn("实际产物与设计不一致", prompt)
         self.assertNotIn("review-checklist.md", prompt)
+        self.assertIn("设计文档显式链接的检查表", prompt)
+        self.assertIn("`*-archive.md`", prompt)
+        self.assertIn("不作判据", prompt)
+        self.assertIn("其余文件不作证据", prompt)
+        self.assertIn("够下结论就停止阅读", prompt)
         followup = completion_gate(self.root) or ""
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)

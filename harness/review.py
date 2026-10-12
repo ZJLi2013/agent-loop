@@ -39,7 +39,10 @@ PROMPT = """# Task boundary review
 
 {inputs}
 
-按需打开 plan / task 引用的原始证据。结论以原始证据为准，不以 worker 的摘要为准。
+只打开上面的输入、plan / task / 设计文档直接链接的文件，以及设计文档列出的被测代码；其余文件不作证据，
+缺了就报证据缺失，不自行搜索；够下结论就停止阅读。结论以原始证据为准，不以 worker 的摘要为准。
+判据只来自 Goal、输入里列出的 repo 检查表和设计文档显式链接的检查表；`archive/` 目录与
+`*-archive.md` 里的内容只是历史，可作事实引用，不作判据。
 {extra}
 ## Review contract
 
@@ -51,7 +54,7 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 
 1. 核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。
    同时核对实际交给被测方的题目、数据、样本或请求（落盘的产物，不是摘要）与设计一致，且仍在测
-   Goal 要测的东西；有 repo 检查表时逐条对照。
+   Goal 要测的东西；有上述检查表时逐条对照。
 2. 在 task 列表里把 {task_id} 标为 `✅ done`；Harness 会把 closed 行移到
    `.agent-loop/archive/tasks.md`。把 plan document 中以 {task_id} 开头的标题段（设计、结果、
    review 依据），连同紧贴标题前的 `<a id>` 行，追加到同目录的 `{plan_archive}`。锚点链接按

@@ -35,7 +35,10 @@ PROMPT = """# Plan revision review
 - task 列表：`{task_doc}`
 - revision：`r{revision}`
 {checklist}
-按需打开 plan / task 直接引用的证据。
+只打开上面的输入、plan / task / 设计文档直接链接的文件，以及设计文档列出的被测代码；其余文件不作证据，
+缺了就报证据缺失，不自行搜索；够下结论就停止阅读。
+判据只来自 Goal、输入里列出的 repo 检查表和设计文档显式链接的检查表；`archive/` 目录与
+`*-archive.md` 里的内容只是历史，可作事实引用，不作判据。
 
 ## 要做的事
 
@@ -46,7 +49,7 @@ PROMPT = """# Plan revision review
    理由，报 revise。
 5. 审被测内容本身，不只审格式与严谨性：每个 task 交给被测方的题目、数据、样本或请求，设计里要有
    渲染样例；看样例判断它能否回答 Goal 的问题——答案是否一条查表或阈值即得，被测方是否拿得到做判断
-   所需的信息。有 repo 检查表时逐条对照；没有时先从 Goal 推出这些条件，并在 summary 写明用了哪些。
+   所需的信息。有上述检查表时逐条对照；没有时先从 Goal 推出这些条件，并在 summary 写明用了哪些。
 6. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
 
 你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。最终决定属于 human。
