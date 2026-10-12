@@ -11,7 +11,12 @@ from typing import Any
 from harness.errors import HarnessError
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_metadata, request_pause, resume
-from harness.plan_review import plan_review_record, plan_review_ready, run_plan_review
+from harness.plan_review import (
+    plan_review_record,
+    plan_review_ready,
+    review_brake,
+    run_plan_review,
+)
 from harness.project import runtime_dir, task_file
 from harness.protocol import Phase
 from harness.review import MAX_REVIEWS
@@ -96,7 +101,9 @@ def _plan_review_summary(root: Path, config: dict[str, Any]) -> str:
     if not record or record.get("error"):
         return ""
     findings = "\n".join(f"- {item}" for item in record.get("findings", []))
-    return f"independent reviewer：{record['summary']}\n{findings}".rstrip()
+    warnings = "\n".join(f"⚠️ {item}" for item in review_brake(root, str(plan_doc)))
+    parts = [f"independent reviewer：{record['summary']}", findings, warnings]
+    return "\n".join(part for part in parts if part)
 
 
 def _checkpoint(

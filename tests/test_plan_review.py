@@ -6,9 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from harness import plan_review
 from harness.core import HarnessError, initialize, load_runtime, resume, run_command
+from harness.page import _plan_review_summary
 from harness.plan import request_pause
-from harness.plan_review import plan_review_record, run_plan_review
+from harness.plan_review import _review_key, plan_review_record, run_plan_review
 
 
 def reviewer_writing(
@@ -265,6 +267,102 @@ class PlanReviewTest(unittest.TestCase):
                 [sys.executable, "-c", "print('must not run')"],
                 kind="exec",
             )
+
+
+REVISE = {"verdict": "revise", "summary": "tighten", "findings": ["seed blocks"]}
+REVISE_STREAK = "plan review returned revise 3 times in a row"
+NO_EXPERIMENT = "since the last exec/verify run"
+
+
+class ReviewBrakeTest(unittest.TestCase):
+    setUp = PlanReviewTest.setUp
+    tearDown = PlanReviewTest.tearDown
+    write_plan = PlanReviewTest.write_plan
+    configure = PlanReviewTest.configure
+
+    def record(
+        self, revision: int, verdict: str | None, at: str, error: str | None = None
+    ) -> None:
+        directory = self.root / ".harness" / "plan-review"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{_review_key('plan.md', revision)}.json").write_text(
+            json.dumps({
+                "version": 1, "plan_doc": "plan.md", "revision": revision,
+                "run_id": "x", "verdict": verdict, "summary": verdict,
+                "findings": ["f"] if verdict == "revise" else [],
+                "error": error, "at": at,
+            }),
+            encoding="utf-8",
+        )
+
+    def brake(self) -> list[str]:
+        return plan_review.review_brake(self.root, "plan.md")
+
+    def journal(self, kind: str, started_at: str) -> None:
+        path = self.root / ".harness" / "runs.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"kind": kind, "started_at": started_at}) + "\n")
+
+    def test_third_consecutive_revise_warns(self) -> None:
+        self.record(1, "revise", "2026-10-12T06:00:00+00:00")
+        self.record(2, "revise", "2026-10-12T06:05:00+00:00")
+        self.assertFalse(any(REVISE_STREAK in w for w in self.brake()))
+        self.write_plan(3)
+        self.configure(reviewer_writing(REVISE))
+
+        result = run_plan_review(self.root, plan_doc="plan.md")
+
+        self.assertIn(f"{REVISE_STREAK} (r1–r3)", "\n".join(result["warnings"]))
+
+    def test_accept_resets_streak_and_error_is_skipped(self) -> None:
+        for revision, verdict in enumerate(["revise", "accept", "revise"], start=1):
+            self.record(revision, verdict, f"2026-10-12T06:0{revision}:00+00:00")
+        self.record(4, None, "2026-10-12T06:04:00+00:00", error="reviewer timeout")
+        self.record(5, "revise", "2026-10-12T06:05:00+00:00")
+        self.assertFalse(any(REVISE_STREAK in w for w in self.brake()))
+
+        self.record(6, "revise", "2026-10-12T06:06:00+00:00")
+
+        self.assertIn(f"{REVISE_STREAK} (r3–r6)", "\n".join(self.brake()))
+
+    def test_revisions_since_last_experiment_warn_including_errors(self) -> None:
+        self.journal("verify", "2026-10-11T04:53:39+00:00")
+        self.record(1, "accept", "2026-10-11T04:32:32+00:00")
+        self.record(2, None, "2026-10-12T06:33:43+00:00", error="workspace modified")
+        self.record(3, "revise", "2026-10-12T06:43:58+00:00")
+        self.record(4, "accept", "2026-10-12T06:48:14+00:00")
+
+        self.assertIn(
+            "3 plan revisions reviewed since the last exec/verify run (r2–r4); "
+            "no new experiment evidence",
+            self.brake(),
+        )
+        self.journal("exec", "2026-10-12T06:45:00+00:00")
+        self.assertFalse(any(NO_EXPERIMENT in w for w in self.brake()))
+
+    def test_cached_review_returns_warnings_without_storing_them(self) -> None:
+        self.record(1, "revise", "2026-10-12T06:00:00+00:00")
+        self.record(2, "revise", "2026-10-12T06:05:00+00:00")
+        self.write_plan(3)
+        self.configure(reviewer_writing(REVISE))
+
+        first = run_plan_review(self.root, plan_doc="plan.md")
+        second = run_plan_review(self.root, plan_doc="plan.md")
+
+        self.assertEqual(first, second)
+        self.assertTrue(any(REVISE_STREAK in w for w in second["warnings"]))
+        self.assertNotIn("warnings", plan_review_record(self.root, "plan.md", 3))
+
+    def test_plan_page_summary_includes_warnings(self) -> None:
+        self.record(1, "revise", "2026-10-12T06:00:00+00:00")
+        self.record(2, "revise", "2026-10-12T06:05:00+00:00")
+        self.record(3, "revise", "2026-10-12T06:10:00+00:00")
+        self.write_plan(3)
+
+        summary = _plan_review_summary(self.root, {"plan_doc": "plan.md"})
+
+        self.assertIn(REVISE_STREAK, summary)
 
 
 if __name__ == "__main__":
