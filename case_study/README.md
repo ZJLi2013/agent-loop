@@ -9,6 +9,7 @@ they are not controlled benchmarks or guarantees of performance on other project
 |---|---|
 | [RoboJEV × Nox](robojev-nox.md) | Worker/reviewer decisions across task boundaries |
 | [Record growth](agent-loop-record-growth.md) | Cross-session records and why they need a retirement policy |
+| [Plan growth](robojev-plan-growth.md) | Why a reviewer-maintained plan grew with every closed task, and what a CLOSE guard must check |
 | [RoboTwin memory](robotwin-memory-consolidation.md) | Consolidating project memory |
 | [Chained tasks](wmforge-r8-chained-tasks.md) | How task chaining bypassed design/review boundaries and motivated a guard |
 
