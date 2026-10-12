@@ -4,6 +4,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-12
+
 ### Added
 
 - English entry documentation, a failing-to-passing quickstart, release guidance, and a sourced related-project comparison.
@@ -57,5 +59,6 @@ All notable user-facing changes are documented here. This project follows Semant
 - Cursor lifecycle hooks bind each conversation to the first project task it reads, preventing STOP and
   preCompact events from affecting projects owned by other sessions.
 
-[Unreleased]: https://github.com/ZJLi2013/agent-loop/commits/main
+[Unreleased]: https://github.com/ZJLi2013/agent-loop/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/ZJLi2013/agent-loop/releases/tag/v0.1.0
 
