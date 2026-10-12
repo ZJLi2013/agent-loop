@@ -4,6 +4,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+### Changed
+
+- A task-boundary review decision is valid only after the closed task's headed sections leave the active plan
+  document; the reviewer moves them to a sibling `<plan>-archive.md`, and a failed re-review can no longer fall
+  back to the previous decision while those sections remain.
+
 ## [0.1.0] - 2026-10-12
 
 ### Added

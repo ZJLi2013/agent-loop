@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,7 @@ REVIEW_DIR = "review"
 DECISIONS = ("continue", "ask_human", "stop")
 MAX_REVIEWS = 2
 DEFAULT_REVIEW_TIMEOUT_SECONDS = 1800.0
+HEADING = re.compile(r"^#{1,6}\s+(.*)$")
 
 PROMPT = """# Task boundary review
 
@@ -51,7 +53,13 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    同时核对实际交给被测方的题目、数据、样本或请求（落盘的产物，不是摘要）与设计一致，且仍在测
    Goal 要测的东西；有 repo 检查表时逐条对照。
 2. 在 task 列表里把 {task_id} 标为 `✅ done`；Harness 会把 closed 行移到
-   `.agent-loop/archive/tasks.md`。写好下一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
+   `.agent-loop/archive/tasks.md`。把 plan document 中以 {task_id} 开头的标题段（设计、结果、
+   review 依据），连同紧贴标题前的 `<a id>` 行，追加到同目录的 `{plan_archive}`。锚点链接按
+   锚点所在文件改写：留下的段落指向被移走锚点用 `{plan_archive_name}#…`，被移走的段落指向留下的
+   锚点用 `{plan_name}#…`，其他文档的 `{plan_name}#…` 改为 `{plan_archive_name}#…`；文件相对链接不改。
+   活跃 plan 只更新当前结论与下一步决策，并留一行指向 archive 的指针。
+   plan 仍有这类标题时 Harness 判本次决策无效。
+   写好下一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
    失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。只展开最近 1–2 项，新 task
    的 `rev` 沿用当前 plan revision。
    结果为否定或意外、或下一个 task 要换方向时，先核对 plan 是否已对照领域结论与业界已有解法；
@@ -61,8 +69,9 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    - `ask_human`：需要改 Goal / scope，要在有显著权衡的方案间选型，或实际产物与设计不一致、
      不在测 Goal 要测的东西（要改设计，由 human 决定修正还是换方向）；
    - `stop`：Goal 已达成，或继续不再改变主线。
-4. 只改 plan document 与 task 列表；不改代码，不跑实验。task 列表保持原有表格、一行一个 task、
-   原有状态词；推理与依据写进 plan document，不写进 task 列表。
+4. 只改 plan document、task 列表、`{plan_archive}`，以及其他文档里指向被移走锚点的链接；
+   不改代码，不跑实验。task 列表保持原有表格、一行一个 task、原有状态词；本次 review 的推理与
+   依据写进 {task_id} 的归档段，不写进活跃 plan 或 task 列表。
 
 ## 输出
 
@@ -92,6 +101,37 @@ def load_reviewer(root: Path) -> dict[str, Any] | None:
 
 def _review_dir(root: Path) -> Path:
     return harness_dir(root) / REVIEW_DIR
+
+
+def _plan_archive(plan_doc: str) -> str:
+    path = Path(plan_doc)
+    return path.with_name(f"{path.stem}-archive{path.suffix}").as_posix()
+
+
+def _closed_task_headings(text: str, task_id: str) -> list[str]:
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if (match := HEADING.match(line))
+        and re.split(r"[\s:：]", match.group(1).strip(), maxsplit=1)[0] == task_id
+    ]
+
+
+def _closed_plan_sections(
+    root: Path, config: dict[str, Any], task_id: str
+) -> str | None:
+    plan_doc = config.get("plan_doc")
+    if not plan_doc or not (root / plan_doc).is_file():
+        return None
+    text = (root / plan_doc).read_text(encoding="utf-8")
+    headings = _closed_task_headings(text, task_id)
+    if not headings:
+        return None
+    listed = ", ".join(f'"{heading}"' for heading in headings)
+    return (
+        f"plan document {plan_doc} still has sections of closed task {task_id}: "
+        f"{listed}; move them to {_plan_archive(plan_doc)}"
+    )
 
 
 def _relative(root: Path, path: Path) -> str:
@@ -126,11 +166,18 @@ def _prompt(
             f"上一次决策：`{json.dumps(decision, ensure_ascii=False)}`\n\n"
             f"{objection}\n\n核实后改正或维持；仍有分歧就选 `ask_human`。\n"
         )
+    elif previous.get("error"):
+        extra = f"\n## 上一次 review 无效\n\n{previous['error']}\n\n补齐后再写决策。\n"
+    plan_doc = config.get("plan_doc")
+    archive = _plan_archive(plan_doc) if plan_doc else "<plan>-archive.md"
     return PROMPT.format(
         task_id=state["task_id"],
         inputs="\n".join(inputs),
         extra=extra,
         decision_file=f"{HARNESS_DIR}/{REVIEW_DIR}/decision.json",
+        plan_name=Path(plan_doc).name if plan_doc else "<plan>.md",
+        plan_archive=archive,
+        plan_archive_name=Path(archive).name,
     )
 
 
@@ -237,6 +284,10 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
                     "✅ done or ❌ dropped"
                 )
         result["archived_tasks"] = archived
+        leftover = _closed_plan_sections(root, config, str(state["task_id"]))
+        if leftover:
+            decision = None
+            error = f"{error}; {leftover}" if error else leftover
 
         review = {
             "verify_run_id": previous["verify_run_id"],
@@ -250,7 +301,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         }
         if decision:
             review.update(decision)
-        elif previous.get("decision"):
+        elif previous.get("decision") and not leftover:
             review.update(
                 {key: previous[key] for key in ("decision", "next_task", "why")}
             )

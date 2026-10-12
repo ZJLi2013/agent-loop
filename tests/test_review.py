@@ -285,5 +285,142 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             )
 
 
+CONTINUE = {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
+PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 下一步决策\nt2\n"
+PLAN_WITH_T1 = (
+    PLAN_HEAD
+    + '\n<a id="t1-design"></a>\n### t1 本地设计\ninput\n### t1 boundary review\nok\n'
+    + "### t2 本地设计\nnext\n"
+)
+PLAN_MOVED = PLAN_HEAD + "\nt1 已归档：[plan-archive.md](plan-archive.md)\n### t2 本地设计\nnext\n"
+PLAN_TASKS = REWRITTEN_TASKS.replace("| — |", "| r1 |")
+
+
+def plan_reviewer(*calls: tuple[dict[str, object] | None, str, bool]) -> list[str]:
+    report = json.dumps({"verdict": "accept", "summary": "ready", "findings": []})
+    code = "\n".join(
+        [
+            "import json, sys",
+            "from pathlib import Path",
+            "prompt = Path('.harness/review/prompt.md').read_text(encoding='utf-8')",
+            "if not prompt.startswith('# Task boundary review'):",
+            f"    Path('.harness/plan-review/report.json').write_text({report!r})",
+            "    sys.exit(0)",
+            "counter = Path('.harness/review/calls.txt')",
+            "n = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(n + 1))",
+            f"decision, plan, fail = json.loads({json.dumps(calls)!r})[n]",
+            f"Path('.agent-loop/task.md').write_text({PLAN_TASKS!r}, encoding='utf-8')",
+            "Path('plan.md').write_text(plan, encoding='utf-8')",
+            "if decision is not None:",
+            f"    Path({DECISION!r}).write_text(json.dumps(decision))",
+            "sys.exit(3 if fail else 0)",
+        ]
+    )
+    return [sys.executable, "-c", code]
+
+
+class ClosedPlanSectionTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        (self.root / ".agent-loop").mkdir()
+        (self.root / ".agent-loop" / "task.md").write_text(
+            PLAN_TASKS.replace("✅ done", "🔬 doing"), encoding="utf-8"
+        )
+        (self.root / "plan.md").write_text(PLAN_WITH_T1, encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def init(self, argv: list[str]) -> None:
+        (self.root / ".agent-loop" / "reviewer.json").write_text(
+            json.dumps({"argv": argv, "timeout_seconds": 30})
+        )
+        initialize(
+            self.root,
+            task_id="t1",
+            plan_doc="plan.md",
+            verifier_argv=[sys.executable, "-c", "print('OK')"],
+        )
+        run_command(
+            self.root,
+            [sys.executable, "-c", "print('OK')"],
+            kind="verify",
+            timeout_seconds=30,
+        )
+
+    def prompt(self) -> str:
+        return (self.root / ".harness" / "review" / "prompt.md").read_text(
+            encoding="utf-8"
+        )
+
+    def test_closed_task_sections_left_in_plan_invalidate_decision(self) -> None:
+        self.init(plan_reviewer((CONTINUE, PLAN_WITH_T1, False)))
+
+        outcome = run_review(self.root)
+
+        self.assertIsNone(outcome["review"]["decision"])
+        error = outcome["review"]["error"]
+        self.assertIn("### t1 本地设计", error)
+        self.assertIn("### t1 boundary review", error)
+        self.assertIn("plan-archive.md", error)
+        self.assertNotIn("t2 本地设计", error)
+
+    def test_moved_sections_keep_decision_and_open_task_headings(self) -> None:
+        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
+
+        outcome = run_review(self.root)
+
+        self.assertEqual(outcome["review"]["decision"], "continue")
+
+    def assert_rereview_cannot_revive_old_decision(self, fail: bool) -> None:
+        self.init(
+            plan_reviewer(
+                (CONTINUE, PLAN_MOVED, False),
+                (None if fail else CONTINUE, PLAN_WITH_T1, fail),
+            )
+        )
+        self.assertEqual(run_review(self.root)["review"]["decision"], "continue")
+
+        outcome = run_review(self.root, objection="t2 input is wrong")
+
+        self.assertIsNone(outcome["review"]["decision"])
+        self.assertIn("### t1 boundary review", outcome["review"]["error"])
+        with self.assertRaisesRegex(HarnessError, "awaiting reviewer decision"):
+            initialize(
+                self.root,
+                task_id="t2",
+                plan_doc="plan.md",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+
+    def test_failed_rereview_with_sections_written_back_drops_old_decision(self) -> None:
+        self.assert_rereview_cannot_revive_old_decision(fail=True)
+
+    def test_valid_rereview_with_sections_written_back_is_rejected(self) -> None:
+        self.assert_rereview_cannot_revive_old_decision(fail=False)
+
+    def test_prompt_names_sibling_archive_and_write_scope(self) -> None:
+        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
+        run_review(self.root)
+
+        prompt = self.prompt()
+
+        self.assertIn("`plan-archive.md`", prompt)
+        self.assertIn("文件相对链接不改", prompt)
+        self.assertIn("只改 plan document、task 列表、`plan-archive.md`", prompt)
+
+    def test_retry_prompt_carries_previous_error(self) -> None:
+        self.init(
+            plan_reviewer((CONTINUE, PLAN_WITH_T1, False), (CONTINUE, PLAN_MOVED, False))
+        )
+        run_review(self.root)
+
+        run_review(self.root)
+
+        self.assertIn("### t1 本地设计", self.prompt())
+
+
 if __name__ == "__main__":
     unittest.main()
