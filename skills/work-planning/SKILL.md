@@ -50,6 +50,7 @@ Plan Review: proposed
 4. 配置 reviewer 时，先对当前 Plan Revision 运行独立 plan review；报告按 plan 路径与
    revision 去重。reviewer 只给准入意见，不能批准 plan 或授权执行。
 5. 再用平台的结构化提问能力给 human：`approve / revise / continue automatically`。
+   plan review 返回 `warnings`（连续 revise、多个 revision 没有实验）时原样附上，并问门槛与实验成本是否相称。
    reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
 6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
    `Plan Review: unreviewed`，但配置 reviewer 时仍须完成独立 plan review。

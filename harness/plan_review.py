@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ from harness.project import render_prompt, review_checklist, task_file
 from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
+    JOURNAL_FILE,
     atomic_write_json,
     harness_dir,
     read_json,
@@ -21,6 +23,7 @@ from harness.storage import (
 
 PLAN_REVIEW_DIR = "plan-review"
 VERDICTS = ("accept", "revise")
+BRAKE_THRESHOLD = 3
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
 DEFAULT_MAX_ARTIFACTS = 20
 DEFAULT_MAX_JOURNAL_ENTRIES = 1000
@@ -105,6 +108,57 @@ def plan_review_ready(
     return True, None
 
 
+def _brake_warnings(
+    records: list[dict[str, Any]], journal: list[dict[str, Any]]
+) -> list[str]:
+    records = sorted(records, key=lambda record: record["revision"])
+    warnings = []
+    streak = []
+    for record in reversed(records):
+        if record.get("verdict") == "accept":
+            break
+        if record.get("verdict") == "revise":
+            streak.append(record["revision"])
+    if len(streak) >= BRAKE_THRESHOLD:
+        warnings.append(
+            f"plan review returned revise {len(streak)} times in a row "
+            f"(r{streak[-1]}–r{streak[0]}); check that this gate fits the task's "
+            "cost before revising again"
+        )
+    experiments = [
+        entry["started_at"]
+        for entry in journal
+        if entry.get("kind") in ("exec", "verify")
+    ]
+    # A truncated journal makes the oldest entry too recent: it undercounts, never overcounts.
+    base = (
+        max(experiments)
+        if experiments
+        else min((entry["started_at"] for entry in journal), default=None)
+    )
+    since = [r["revision"] for r in records if base is not None and r["at"] > base]
+    if len(since) >= BRAKE_THRESHOLD:
+        warnings.append(
+            f"{len(since)} plan revisions reviewed since the last exec/verify run "
+            f"(r{since[0]}–r{since[-1]}); no new experiment evidence"
+        )
+    return warnings
+
+
+def review_brake(root: Path, plan_doc: str) -> list[str]:
+    _, relative = _plan_path(root, plan_doc)
+    prefix = _review_key(relative, 0).removesuffix("-r0")
+    records = [
+        record
+        for path in _review_dir(root).glob(f"{prefix}-r*.json")
+        if (record := read_json(path)).get("plan_doc") == relative
+    ]
+    path = harness_dir(root) / JOURNAL_FILE
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    journal = [json.loads(line) for line in lines if line.strip()]
+    return _brake_warnings(records, journal)
+
+
 def run_plan_review(
     root: Path,
     *,
@@ -127,7 +181,7 @@ def run_plan_review(
                 raise HarnessError(
                     f"plan review r{revision} is incomplete: {existing['error']}"
                 )
-            return existing
+            return {**existing, "warnings": review_brake(root, relative)}
 
         review_dir = _review_dir(root)
         review_dir.mkdir(parents=True, exist_ok=True)
@@ -201,4 +255,4 @@ def run_plan_review(
         prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
         if error:
             raise HarnessError(f"plan review r{revision} failed: {error}")
-        return record
+        return {**record, "warnings": review_brake(root, relative)}
