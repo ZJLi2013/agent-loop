@@ -13,6 +13,8 @@ All notable user-facing changes are documented here. This project follows Semant
   `archive/` content is history, not a criterion. Evidence is limited to the listed inputs, files the plan,
   task list or design links directly, and the code under test the design names; reviewers report missing
   evidence instead of searching and stop reading once they can decide.
+- Reviewer prompts live in `harness/prompts/plan_review.md` and `harness/prompts/task_review.md` and ship with
+  the wheel; rendered prompts are unchanged.
 
 ## [0.1.0] - 2026-10-12
 

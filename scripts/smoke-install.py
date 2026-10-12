@@ -68,6 +68,13 @@ def main() -> None:
         if not all(Path(line).resolve().is_relative_to(target.resolve())
                    for line in location.splitlines()):
             raise RuntimeError(f"Imports escaped the installed environment: {location}")
+        run([str(python), "-c",
+             "from harness.project import render_prompt; "
+             "render_prompt('plan_review.md', plan_doc='p', task_doc='t', revision=1, "
+             "checklist='', report_file='r'); "
+             "render_prompt('task_review.md', task_id='t1', inputs='', extra='', "
+             "decision_file='d', plan_name='p', plan_archive='a', plan_archive_name='a')"],
+            root, env)
         run([str(cli), "--help"], root, env)
 
         project = root / "example"

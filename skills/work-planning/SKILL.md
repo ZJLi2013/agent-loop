@@ -107,6 +107,6 @@ archive index。原始 run / artifact 与 sub-exp 不删，但不再默认加载
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。
 
 项目配置了 reviewer 时，「更新下一步决策」归 reviewer：锁定 verifier 通过后 Harness 自动运行
-`harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/review.py`。
+`harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。
 把关闭 task 的标题段移到 plan 同目录的 `<plan>-archive.md` 也归 reviewer；plan 仍有以该 task id
 开头的标题时，Harness 判这次决策无效。
