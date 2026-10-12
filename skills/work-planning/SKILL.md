@@ -79,7 +79,8 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 1. `pause --require-revision --reason "<纠偏>"`；
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
 3. 旧 task 逐项保留、blocked 或 dropped；新 task 绑定新 `rN`；
-4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`。
+4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
+   而 human 决定开新 task 时，新 revision 批准为 `approved` 后对新 task 运行 `init`，不用 `disable`。
 
 对话里的「明白」不算 RECONCILE；四步落盘后才继续。
 
