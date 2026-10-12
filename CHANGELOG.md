@@ -6,6 +6,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- After the task reviewer chooses `ask_human` or `stop`, `init` starts the next task once the plan is at a newer
+  Plan Revision marked `approved`, instead of requiring `disable` first.
+
 - A task-boundary review decision is valid only after the closed task's headed sections leave the active plan
   document; the reviewer moves them to a sibling `<plan>-archive.md`, and a failed re-review can no longer fall
   back to the previous decision while those sections remain.

@@ -14,6 +14,7 @@ from harness.core import (
     run_command,
     verify,
 )
+from harness.plan_review import run_plan_review
 from harness.review import run_review
 
 DECISION = ".harness/review/decision.json"
@@ -425,6 +426,73 @@ class ClosedPlanSectionTest(unittest.TestCase):
         run_review(self.root)
 
         self.assertIn("### t1 本地设计", self.prompt())
+
+
+SUCCESSOR_TASKS = (
+    "| P | id | rev | task | check | status | fail |\n"
+    "|---|---|---|---|---|---|---|\n"
+    "| P0 | t2 | r{revision} | next | check | 🔬 doing | 0 |\n"
+)
+
+
+class HumanSuccessorTest(unittest.TestCase):
+    setUp = ClosedPlanSectionTest.setUp
+    tearDown = ClosedPlanSectionTest.tearDown
+    init = ClosedPlanSectionTest.init
+
+    def review_as(self, decision: str) -> None:
+        self.init(plan_reviewer(({"decision": decision, "why": "human decides"}, PLAN_MOVED, False)))
+        self.assertEqual(run_review(self.root)["review"]["decision"], decision)
+
+    def human_decides(self, revision: int, review: str) -> None:
+        plan = PLAN_MOVED.replace("Plan Revision: 1", f"Plan Revision: {revision}")
+        (self.root / "plan.md").write_text(
+            plan.replace("Plan Review: unreviewed", f"Plan Review: {review}"), encoding="utf-8"
+        )
+        if revision > 1:
+            run_plan_review(self.root, plan_doc="plan.md")
+        (self.root / ".agent-loop" / "task.md").write_text(
+            SUCCESSOR_TASKS.format(revision=revision), encoding="utf-8"
+        )
+
+    def init_successor(self) -> dict[str, object]:
+        _, state = initialize(
+            self.root,
+            task_id="t2",
+            plan_doc="plan.md",
+            verifier_argv=[sys.executable, "-c", "print('OK')"],
+        )
+        return state
+
+    def assert_successor_starts(self, decision: str) -> None:
+        self.review_as(decision)
+        self.human_decides(2, "approved")
+
+        state = self.init_successor()
+        run_command(self.root, [sys.executable, "-c", "print('first')"], kind="exec")
+
+        self.assertEqual((state["task_id"], state["phase"]), ("t2", "ready"))
+        self.assertEqual(load_runtime(self.root)[1]["last_outcome"], "pass")
+
+    def test_successor_after_ask_human_starts_from_newer_approved_revision(self) -> None:
+        self.assert_successor_starts("ask_human")
+
+    def test_successor_after_stop_starts_from_newer_approved_revision(self) -> None:
+        self.assert_successor_starts("stop")
+
+    def test_successor_on_same_revision_is_refused(self) -> None:
+        self.review_as("ask_human")
+        self.human_decides(1, "unreviewed")
+
+        with self.assertRaises(HarnessError):
+            self.init_successor()
+
+    def test_successor_on_unapproved_revision_is_refused(self) -> None:
+        self.review_as("ask_human")
+        self.human_decides(2, "unreviewed")
+
+        with self.assertRaises(HarnessError):
+            self.init_successor()
 
 
 if __name__ == "__main__":
