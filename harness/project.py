@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 RUNTIME_DIR = ".agent-loop"
 LEGACY_RUNTIME_DIR = ".cursor"
+PROMPT_DIR = Path(__file__).with_name("prompts")
+PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
+
+
+def render_prompt(name: str, **values: object) -> str:
+    text = (PROMPT_DIR / name).read_text(encoding="utf-8")
+    return PLACEHOLDER.sub(lambda match: str(values[match.group(1)]), text)
 
 
 def runtime_dir(root: Path) -> Path:

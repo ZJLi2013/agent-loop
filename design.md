@@ -232,8 +232,8 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 | `harness/runner.py` | subprocess、process-tree kill、timeout、输出采集 |
 | `harness/journal.py` | 有界 artifacts 与 `runs.jsonl` |
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
-| `harness/plan_review.py` | plan reviewer：prompt、report 校验与 revision 去重 |
-| `harness/review.py` | task 边界 reviewer：prompt、执行、决策校验与 follow-up |
+| `harness/plan_review.py` | plan reviewer：report 校验与 revision 去重；prompt 在 `harness/prompts/plan_review.md` |
+| `harness/review.py` | task 边界 reviewer：执行、决策校验与 follow-up；prompt 在 `harness/prompts/task_review.md` |
 | `harness/records.py` | reviewer 决策后把 closed task 移出 active backlog，并保留 archive |
 | `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录 |
 | `harness/page.py` | human 检查点经 pager 发到手机，回复映射成 Harness 动作 |
@@ -297,6 +297,7 @@ agent-loop/
 │   ├── journal.py            # execution evidence
 │   ├── plan.py               # Plan Revision / pause gate
 │   ├── records.py            # closed-task archive
+│   ├── prompts/              # reviewer prompts（Policy 文本）
 │   ├── core.py               # orchestration façade
 │   └── run.py                # CLI
 ├── skills/                   # Policies

@@ -8,7 +8,7 @@ from harness.errors import HarnessError
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_metadata
-from harness.project import review_checklist, task_file
+from harness.project import render_prompt, review_checklist, task_file
 from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
@@ -24,45 +24,6 @@ VERDICTS = ("accept", "revise")
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
 DEFAULT_MAX_ARTIFACTS = 20
 DEFAULT_MAX_JOURNAL_ENTRIES = 1000
-
-PROMPT = """# Plan revision review
-
-你是 plan reviewer。只审提交的 Plan Revision，不执行 task、不修改 workspace。
-
-## 输入
-
-- plan document：`{plan_doc}`
-- task 列表：`{task_doc}`
-- revision：`r{revision}`
-{checklist}
-只打开上面的输入、plan / task / 设计文档直接链接的文件，以及设计文档列出的被测代码；其余文件不作证据，
-缺了就报证据缺失，不自行搜索；够下结论就停止阅读。
-判据只来自 Goal、输入里列出的 repo 检查表和设计文档显式链接的检查表；`archive/` 目录与
-`*-archive.md` 里的内容只是历史，可作事实引用，不作判据。
-
-## 要做的事
-
-1. 检查最近 1–2 个 proposed task 是否各自链接本地设计文档；plan 表格里的一行不算设计。
-2. 检查每个 task 的验收判据能否支持它声称的结论，成立与不成立是否指向不同的下一动作。
-3. 检查昂贵动作前是否缺少能改变选择的廉价前置。
-4. 研究型 task（方法是否有效、现象成因、方案选型）缺少领域先例，或设计与已知结论冲突却未说明
-   理由，报 revise。
-5. 审被测内容本身，不只审格式与严谨性：每个 task 交给被测方的题目、数据、样本或请求，设计里要有
-   渲染样例；看样例判断它能否回答 Goal 的问题——答案是否一条查表或阈值即得，被测方是否拿得到做判断
-   所需的信息。有上述检查表时逐条对照；没有时先从 Goal 推出这些条件，并在 summary 写明用了哪些。
-6. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
-
-你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。最终决定属于 human。
-不要修改 plan、task 或代码。
-
-## 输出
-
-把下面的 JSON 写到 `{report_file}`：
-
-```json
-{{"verdict": "accept | revise", "summary": "<一句话>", "findings": ["<只列会改变决定的问题>"]}}
-```
-"""
 
 
 def _plan_path(root: Path, plan_doc: str) -> tuple[Path, str]:
@@ -177,7 +138,8 @@ def run_plan_review(
         report_path.unlink(missing_ok=True)
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(
-            PROMPT.format(
+            render_prompt(
+                "plan_review.md",
                 plan_doc=relative,
                 task_doc=task_file(root).resolve().relative_to(root).as_posix(),
                 revision=revision,

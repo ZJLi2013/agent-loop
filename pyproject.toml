@@ -27,3 +27,6 @@ agent-loop-harness = "harness.run:main"
 [tool.setuptools.packages.find]
 include = ["harness*", "adapters*"]
 
+[tool.setuptools.package-data]
+harness = ["prompts/*.md"]
+
