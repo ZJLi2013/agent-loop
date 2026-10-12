@@ -63,8 +63,17 @@ Goal 停止后，human 把完整 r52 plan 移到项目 `.agent-loop/archive/`，
 没有随之改写，从新位置解析失败。另有 41 条指向 `.harness/artifacts/` 的证据链接早已失效——Harness
 按 `max_artifacts` 只保留最近 20 次运行，review 里引用的较早 artifact 被清掉了。后者是独立问题。
 
-## 修复方向
+## 修复
 
-在 reviewer 关闭 task 的同一边界上，把「该 task 的段落已移出活跃 plan」变成 review 决策的
-有效条件，与「reviewer 必须把 task 标为 done」并列；prompt 同步写明由 reviewer 负责移出与改链接。
+reviewer 关闭 task X 时，活跃 plan 不能再有以 X 开头的标题，否则这次决策无效，也不回退到上一次
+决策；这与「reviewer 必须把 X 标为 done」是同一个边界。prompt 写明由 reviewer 把这些段落连同标题前的
+`<a id>` 移到 plan 同目录的 `<plan>-archive.md`：同目录让段内文件链接不用改，锚点链接按锚点所在文件
+改写。只查 X 而不查全部 closed id，是因为 task id 会跨 Goal 复用。
+
+在这个样本上的核对：
+
+- 判定函数对 r52 plan 命中 46 个标题，与独立正则盘点完全一致；归档后 plan 命中 0 个；
+- 按关闭顺序逐个搬运 23 个 task 后，原本可解析的 22 个锚点仍全部可解析，plan 剩 256 行。剩下的是没有
+  task 标题的「当前结论」等章节，这一类增长 guard 管不到，仍靠 CLOSE 时收口结论。
+
 跟踪见 [#10](https://github.com/ZJLi2013/agent-loop/issues/10)。
