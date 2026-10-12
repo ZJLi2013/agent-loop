@@ -59,8 +59,12 @@ Goal 停止后，human 把完整 r52 plan 移到项目 `.agent-loop/archive/`，
 
 原始 runs、manifest 与旧 plan 全部保留，只是不再默认加载。
 
+搬运本身也有代价：旧 plan 从项目根移到 `.agent-loop/archive/` 后，309 条相对链接里 34 条 `./…`
+没有随之改写，从新位置解析失败。另有 41 条指向 `.harness/artifacts/` 的证据链接早已失效——Harness
+按 `max_artifacts` 只保留最近 20 次运行，review 里引用的较早 artifact 被清掉了。后者是独立问题。
+
 ## 修复方向
 
 在 reviewer 关闭 task 的同一边界上，把「该 task 的段落已移出活跃 plan」变成 review 决策的
 有效条件，与「reviewer 必须把 task 标为 done」并列；prompt 同步写明由 reviewer 负责移出与改链接。
-跟踪见 issue。
+跟踪见 [#10](https://github.com/ZJLi2013/agent-loop/issues/10)。
