@@ -5,19 +5,20 @@ Plan Review: approved
 
 ## Goal
 
-Demonstrate one reviewed task reaching independent verification.
+Fix the arithmetic mean without changing the empty-input contract.
 
 ## Current conclusion
 
-The task is ready to execute.
+The example uses integer division, so the fractional-mean test should fail.
+This fixture is pre-approved for the walkthrough; review your own project plans before execution.
 
 ## Next decision
 
-Run the verifier and close only when the Harness records fresh evidence.
+Run the tests, inspect the failure, fix the implementation, and verify again.
 
 ## Experiment Log
 
 | Exp | Hypothesis | Status | Evidence | Conclusion |
 |---|---|---|---|---|
-| 1 | The verifier exits successfully | Pending | — | — |
+| 1 | True division preserves fractional means and rejects empty input | Pending | test_average.py | — |
 

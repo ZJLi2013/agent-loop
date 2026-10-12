@@ -6,6 +6,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- English entry documentation, a failing-to-passing quickstart, release guidance, and a sourced related-project comparison.
+- Isolated sdist/wheel installation smoke covering public CLI verification, repair, stale evidence, and uninstall.
+
 - Apache-2.0 licensing and public contribution, security, AI-use, and conduct policies.
 - GitHub issue/PR templates and cross-platform Harness CI.
 - Windows uninstall support.

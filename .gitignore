@@ -22,12 +22,9 @@ adapters/cursor/hooks/*.log
 # Per-project Harness runtime
 .harness/
 
-# Per-project agent runtime (templates live under skills/agent-memory/)
-.agent-loop/task.md
-.agent-loop/progress.md
-.agent-loop/memory/
-.agent-loop/archive/
-.agent-loop/reviewer.json
+# Maintainer/project runtime (templates live under skills/agent-memory/)
+.agent-loop/
+agent-loop.code-workspace
 
 # Legacy runtime read compatibility
 .cursor/task.md
@@ -41,6 +38,8 @@ __pycache__/
 .pytest_cache/
 pytest-cache-files-*/
 .venv/
+build/
+dist/
 
 # Other agents' scratch dirs and pager's default local state
 .codex/

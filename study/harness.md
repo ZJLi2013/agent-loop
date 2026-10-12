@@ -1,5 +1,7 @@
 # 最小 Harness
 
+> [Study 索引](README.md) · 已落地机制的专题说明；当前完整控制流（含 reviewer）以 [design.md](../design.md) 为准。
+
 ## Goal
 
 把 agent-loop 从模型自觉遵守的建议，变成由模型之外的 runner、verifier 和 completion gate

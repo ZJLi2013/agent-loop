@@ -1,5 +1,7 @@
 # Multi-agent loop 调研
 
+> [Study 索引](README.md) · 角色与评审边界专题；跨主题参照见 [业界实践](industry-practices.md)。
+
 > 2026-09 读的是各项目的公开文档与 README，只看角色划分与调度方式；标「未实测」的没有跑过。
 
 ## 结论

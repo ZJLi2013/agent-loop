@@ -1,5 +1,7 @@
 # 渐进计划与人工纠偏
 
+> [Study 索引](README.md) · 已落地规划机制的设计记录；下列 revision 是历史记录，不是工作项目的审批状态。
+
 Plan Revision: 2
 Plan Review: approved
 
@@ -26,7 +28,9 @@ plan document（Goal / 当前结论 / 下一步决策 / Experiment Log）
   ↓
 task.md：📝 proposed
   ↓
-Human Review Gate ── approve / revise / unattended 自批准
+配置 reviewer 时先审 Plan Revision 准入（建议权）
+  ↓
+Human Review Gate ── approve / revise / unattended policy
   ↓
 只展开最近 1–2 个 task
   ↓
@@ -50,7 +54,7 @@ Harness pause（必要时中断 runner）
 - user 新消息纠正 Goal、scope 或优先级时，立即中断旧计划并完成 RECONCILE，不能只在对话里确认。
 - plan document 固定写 `Plan Revision: N` 与 `Plan Review: proposed|approved|unreviewed`。
 - Harness 初始化 task 时锁定 plan revision；pause 后拒绝新命令。修改意见要求 revision 递增，
-  且 review 变为 approved / unreviewed 后才允许 resume。
+  且 review 变为 approved / unreviewed 后才允许 resume；配置 reviewer 时还要求当前 revision 的有效准入报告。
 
 ## Verification
 

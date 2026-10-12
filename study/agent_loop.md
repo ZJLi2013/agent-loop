@@ -1,150 +1,61 @@
-
 # Agent Loop 设计沿革
 
-> 当前架构以 [`design.md`](../design.md) 为准；本文保留问题背景与演进依据。
+> [Study 索引](README.md) · 本文保留问题背景与演进脉络；当前架构以 [design.md](../design.md) 为准。
+> 2026-10-12 整理：历史阶段按机制归纳，不作为完整版本时间线。
 
-## 背景
+## 起点：减少逐轮人工接力
 
-当前工作范式： `人 → agent → 一个实验 → 人判断 → agent → 下一个实验`
-
-预期：`Goal → Plan → Execute → Observe → Diagnose → Repair / Re-plan → Verify → Continue → Done`
-
-
-### Anthropic Ralpha Loop
-
-核心是一个orchestration primitive: `agent 想退出 → harness 判断 completion criteria → 没完成 → 把任务重新喂进去 → 新 iteration 继续`
-
-
-###  [Karpathy/autoresearch](https://github.com/karpathy/autoresearch)
-
-把 agent 工作压缩成一个非常明确的 closed-loop optimization problem。如果 crash 是 typo / missing import 这种简单问题，就自己修；如果 experiment 本身坏了，就记录并跳过，然后继续。**failure 是 input，不是 termination condition**，
-
-
-
-## agent_loop 架构
-
-### 它实际在管什么
-
-这个环的主题不是编排，是**每一步判断该继续、该换一条、还是该停，并且默认继续**。
-它同时压着两个相反方向：不轻易停（自修、跳过、无人值守），也不乱跑（只有一行 doing、检查点判据、中止清单）。
-
-### 形状
+最初的工作方式是 `人 → agent → 一个实验 → 人判断 → 下一个实验`。希望建立的循环是：
 
 ```text
-                  ┌──────────────────────────────────┐
-                  │  常驻层：7 条 rule，每轮都在上下文  │
-                  │  调度器必须在这里，不能是 skill     │
-                  └────────────────┬─────────────────┘
-                                   │
-  GOAL ─► PLAN ─► HUMAN REVIEW ─► SELECT ─► DESIGN ─► EXECUTE ─► EVALUATE
-   │       │          │              │         │                    │
- user    work-     proposed       task-state experiment-       ┌─────┴─────┐
-  定     planning  approve/revise               design        pass        fail
-                                                           │           │
-                                                         CLOSE     DIAGNOSE
-                                                           │           │
-                                                           │      ┌────┴────┐
-                                                           │   可自修    用尽
-                                                           │      │         │
-                                                           │   REPAIR   when-to-stop
-                                                           │      │      中止清单
-                                                           │      └────┬────┘
-                                                           └───────────┤
-                                                                       ▼
-                                                                  下一个 task
-                                                                       │
-                                                             全部通过 ─► DONE
-  ─────────────────────────────────────────────────────────────────────────
-  横穿全环：.agent-loop/memory/（值第二次用到就写，要用就读）
-            agent-heartbeat（detach 长任务）
-            Harness（显式命令 timeout / journal；stop 前独立 Verify）
-  环之外：code-review / upstream-contribute / research-to-blog /
-          code-to-kernel-diagram / remote-exec —— user 明确要了才走
+Goal → Plan → Execute → Observe → Diagnose → Repair / Re-plan → Verify → Continue / Done
 ```
 
-### 五个让它能自己转下去且不偏离 human 意图的机制
+核心问题始终是每一步如何判断继续、换方向或停止：让 agent 能在授权范围内持续推进，
+同时保留人的目标、纠偏与预算边界。研究中假设被推翻也是结果，需要据此选择下一步。
 
-**一、调度器是常驻 rule。** rule 每轮都在上下文；skill 只有 name 与 description
-在，正文要被语义匹配命中才加载。
+## 从规则路由到可执行边界
 
-**二、失败先分类再决定问不问人。** 六类各有去向与重试上限（`when-to-stop`）：
-连不上先验事实、环境错误自修 2 次、契约不匹配回层 0、**假设被推翻算结果不算故障**、
-判据失效退回任务指标、都用尽才查中止清单。重试必须换做法，原样重跑不算一次。
+早期通过常驻 rule 路由 SELECT、DESIGN、EXECUTE 等步骤，再由 skill 定义具体做法。
+它提供了小步任务、失败分类与人工检查点，但仅靠文字要求不能保证命令受预算限制，
+也不能保证 agent 宣布完成前确实做了验证。
 
-**三、防漂移靠不变量，不靠提醒。** `task.md` 里有且只有一行 `🔬 doing`，一次改动属于它的唯一
-判据是「会让那行的验收检查点从不通过变成通过吗」。
+后续把可机械检查的条件移到 Harness：显式 runner、超时与预算、锁定 verifier、workspace
+fingerprint、pause 和 Plan Revision guard。常驻 rule 继续负责路由，确定性调度和准入检查
+由代码承担。详见 [最小 Harness](harness.md) 与 [渐进计划](planning-contract.md)。
 
-**四、计划先过 Human Review Gate。** plan document 先承载 human 意图，新 task 先标
-`📝 proposed`；批准前不进实验。无人值守时才按 KISS 自批准并标 `⚠️ unreviewed`。
+宿主仍拥有未交给 runner 的工具调用；enforced adapter 依赖可拦截完成事件的宿主 hook。
+持久化任务记录也不等于完整会话恢复，这些边界不能靠规则补齐。
 
-**五、计划按 evidence 渐进展开。** 一个 task 最多跨越一个未验证假设，只细化最近 1–2 项；
-每项变绿后重排。human 纠偏时 Harness 先 pause，plan revision 递增，再 RECONCILE `task.md`；
-plan review、task `rN` 与 runtime revision 一致后才能 resume。
+## 从执行结果到独立判断
 
+验证命令通过之后，还需要判断证据说明了什么，以及下一步是否值得做。worker / reviewer
+分工把执行与边界判断分开：配置 reviewer 时，在 plan 提交后给出准入意见，在 task 验证后
+核对证据并决定下一步。human 保留 Goal 与计划批准权。
 
-### 缺口
+相关依据与取舍集中在 [multi-agent 调研](multi_agent.md)。模型选择、review 调度和权限的
+当前定义归根目录设计，不在沿革中再维护一套。
 
-| 环节 | 现状 |
-|---|---|
-| OBSERVE | **没有独立节点**。实验类由 `experiment-design` 的 Phase 2/3 覆盖，重构 / 修 bug 类的产物无人要求落盘 |
-| VERIFY | ✅ 锁定 verifier 独立执行；工作树 fingerprint 防止验证后改码 |
-| 强制执行 | ⚠️ enforced adapter 能拒绝未验证的完成；未显式交给 runner 的 host tool call 仍由宿主管理 |
+## 从留下记录到可检索、可退役
 
+跨 session 工作既需要记住已有结论，也需要避免 task、实验日志和交接快照无限增长。
+因此形成了两条配套路径：
 
-## 三层分工
+- [Memory](memory.md)：在任务选择时检索，按可观察的转换写回，并维护有界索引。
+- [记录生命周期](experiment-record-lifecycle.md)：task / Goal 结束时合并结论、移出活跃工作集，保留证据指针和否定发现。
 
-| 层 | 职责 | 在本库是什么 |
-|---|---|---|
-| Agent | think / plan / execute / diagnose / replan | `agent-loop` 的路由 + 各格的 skill |
-| **Harness** | run / timeout / retry / rollback / checkpoint / persist state / capture logs / resource limits | `harness/` + stop hook；checkpoint 复用 git |
-| Verifier | 这件事真的做完了吗：实验回答了那个问题吗、指标动了吗、测试过了吗、证据够吗 | 锁定命令 + 输出契约 + fingerprint |
+[心跳](heartbeat.md) 则处理长任务观察：进程存在不等于有效进展，任务终态与日志变化需要分别判断。
 
+## 外部参照与保留的取舍
 
-### Harness 的边界
+[autoresearch](autoresearch.md) 提供了固定预算、明确项目指标、保留或丢弃改动的参照。
+它也强调失败记录应活过代码回滚。本库把这些思想放到有 Goal、review 和预算边界的通用项目循环里。
 
-| 能力 | 现状 |
-|---|---|
-| persist state | ✅ `task.md` + `.agent-loop/memory/` + `progress.md` |
-| capture logs | ✅ runner 记录有界 stdout/stderr、hash 与 `runs.jsonl` |
-| retry | ✅ Verify attempt 硬上限；repair 动作仍由 agent 选择，不原样自动重跑 |
-| resource limits | ✅ runner 的总 wall budget；其它 host tool call 不在边界内 |
-| timeout | ✅ runner 杀进程树；其它 host tool call 由宿主管理 |
-| mid-run human review | ✅ pause request 可中断 runner；Plan Revision gate 拒绝旧 task 恢复 |
-| run / rollback / checkpoint | ⚠️ run 已有；checkpoint / rollback 复用 git，不自动覆盖用户工作树 |
+早期还关注过 [ralph](https://github.com/chrismdp/ralph) 一类在 agent 尝试退出时检查完成条件、
+未完成则继续的循环方式。此处仅保留历史参考，不将其归为 Anthropic 官方方案。
 
+本库保留扁平 task 与渐进展开，不引入 task / hypothesis DAG；checkpoint / rollback 复用 git，
+不自动覆盖用户工作树。当前完整取舍见 [design.md](../design.md)。
 
-### Verifier
-
-验收检查点写成初始化时锁定的命令；Harness 独立执行并保存证据。`exit 0` 之外可配置
-`expect_regex` / `forbid_regex`，挡住「0 tests」这类假通过；验证后工作树变化会使证据失效。
-stop hook 对未验证状态返回 `followup_message`，预算耗尽时只续一轮 Auto-Stop Report。
-
-
-### 不做：task/hypothesis graph
-
-`task.md` 是扁平列表 + `blocked-by` 链，**链长 ≥ 2 就停下问人**——这个上限是刻意的，
-套两层说明最初的拆解不对。改成图会让嵌套变廉价，恰好鼓励了要防的那件事。
-
-假设之间的依赖也没复杂到需要遍历，`episodes.md` 的 `#disproved` 与 `#rejected` 两个扁平
-清单够用。等真被扁平结构卡住再说。
-
-
-
-## GPT Insights
-
-当前 agent-loop 是 task-centric agent, 而autoresearch 的关键是 evidence-centric agent.
-
-下一步升级可以考虑，从 `SELECT -> next task` 到 `SELECT -> next best action`，这个action 可以是 a new experiment, inspection, write code, memory retreival, replanning, or ask human 等。
-
-
-
-
-
-
-
-
-
-## 参考
-
-* [ralph](https://github.com/chrismdp/ralph)
-*
+更广的行业对照，以及独立 radar、项目验证和 RSI 的范围，集中在
+[业界实践与能力边界](industry-practices.md)。外部研究方向不自动成为本库的实现计划。
