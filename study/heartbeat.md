@@ -1,5 +1,7 @@
 # 心跳
 
+> [Study 索引](README.md) · 长任务观察专题；持久化与恢复的外部参照见 [业界实践](industry-practices.md)。
+
 > 2026-10 对照三份社区做法。执行契约在 [`skills/agent-heartbeat`](../skills/agent-heartbeat/SKILL.md)，这里只记取舍。
 
 ## 结论

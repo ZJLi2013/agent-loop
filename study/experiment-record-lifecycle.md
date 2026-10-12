@@ -1,5 +1,7 @@
 # 实验记录的生命周期
 
+> [Study 索引](README.md) · 记录收敛专题；当前 owner 与控制流以 [design.md](../design.md) 为准。
+
 > t9 于 2026-10-01 落地：Policy 定义完整生命周期；配置 reviewer 时，Harness 在有效决策落盘前
 > 自动归档 closed task，并拒绝没有关闭当前 task 的 reviewer 决策。
 
@@ -9,12 +11,12 @@
 task 关闭时把多轮实验提升为一个决策，旧记录转为 `promoted / superseded / archived`；只有仍会改变
 后续选择的结论留在活跃文档。行数上限只负责报警，不能代替生命周期。
 
-当前规则已经覆盖单轮写回和 memory 晋升，但没有统一规定实验、交接记录和已完成 task 何时退出
+改造前，规则已经覆盖单轮写回和 memory 晋升，但没有统一规定实验、交接记录和已完成 task 何时退出
 活跃工作集。结果是内容虽然下沉到 Experiment Log、sub-exp 或 memory，跨 session 仍持续增长。
 
 ## 改造前缺口
 
-现有 owner 分工基本正确：
+改造前的 owner 分工基本正确：
 
 - `experiment-design` 清理单轮草稿，把实验压成一行摘要；
 - `work-planning` 把关键 evidence 提升到 plan document 的「当前结论」；
@@ -23,7 +25,7 @@ task 关闭时把多轮实验提升为一个决策，旧记录转为 `promoted /
 
 缺的是这些对象的退役规则：
 
-| 对象 | 当前写法 | 缺口 |
+| 对象 | 改造前写法 | 缺口 |
 |---|---|---|
 | Experiment Log | 每轮追加一行 | task 关闭后仍全部留在活跃 plan |
 | sub-exp | 详细记录下沉 | 只移动体量，没有退出活跃索引 |

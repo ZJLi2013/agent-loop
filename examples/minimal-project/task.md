@@ -2,9 +2,9 @@
 
 ## Goal
 
-Demonstrate one reviewed task reaching independent verification.
+Fix the arithmetic mean without changing the empty-input contract.
 
 | P | id | rev | task | Acceptance checkpoint | Status | Failures |
 |---|---|---|---|---|---|---|
-| P0 | t1 | r1 | Verify the example | verifier exits 0 and evidence is fresh | 🔬 doing | 0 |
+| P0 | t1 | r1 | Fix fractional means ([plan](plan.md)) | both tests pass and evidence is fresh | 🔬 doing | 0 |
 

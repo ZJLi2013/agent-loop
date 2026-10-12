@@ -1,14 +1,17 @@
 # Minimal project
 
-Copy `task.md` to `.agent-loop/task.md` and use `plan.md` as the reviewed plan document.
+This fixture contains an intentionally incorrect arithmetic mean and two acceptance tests. Use the
+[quickstart](../../docs/quickstart.md) for the complete install, expected failure, repair, and verification walkthrough.
 
-```powershell
-mkdir .agent-loop
-copy examples\minimal-project\task.md .agent-loop\task.md
-agent-loop-harness init --task t1 --plan-doc plan.md `
-  -- python -c "print('verification passed')"
-agent-loop-harness verify
+From the agent-loop repository root:
+
+```sh
+python examples/minimal-project/prepare.py ../agent-loop-demo
+cd ../agent-loop-demo
 ```
 
-The `Plan Revision` in `plan.md`, task `rev`, and Harness runtime revision must match.
+`prepare.py` copies the code and reviewed plan, places the task at `.agent-loop/task.md`, and refuses to overwrite
+an existing directory. Work in this copy; keep the repository fixture failing so the installation smoke can test it.
 
+The fixture has matching plan revision `1` and task `r1`. Its pre-approved status applies only to this walkthrough.
+No model, API key, or reviewer is configured.

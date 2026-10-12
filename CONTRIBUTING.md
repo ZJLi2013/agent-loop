@@ -32,6 +32,15 @@ python -m unittest discover -s tests -v
 git diff --check
 ```
 
+For packaging or release changes, also run the isolated installation smoke:
+
+```shell
+python -m pip install build virtualenv
+python scripts/smoke-install.py
+```
+
+See [the release guide](docs/releasing.md) for full validation, host checks, and publication steps.
+
 The Windows installer can be smoke-tested in an isolated profile:
 
 ```powershell

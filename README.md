@@ -1,200 +1,103 @@
 # agent-loop
 
+[English](en.md) · [快速开始](docs/quickstart.md) · [使用指南](docs/usage.md) · [相关项目](docs/related-projects.md)
+
 [![tests](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml/badge.svg)](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-平台无关的 agent 控制环：**默认继续，但不允许未 review 的计划、旧 revision 或未验证证据继续驱动任务。**
+**让 coding agent 持续推进研究与工程项目：逐步规划、执行、验证，再根据证据决定下一步。**
+
+agent-loop 为现有 agent 提供项目级控制环。适合多轮实验、需要验证的工程改造，以及需要跨上下文
+接续的长任务。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer
+核对证据、提出下一步，方向变化时交回 human。
 
 ```text
-Goal → Plan → Human Review
-                   │
-                   ▼
-     ┌──► worker   ：Run → Verify（锁定 verifier）
-     │                     │ VERIFIED
-     │ continue            ▼
-     └─── reviewer ：读落盘证据 → 纠正结论 → 改写下一个 task
-                           │
-                           └─ ask_human / stop ─► human
-
-     human 纠偏随时可 pause；plan revision 不一致时拒绝继续
+Goal → Plan → Human Review → Execute → Verify → Review → next task / human / stop
+                                  ↑                        │
+                                  └──── approved next task ┘
 ```
 
-## worker + reviewer
+当前版本定位为 **0.1.0 early release**；发布状态以 [GitHub Releases](https://github.com/ZJLi2013/agent-loop/releases)
+为准。配置与状态格式仍可能演进，变更记录在 [CHANGELOG](CHANGELOG.md)。
 
-像实验室里的研究员和导师：研究员把实验做完、数据落盘；导师不看过程，只看数据，决定下一个实验做什么。
-导师拿不准方向时，才去找出资人（human）。
+## 它负责什么
 
-| 角色 | 推荐配置 | 在哪跑 | 负责 | 不做 |
-|---|---|---|---|---|
-| worker | Opus 5 | Cursor agent | 执行、自修、重试、跑 verifier | 给自己的下一步拍板 |
-| reviewer | gpt-6 | Codex CLI（经 WSL） | plan 准入意见；核对 task 结论并决定下一步 | 批准 plan、改代码、跑实验 |
-| 调度 | Harness 状态机 | verifier + reviewer runner + stop hook | 决定什么时候叫谁 | 任何判断 |
-| human | 项目 owner | — | 定 Goal、批 plan、回答 `ask_human` | — |
+- **渐进规划**：每次推进一个待验证假设，plan revision 防止旧任务继续驱动工作。
+- **执行与完成判据**：显式 runner 控制超时、预算和日志；锁定 verifier 验证项目结果，工作树变化会使证据失效。
+- **边界评审**：可选 reviewer 在计划提交与任务验证后运行；human 保留目标和计划批准权。
+- **跨轮接续**：项目 memory、当前交接和记录归档，让后续上下文找得到已有结论。
+- **长任务观察与人工检查点**：提供心跳 policy；可选 pager 将检查点送到手机。
 
-模型不写死，原则是 reviewer 强于 worker。reviewer 是项目里的一条命令，init 前写进
-`.agent-loop/reviewer.json`；不写这个文件，就是只有 worker 的单 agent 模式。`.harness/review/prompt.md`
-由 Harness 在每次 review 前按当前项目生成，不需要自己写；下面这份配置各项目通用：
+实验指标和测试由工作项目定义。agent-loop 不预设某个研究领域，也不要求固定模型搭配。
 
-```json
-{
-  "argv": ["wsl.exe", "--", "bash", "-lc",
-           "codex exec -s workspace-write 'Read .harness/review/prompt.md and follow it exactly.'"],
-  "timeout_seconds": 1800
-}
-```
+## 先跑通一次
 
-reviewer 只在两个边界运行：每个 Plan Revision 提交后、human 批准前给出一次准入意见；task
-通过 verifier 后核对证据、改写下一 task，并给出 `continue / ask_human / stop`。plan reviewer
-不能批准 plan；task reviewer 的决策落盘前，Harness 拒绝新命令和下一个 task。
-实验记录的一次修改、判据的一个版本或一轮讨论不单独触发 review。
-模型 CLI 的会话、日志和缓存目录也不属于 agent-loop 的项目状态。
+需要 Python 3.11+、pip 和 Git。以下从仓库根目录开始，PowerShell 与 Bash 均可执行；Linux 上
+若只有 `python3`，将 `python` 替换为 `python3`。可先激活自己的虚拟环境。
 
-## 人不在电脑前
-
-需要 human 的检查点可以经 [`tools/pager`](tools/pager/) 发到 Outlook 或飞书：plan 待批、
-reviewer 选 `ask_human`、reviewer 连续失败、预算用尽时，worker 运行
-`agent-loop-harness page` 并等待回复；reviewer 选 `stop` 时只发通知。
-
-回复 `OK` 批准当前检查点，`DO <文字>` 作为 human 纠偏交给 worker，`NO` / `STOP` 停下。
-飞书还支持直接输入自然语言。pager 不能唤醒已退出的 agent，所以电脑、网络和 agent 会话
-都要保持在线。
-
-- Outlook 安装与 Graph 配置：[`tools/pager/README.md`](tools/pager/README.md)
-- 飞书应用、长连接、smoke 与 Harness 配置：
-  [`tools/pager/docs/feishu.md`](tools/pager/docs/feishu.md)
-
-## 架构
-
-核心分三层：
-
-- **Stable Kernel**：状态、事件、转移和 guard；
-- **Policies**：planning、task、experiment、memory、stop；
-- **Adapters**：platform codecs、runner、verifier、git 与 execution journal。
-
-完整边界与扩展规则见 [`design.md`](design.md)。
-
-## 安装
-
-```powershell
+```sh
 git clone https://github.com/ZJLi2013/agent-loop.git
 cd agent-loop
-python -m pip install -e .
+python -m pip install .
+python examples/minimal-project/prepare.py ../agent-loop-demo
+cd ../agent-loop-demo
+agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
+agent-loop-harness verify
 ```
 
-核心 CLI 与项目 runtime 不依赖宿主。当前仓库另提供 Cursor enforced adapter：
+第一次验证**预期失败，退出码为 1**：示例把平均值错误地做了整数除法。完整的
+[快速开始](docs/quickstart.md) 会带你检查证据、完成 Goal Review、修复代码并重新验证。
+示例无需 API key、模型或 Cursor，也不会安装全局 hooks。
+
+这段命令跟随默认分支；已有 release 时，安装前可 `git checkout v0.1.0` 固定对应版本。
+完整使用通过仓库 checkout 分发，Python 包只安装 CLI 与 adapter 代码。
+
+## 接到日常工作
+
+CLI 跑通后，在 Windows + Cursor 下安装 enforced adapter（从仓库根目录执行）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-脚本幂等，将 rules、skills、Harness 与 Cursor codec 链接到 `~/.cursor/`。完成后重启 Cursor；
-仓库移动、skill 增删改名后重跑。
+安装器会创建 user-level junction 和 hooks，并将已有同名普通目录备份。保持仓库路径可用，
+重启 Cursor，并确保它能找到 `python`。hooks 会在宿主覆盖的 workspace 中执行本地代码；安装前
+阅读 [安全边界](SECURITY.md)。卸载使用 `scripts/uninstall-from-cursor.ps1`，备份需自行恢复。
 
-> Cursor adapter 会创建 user-level junction，并让本地 Python hook 在所有 workspace 运行。
-> 请先审阅并固定可信 commit；完整边界见 [`SECURITY.md`](SECURITY.md)。
+[使用指南](docs/usage.md) 包含新项目初始化、reviewer、暂停纠偏、memory、pager 和升级步骤。
 
-卸载只移除 agent-loop 自己的 links 与 hook entries，不删除备份：
+## 支持范围与边界
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
-```
-
-## 支持范围
-
-| Component | Status |
+| 部分 | v0.1 支持范围 |
 |---|---|
-| Platform-neutral Harness CLI | Python 3.11 / 3.13; Windows and Ubuntu CI tested |
-| Cursor enforced adapter | Windows + PowerShell 5.1 installer supported |
-| macOS/Linux installer | Roadmap；当前需手动 symlink |
+| Harness CLI | Python 3.11+；CI 配置覆盖 Windows / Ubuntu，Python 3.11 / 3.13 |
+| Cursor enforced adapter | Windows + PowerShell 5.1 安装器；依赖宿主 lifecycle hooks |
+| 其他宿主 | 可使用 portable CLI / policies；不承诺强制 completion gate |
+| macOS/Linux 宿主安装器 | 尚未提供；CLI 与宿主全局安装是两个层次 |
+| reviewer / pager | 可选命令与独立组件，需要额外配置 |
 
-## 新项目
+Harness 只硬控显式交给 runner 的命令，其余工具调用由宿主管理。pager 不能唤醒已退出的 agent；
+无人值守等待需要会话、电脑和网络在线。checkpoint / rollback 复用 git，不自动覆盖工作树。
 
-对于需要探索、实验或多轮决策的项目，建议先在项目中创建 `plan.md`，再使用 agent-loop；
-`plan.md` 记录 Goal、边界、当前结论与下一步决策，`.agent-loop/task.md` 只保存当前待执行的 task。
+## 与其他项目的关系
 
-初始化项目自己的 memory：
+[Ralph](https://github.com/snarktank/ralph) 围绕 PRD 条目循环执行，
+[autoresearch](https://github.com/karpathy/autoresearch) 围绕固定训练指标试验；agent-loop 聚焦
+跨研究与工程项目的计划、项目验证和边界评审。完整对照还包括 Aider、mini-swe-agent、
+OpenHands 和 LangGraph，见 [相关项目与选择依据](docs/related-projects.md)。这是一份用途对照，未做性能排名。
 
-```powershell
-mkdir .agent-loop\memory
-$agentLoopRepo = "C:\path\to\agent-loop"
-copy "$agentLoopRepo\skills\agent-memory\templates\*.md" .agent-loop\memory\
-```
+## 文档与贡献
 
-然后直接描述 Goal。agent 会：
-
-1. 先写一份 plan document 与最近 1–2 个 `📝 proposed` task；
-2. 配置 reviewer 时，每个 Plan Revision 先取得独立准入意见；
-3. 等待 `approve / revise / continue automatically`；批准时把当前 task 改为唯一的 `🔬 doing`；
-4. 每次只推进一个未验证假设；
-5. task 结束时回读完整 diff，精炼文档并清理一次性脚本；
-6. 用独立 verifier 验证最终 workspace。
-
-要启用 Harness，plan document 写：
-
-```text
-Plan Revision: 1
-Plan Review: proposed
-```
-
-`task.md` 的 `rev` 列绑定同一个 `r1`。配置 reviewer 时先运行 plan review；未配置时由 human
-直接审批。配置 reviewer 的 task 还必须从 `task.md` 链接项目内的设计文档：
-
-```powershell
-agent-loop-harness plan-review --plan-doc docs\plan.md
-# human 读 report 后把 Plan Review 改为 approved，并把当前 task 改为 🔬 doing
-agent-loop-harness init --task t1 --plan-doc docs\plan.md `
-  --timeout 300 --max-attempts 3 -- python -m pytest -q
-```
-
-运行中需要人工纠偏：
-
-```powershell
-agent-loop-harness pause --require-revision --reason "Goal changed"
-# 更新 plan revision / review 与 task rN
-agent-loop-harness resume
-```
-
-默认每 3 次 action、60 分钟、失败或 context compact 后触发 Goal Review；用
-`goal-review --decision continue|replan|stop --evidence "<结论>"` 处理。
-
-要让 reviewer 接管 plan 与 task 两个边界，plan review 前放好 `.agent-loop/reviewer.json`
-（见上文「worker + reviewer」）。
-
-最小可运行样例见 [`examples/minimal-project/`](examples/minimal-project/)。
-
-## 边界
-
-- Harness 只硬控显式交给 runner 的命令；其它 host tool call 仍由宿主管理。
-- Cursor conversation 首次成功读取 `.agent-loop/task.md` 时绑定该项目；STOP 与 preCompact
-  只处理该绑定，避免同一 workspace 中多个 session 相互暂停或阻塞。
-- detach 作业仍属于启动它的 task；远端脚本不得跨 task 串联，successor 必须等 verifier 与 reviewer。
-- `task.md` 只保存 active backlog；closed task 与旧交接点归档到 `.agent-loop/archive/`，不默认加载。
-- `.harness/` 只存有界 runtime evidence。
-- `.agent-loop/task.md` 与 `.agent-loop/memory/` 是项目本地 runtime；旧 `.cursor/` 路径只读兼容，
-  下一次维护 memory 时整体迁移，不双写。
-- checkpoint / rollback 复用 git，不自动覆盖用户工作树。
-- 没有 lifecycle hooks 的宿主属于 portable mode，不能强制 completion gate；外部进程掌握 agent
-  生命周期时可评估 [BOUND](https://github.com/Danny-de-bree/bound)。
-
-## 文档
-
-| 文档 | 内容 |
+| 想做什么 | 入口 |
 |---|---|
-| [`design.md`](design.md) | 当前架构、状态机、归属与扩展规则 |
-| [`study/harness.md`](study/harness.md) | runner、journal、Verifier 与边界 |
-| [`study/planning-contract.md`](study/planning-contract.md) | 渐进计划、review 与人工纠偏 |
-| [`study/memory.md`](study/memory.md) | facts / episodes / lessons 的检索设计 |
-| [`study/experiment-record-lifecycle.md`](study/experiment-record-lifecycle.md) | 实验、task、交接与 memory 的退役规则 |
-| [`study/multi_agent.md`](study/multi_agent.md) | 现有 multi-agent loop 对比与 worker / reviewer 分工 |
-| [`study/heartbeat.md`](study/heartbeat.md) | 心跳取了哪三条社区做法、哪几条没取 |
-| [`case_study/robojev-nox.md`](case_study/robojev-nox.md) | 一天 11 个 task 边界的跨模型纠偏记录 |
-| [`case_study/agent-loop-record-growth.md`](case_study/agent-loop-record-growth.md) | agent-loop 自身跨 session 的记录增长与迁移 |
-| [`case_study/wmforge-r8-chained-tasks.md`](case_study/wmforge-r8-chained-tasks.md) | 自动串联让 task 跳过设计与评审：漏洞链与通用修复 |
-| [`skills/README.md`](skills/README.md) | Policy 索引与唯一 owner |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | 贡献流程、新 feature 准入与测试 |
-| [`AI_POLICY.md`](AI_POLICY.md) | AI-assisted contribution 披露 |
-| [`SECURITY.md`](SECURITY.md) | 安全边界与私密报告渠道 |
-| [`CHANGELOG.md`](CHANGELOG.md) | 用户可感知变化 |
-| [`ROADMAP.md`](ROADMAP.md) | Now / Next / Later |
+| 安装并体验失败到通过 | [Quickstart](docs/quickstart.md) |
+| 在工作项目中使用 | [Usage](docs/usage.md) |
+| 理解架构与扩展边界 | [design.md](design.md) · [Policies](skills/README.md) |
+| 阅读调研与实际案例 | [Study 地图](study/README.md) · [案例索引](case_study/README.md) |
+| 查看版本与发布流程 | [Changelog](CHANGELOG.md) · [v0.1.0 notes](docs/releases/v0.1.0.md) · [Release guide](docs/releasing.md) |
+| 报告问题或贡献 | [Issues](https://github.com/ZJLi2013/agent-loop/issues) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) |
 
-Apache-2.0 licensed. Security issues must use private vulnerability reporting, not public Issues.
+欢迎提供安装失败、宿主版本兼容、错误完成判断、重复劳动和 review 开销的最小复现。
+AI 辅助贡献需遵循 [AI_POLICY.md](AI_POLICY.md)。漏洞请走 [私密报告渠道](SECURITY.md)，不要发公开 Issue。
+
+Apache-2.0，见 [LICENSE](LICENSE)。
