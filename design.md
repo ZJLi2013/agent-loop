@@ -23,6 +23,8 @@ adapter 还是确实需要扩展 kernel。
 后调用，并只报告会改变 `continue / ask_human / stop` 或下一条命令的问题。
 固定时间与文件修改 review 不采用——它们没有稳定的决策边界。
 Codex、Cursor 等宿主的会话与缓存目录不属于项目状态，也不进入 agent-loop 的生命周期。
+上下文与 token 按决策需要花，不按完整性花：常驻面只放路由与当前状态，已关闭记录退出活跃面，
+reviewer 只读列出的判据与直接链接的证据，够下结论即停。
 
 ## 下一步决策
 
@@ -174,6 +176,10 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 每个 Plan Revision 提交后先运行 plan reviewer，再由 human 决定 `approve / revise / stop`。
 report 以 plan identity + revision 去重；reviewer 只有建议权。init、resume、pager 和无人值守
 `unreviewed` 都要求有效 report。
+
+reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
+`archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、
+plan / task / 设计文档直接链接的文件与设计列出的被测代码；缺了就报缺失，不自行搜索。
 
 task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。reviewer 选中的 successor
 保持 `📝 proposed`，human 或无人值守 policy 明确批准为 `🔬 doing` 后才能初始化。

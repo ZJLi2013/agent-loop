@@ -9,6 +9,10 @@ All notable user-facing changes are documented here. This project follows Semant
 - A task-boundary review decision is valid only after the closed task's headed sections leave the active plan
   document; the reviewer moves them to a sibling `<plan>-archive.md`, and a failed re-review can no longer fall
   back to the previous decision while those sections remain.
+- Both reviewers take criteria only from the Goal, the listed repo checklist and checklists the design links;
+  `archive/` content is history, not a criterion. Evidence is limited to the listed inputs, files the plan,
+  task list or design links directly, and the code under test the design names; reviewers report missing
+  evidence instead of searching and stop reading once they can decide.
 
 ## [0.1.0] - 2026-10-12
 
