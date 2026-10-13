@@ -4,6 +4,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+### Added
+
+- On-demand `research-to-paper` skill: an arXiv-style paper and an optional 5–15 s teaser from a closed research
+Goal, with every number traced to the experiment records. Usage documents how to invoke on-demand skills.
+
 ### Changed
 
 - After the task reviewer chooses `ask_human` or `stop`, `init` starts the next task once the plan is at a newer

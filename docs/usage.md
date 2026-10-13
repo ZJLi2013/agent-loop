@@ -135,6 +135,19 @@ The pager is a separate package. Follow [tools/pager](../tools/pager/README.md) 
 Plan approval, reviewer escalation, repeated review failure, and budget exhaustion can be paged to a human.
 The worker must remain running to wait for a reply; pager cannot restart an exited agent.
 
+## Optional on-demand skills
+
+Skills outside the loop load only when named: type `/<skill-name>` in Cursor chat followed by the request,
+or name the skill in the message. The list is under *Explicit / cold policies* in [Policies](../skills/README.md).
+For example, to turn a closed research Goal into an arXiv-style paper and a short teaser:
+
+```text
+/research-to-paper Write wm_forge's conclusions as an arXiv paper, then make a 10 s teaser.
+```
+
+The sync script links these skills into Cursor only. Codex does not see them; point it at
+`skills/<skill-name>/SKILL.md` in the agent-loop checkout instead.
+
 ## Upgrade and uninstall
 
 Before changing the harness version, finish or pause active work, inspect the changelog, and preserve the

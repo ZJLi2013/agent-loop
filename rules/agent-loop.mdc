@@ -65,5 +65,5 @@ user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时
 ## 环外能力
 
 只有 user 点名才读：审 diff / PR → `code-review`；提上游 → `upstream-contribute`；
-写对外文章 → `research-to-blog`；画 kernel 数据流图 → `code-to-kernel-diagram`；
-远端执行 → `remote-exec`。
+写对外文章 → `research-to-blog`；写 arXiv 稿 / 宣传短片 → `research-to-paper`；
+画 kernel 数据流图 → `code-to-kernel-diagram`；远端执行 → `remote-exec`。
