@@ -30,6 +30,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 - `code-to-kernel-diagram`：模块到 kernel 数据流。
 - `upstream-contribute`：上游 PR / Issue 判断与正文。
 - `research-to-blog`：调研到对外文章。
+- `research-to-paper`：实验到 arXiv 稿，可选 5–15 s 短片（onetake）。
 - `gen-ppt`：16:9 PPT 生成 / 改版（`python-pptx`）。用户已有配色时跟用户的，否则用默认样式。
 
 ## Ownership

@@ -74,6 +74,7 @@ also exercises stale-evidence rejection and reverification.
 
 Read [Usage](usage.md) to install the Windows Cursor adapter and initialize your own reviewed plan.
 The CLI alone does not start an agent session or enforce a host's stop behavior.
+On-demand skills such as `/research-to-paper` are listed in Usage under *Optional on-demand skills*.
 
 The demo is disposable and has no global hooks. Uninstall the CLI with `python -m pip uninstall agent-loop`.
 If you also installed the Cursor adapter, follow the separate uninstall instructions in Usage.
