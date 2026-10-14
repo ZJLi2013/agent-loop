@@ -25,6 +25,8 @@ Goal, with every number traced to the experiment records. Usage documents how to
   with `revise` 3 times in a row or 3 revisions were reviewed since the last `exec` / `verify` run.
 - Reviewer prompts live in `harness/prompts/plan_review.md` and `harness/prompts/task_review.md` and ship with
   the wheel; rendered prompts are unchanged.
+- Usage recommends an editable CLI install for Cursor enforced mode, so the CLI and the linked hooks run the
+  same checkout. `sync-to-cursor.ps1` warns when the CLI is not installed from that checkout.
 
 ## [0.1.0] - 2026-10-12
 
