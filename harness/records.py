@@ -56,6 +56,21 @@ def archived_task_ids(root: Path) -> set[str]:
     }
 
 
+def open_task_ids(root: Path, revision: int) -> list[str]:
+    path = task_file(root)
+    if not path.exists():
+        return []
+    return [
+        task_id
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if (task_id := _task_id(line))
+        and (cells := _cells(line))
+        and len(cells) >= 6
+        and cells[2] == f"r{revision}"
+        and not _closed(line)
+    ]
+
+
 def active_task_status(root: Path, task_id: str) -> str | None:
     path = task_file(root)
     if not path.exists():

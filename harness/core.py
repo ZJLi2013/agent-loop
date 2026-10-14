@@ -168,7 +168,9 @@ def initialize(
                 f"task {task_id} binds r{task_revision}, plan is r{revision}"
             )
         if reviewer:
-            ready, reason = plan_review_ready(root, plan_doc, revision)
+            ready, reason = plan_review_ready(
+                root, plan_doc, revision, review=review, task_id=task_id
+            )
             if not ready:
                 if review == "approved":
                     raise HarnessError(

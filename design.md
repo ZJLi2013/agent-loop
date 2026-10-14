@@ -175,7 +175,11 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 
 每个 Plan Revision 提交后先运行 plan reviewer，再由 human 决定 `approve / revise / stop`。
 report 以 plan identity + revision 去重；reviewer 只有建议权。init、resume、pager 和无人值守
-`unreviewed` 都要求有效 report。
+`unreviewed` 都要求有效 report。human waiver（`plan-review --waive`）也是有效记录：只有当前 revision
+的每个未关闭 task 都已被更早的 reviewer 记录覆盖时才能写入，且要 `approved`，`unreviewed` 不认。
+连续 revise 或无实验的 revision 达到 3 时，Harness 不再为下一 revision 跑 reviewer，直到 human 选择继续重审
+（`--continue --reason`，记录 `brake_ack`）、带意见批准（waiver）或停；ack 与 waiver 让两条计数重新开始。
+它拦的是下一轮重审，不拦 human 批准。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、
