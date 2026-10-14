@@ -138,4 +138,14 @@ Write-Host "`n--- Verify ---" -ForegroundColor Cyan
 Get-ChildItem $skillsDest -Force | Where-Object { $_.LinkType -eq 'Junction' } | ForEach-Object {
     "{0,-26} target-exists={1}" -f $_.Name, (Test-Path ($_.Target -join ''))
 }
+# hook 从 ~/.cursor/harness 导入，工作项目里的 CLI 只能靠 pip 安装；在 TEMP 里查，避免当前目录遮蔽。
+Push-Location $env:TEMP
+$cli = if (Get-Command python -ErrorAction SilentlyContinue) {
+    python -c "import importlib.util as u; s = u.find_spec('harness'); print(s.origin if s else '')"
+}
+Pop-Location
+"CLI harness = $cli   (必须在 $repo\harness 下)"
+if ($cli -notlike "$repo\harness\*") {
+    Write-Host "工作项目里调不到本 checkout 的 CLI：在 $repo 运行 python -m pip install -e ." -ForegroundColor Yellow
+}
 Write-Host "`nCursor 重启后生效。" -ForegroundColor Cyan

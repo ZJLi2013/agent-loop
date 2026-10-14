@@ -4,8 +4,10 @@
 
 ## Install and choose a mode
 
-Install the CLI from a repository checkout with `python -m pip install .`. Use `python -m pip install -e .`
-only when developing the harness itself. Keep your working project separate from the agent-loop checkout.
+Install the CLI from a repository checkout with `python -m pip install .`. For Cursor enforced mode use
+`python -m pip install -e .` instead: the installer links the hooks to the checkout, and an editable install
+keeps the CLI on the same code after a branch switch or pull. Keep your working project separate from the
+agent-loop checkout.
 
 | Mode | What you get |
 |---|---|
@@ -154,7 +156,7 @@ Before changing the harness version, finish or pause active work, inspect the ch
 working project's state and evidence. For v0.1, finish active tasks before switching versions when no explicit
 migration instructions exist; do not assume arbitrary runtime schemas can be resumed across releases.
 
-In the harness checkout, fetch tags, check out the selected version, reinstall with `python -m pip install .`,
+In the harness checkout, fetch tags, check out the selected version, reinstall with the same `pip install` command,
 and rerun the Cursor sync script after directory/skill changes. Restart Cursor. Its junctions reference the
 checkout directly, so changing branches also changes the code and policies used by the hooks.
 
