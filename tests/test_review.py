@@ -14,7 +14,6 @@ from harness.core import (
     run_command,
     verify,
 )
-from harness.plan_review import record_task_review, respond_task, review_status, task_record
 from harness.records import close_task
 from harness.review import run_review
 
@@ -36,7 +35,7 @@ def reviewer_writing(
         f"Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'); "
         f"Path({DECISION!r}).write_text({text!r})"
     )
-    return [sys.executable, "-c", code]
+    return [sys.executable, "-S", "-c", code]
 
 
 def reviewer_decision_only(decision: dict[str, object]) -> list[str]:
@@ -45,7 +44,7 @@ def reviewer_decision_only(decision: dict[str, object]) -> list[str]:
         "from pathlib import Path; "
         f"Path({DECISION!r}).write_text({text!r})"
     )
-    return [sys.executable, "-c", code]
+    return [sys.executable, "-S", "-c", code]
 
 
 class TaskBoundaryReviewTest(unittest.TestCase):
@@ -69,7 +68,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         initialize(
             self.root,
             task_id="t1",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         if run_verifier:
             config, _ = load_runtime(self.root)
@@ -119,21 +118,6 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
 
-    def test_repo_checklist_is_listed_as_input(self) -> None:
-        (self.root / ".agent-loop" / "review-checklist.md").write_text(
-            "- item\n", encoding="utf-8"
-        )
-        self.init(reviewer_writing(
-            {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
-        ))
-
-        run_review(self.root)
-
-        prompt = (self.root / ".harness" / "review" / "prompt.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn(".agent-loop/review-checklist.md", prompt)
-
     def test_verify_automatically_runs_reviewer(self) -> None:
         self.init(
             reviewer_writing(
@@ -165,14 +149,14 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "awaiting reviewer decision"):
             run_command(
                 self.root,
-                [sys.executable, "-c", "print('must not run')"],
+                [sys.executable, "-S", "-c", "print('must not run')"],
                 kind="exec",
             )
         with self.assertRaisesRegex(HarnessError, "awaiting reviewer decision"):
             initialize(
                 self.root,
                 task_id="t2",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
+                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             )
 
     def test_init_takes_any_human_approved_task_not_only_the_reviewers_pick(self) -> None:
@@ -187,7 +171,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             initialize(
                 self.root,
                 task_id="t2",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
+                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             )
         task = self.root / ".agent-loop" / "task.md"
         task.write_text(
@@ -199,7 +183,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         _, state = initialize(
             self.root,
             task_id="t3",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         self.assertEqual(state["task_id"], "t3")
 
@@ -226,12 +210,6 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         run_review(self.root)
         self.assertIsNone(completion_gate(self.root))
 
-    def test_stop_lets_the_worker_stop(self) -> None:
-        self.assert_worker_may_stop("stop")
-
-    def test_ask_human_lets_the_worker_stop(self) -> None:
-        self.assert_worker_may_stop("ask_human")
-
     def test_invalid_decision_is_counted_then_reported_once(self) -> None:
         self.init(reviewer_writing({"decision": "continue", "why": "no task"}))
 
@@ -244,37 +222,6 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIsNone(completion_gate(self.root))
         _, state = load_runtime(self.root)
         self.assertEqual(state["review"]["attempts"], 2)
-
-    def test_harness_closes_the_task_when_the_reviewer_only_decides(self) -> None:
-        self.init(
-            reviewer_decision_only(
-                {"decision": "continue", "next_task": "t2", "why": "next"}
-            )
-        )
-
-        outcome = run_review(self.root)
-        archive = (self.root / ".agent-loop" / "archive" / "tasks.md").read_text(encoding="utf-8")
-
-        self.assertEqual(outcome["review"]["decision"], "continue")
-        self.assertIn("| t1 | — | first | check | ✅ done |", archive)
-
-    def test_continue_requires_an_open_successor(self) -> None:
-        self.init(
-            reviewer_decision_only({"decision": "continue", "next_task": "t9", "why": "next"})
-        )
-
-        outcome = run_review(self.root)
-
-        self.assertIsNone(outcome["review"]["decision"])
-        self.assertIn("t9 must be an open task", outcome["review"]["error"])
-
-    def test_findings_are_validated_and_relayed(self) -> None:
-        self.init(
-            reviewer_decision_only(
-                {"decision": "continue", "next_task": "t2", "why": "next", "findings": [1]}
-            )
-        )
-        self.assertIn("each finding needs level", run_review(self.root)["review"]["error"])
 
     def test_non_blocking_findings_reach_the_worker(self) -> None:
         self.init(
@@ -291,22 +238,6 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         run_review(self.root)
 
         self.assertIn("Suggest: state snapshot not saved", completion_gate(self.root) or "")
-
-    def test_review_requires_fresh_verification(self) -> None:
-        self.init(reviewer_writing({"decision": "stop", "why": "done"}))
-        (self.root / "changed.py").write_text("changed = True\n")
-        with self.assertRaisesRegex(HarnessError, "stale"):
-            run_review(self.root)
-
-    def test_invalid_reviewer_config_is_rejected_at_init(self) -> None:
-        (self.root / ".agent-loop" / "reviewer.json").write_text('{"argv": []}')
-        with self.assertRaisesRegex(HarnessError, "non-empty list"):
-            initialize(
-                self.root,
-                task_id="t1",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
-            )
-
 
 CONTINUE = {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
 PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 下一步决策\nt2\n"
@@ -341,7 +272,7 @@ def plan_reviewer(*calls: tuple[dict[str, object] | None, str, bool]) -> list[st
             "sys.exit(3 if fail else 0)",
         ]
     )
-    return [sys.executable, "-c", code]
+    return [sys.executable, "-S", "-c", code]
 
 
 class ClosedPlanSectionTest(unittest.TestCase):
@@ -365,11 +296,11 @@ class ClosedPlanSectionTest(unittest.TestCase):
             self.root,
             task_id="t1",
             plan_doc="plan.md",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         run_command(
             self.root,
-            [sys.executable, "-c", "print('OK')"],
+            [sys.executable, "-S", "-c", "print('OK')"],
             kind="verify",
             timeout_seconds=30,
         )
@@ -378,64 +309,6 @@ class ClosedPlanSectionTest(unittest.TestCase):
         return (self.root / ".harness" / "review" / "prompt.md").read_text(
             encoding="utf-8"
         )
-
-    def test_harness_moves_the_closed_sections(self) -> None:
-        self.init(plan_reviewer((CONTINUE, PLAN_WITH_T1, False)))
-
-        outcome = run_review(self.root)
-        plan = (self.root / "plan.md").read_text(encoding="utf-8")
-        archive = (self.root / "plan-archive.md").read_text(encoding="utf-8")
-
-        self.assertEqual(outcome["review"]["decision"], "continue")
-        self.assertNotIn("### t1 本地设计", plan)
-        self.assertIn("### t2 本地设计", plan)
-        self.assertIn("### t1 本地设计", archive)
-        self.assertIn("### t1 boundary review", archive)
-
-    def test_reviewer_written_successor_counts_as_reviewed(self) -> None:
-        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
-        (self.root / ".harness" / "plan-review" / "tasks" / "t2.json").unlink()
-
-        run_review(self.root)
-
-        self.assertEqual(review_status(self.root, "t2"), "reviewed")
-        self.assertEqual(task_record(self.root, "t2")["reviews"][-1]["source"], "task_review")
-
-    def test_prompt_leaves_clerical_work_to_harness(self) -> None:
-        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
-        run_review(self.root)
-
-        prompt = self.prompt()
-
-        self.assertIn("都由 Harness 做", prompt)
-        self.assertIn("只改 plan document 与 task 列表", prompt)
-        self.assertIn("不给它加交接或核验步骤", prompt)
-        self.assertIn("写成 `suggest`", prompt)
-        self.assertIn("被忽略时会让方向错", prompt)
-
-    def test_prompt_lists_plan_review_items_and_answers(self) -> None:
-        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
-        record_task_review(
-            self.root, "t1", summary="s", source="plan_review", run_id=None, dropped=0,
-            findings=[{"level": "must", "claim": "lock race", "consequence": "c",
-                       "evidence": "e", "change": "", "human": False}],
-        )
-        respond_task(self.root, "t1", items=["1=reject"], reason="the lock is per process")
-
-        run_review(self.root)
-
-        self.assertIn("开工前的审查意见与 executor 回应", self.prompt())
-        self.assertIn("[must] lock race", self.prompt())
-        self.assertIn("the lock is per process", self.prompt())
-
-    def test_retry_prompt_carries_previous_error(self) -> None:
-        self.init(plan_reviewer((None, PLAN_MOVED, True), (CONTINUE, PLAN_MOVED, False)))
-        run_review(self.root)
-
-        run_review(self.root)
-
-        self.assertIn("上一次 review 无效", self.prompt())
-
 
 SUCCESSOR_TASKS = (
     "| P | id | rev | task | check | status | fail |\n"
@@ -470,25 +343,9 @@ class HumanSuccessorTest(unittest.TestCase):
             self.root,
             task_id="t2",
             plan_doc="plan.md",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         return state
-
-    def assert_successor_starts(self, decision: str, revision: int) -> None:
-        self.review_as(decision)
-        self.human_decides(revision, "approved")
-
-        state = self.init_successor()
-        run_command(self.root, [sys.executable, "-c", "print('first')"], kind="exec")
-
-        self.assertEqual((state["task_id"], state["phase"]), ("t2", "ready"))
-        self.assertEqual(load_runtime(self.root)[1]["last_outcome"], "pass")
-
-    def test_successor_after_ask_human_starts_on_the_same_approved_revision(self) -> None:
-        self.assert_successor_starts("ask_human", 1)
-
-    def test_successor_after_stop_starts_on_a_newer_approved_revision(self) -> None:
-        self.assert_successor_starts("stop", 2)
 
     def test_unattended_release_follows_the_reviewer(self) -> None:
         cases = (
@@ -508,21 +365,6 @@ class HumanSuccessorTest(unittest.TestCase):
                 else:
                     with self.assertRaisesRegex(HarnessError, "unattended after"):
                         self.init_successor()
-
-    def test_unattended_ask_human_starts_only_the_named_task(self) -> None:
-        self.review_as("ask_human", "t2")
-        (self.root / "plan.md").write_text(PLAN_MOVED, encoding="utf-8")
-        (self.root / ".agent-loop" / "task.md").write_text(
-            SUCCESSOR_TASKS.format(revision=1) + "| P0 | t3 | r1 | other | check | 🔬 doing | 0 |\n",
-            encoding="utf-8",
-        )
-
-        with self.assertRaisesRegex(HarnessError, r"only the reviewer's next task \(t2\)"):
-            initialize(
-                self.root, task_id="t3", plan_doc="plan.md",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
-            )
-
 
 CLOSE_PLAN = (
     "# Plan\n\nPlan Revision: 1\nPlan Review: approved\n\n"

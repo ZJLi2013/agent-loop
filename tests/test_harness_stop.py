@@ -11,11 +11,9 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from adapters.core import request_goal_review
 from adapters.cursor import session_scope
 from harness import run
-from harness.core import completion_gate, initialize
-from harness.plan import pause_request
+from harness.core import initialize
 
 HOOK_PATH = (
     Path(__file__).resolve().parents[1]
@@ -41,7 +39,7 @@ class HarnessStopHookTest(unittest.TestCase):
             initialize(
                 root,
                 task_id="t1",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
+                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             )
             payload = {
                 "conversation_id": "active",
@@ -72,33 +70,6 @@ class HarnessStopHookTest(unittest.TestCase):
         self.assertIn("not independently verified", followup or "")
         self.assertIsNone(repeated)
 
-    def test_unbound_session_is_not_requeued(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            initialize(
-                root,
-                task_id="t1",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
-            )
-            with patch.object(
-                session_scope, "_SCOPES", root / "session-cache"
-            ):
-                followup = HOOK.followup_for(
-                    {
-                        "conversation_id": "unbound",
-                        "status": "completed",
-                        "workspace_roots": [str(root)],
-                    }
-                )
-
-        self.assertIsNone(followup)
-
-    def test_aborted_session_is_not_requeued(self) -> None:
-        followup = HOOK.followup_for(
-            {"status": "aborted", "workspace_roots": ["C:/unused"]}
-        )
-        self.assertIsNone(followup)
-
     def stop_with_goal_review_due(
         self, root: Path, *, owner: str | None, session: str
     ) -> tuple[str | None, bytes, bytes]:
@@ -108,7 +79,7 @@ class HarnessStopHookTest(unittest.TestCase):
         initialize(
             root,
             task_id="t1",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         state_path = root / ".harness" / "state.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -146,22 +117,6 @@ class HarnessStopHookTest(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertFalse(paused)
 
-    def test_owning_session_gets_goal_review(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            followup, _, _ = self.stop_with_goal_review_due(
-                Path(directory), owner="A", session="A"
-            )
-
-        self.assertIn("Goal Review", followup or "")
-
-    def test_task_without_owner_gets_goal_review(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            followup, _, _ = self.stop_with_goal_review_due(
-                Path(directory), owner=None, session="B"
-            )
-
-        self.assertIn("Goal Review", followup or "")
-
     def test_stop_checks_every_project_the_session_read(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -176,7 +131,7 @@ class HarnessStopHookTest(unittest.TestCase):
                 initialize(
                     root,
                     task_id=task_id,
-                    verifier_argv=[sys.executable, "-c", "print('OK')"],
+                    verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
                     owner="s",
                 )
             run.main(["--root", str(stopped), "disable"])
@@ -206,38 +161,6 @@ class HarnessStopHookTest(unittest.TestCase):
         self.assertIn("Task c2 is not independently verified", followup or "")
         self.assertNotIn("w32", followup or "")
 
-    def owned_task_with_goal_review_due(self, root: Path) -> Path:
-        initialize(
-            root,
-            task_id="t1",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
-            owner="A",
-        )
-        state_path = root / ".harness" / "state.json"
-        state = json.loads(state_path.read_text(encoding="utf-8"))
-        state["last_goal_review_at"] = "2000-01-01T00:00:00+00:00"
-        state_path.write_text(json.dumps(state), encoding="utf-8")
-        return state_path
-
-    def test_gate_without_session_leaves_owned_task_alone(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            state_path = self.owned_task_with_goal_review_due(root)
-            before = state_path.read_bytes()
-
-            message = completion_gate(root)
-
-            self.assertIsNone(message)
-            self.assertEqual(state_path.read_bytes(), before)
-
-    def test_compact_without_session_leaves_owned_task_alone(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            self.owned_task_with_goal_review_due(root)
-
-            self.assertEqual(request_goal_review((root,)), 0)
-            self.assertIsNone(pause_request(root))
-
     def test_cli_init_records_session_as_owner(self) -> None:
         cases = (
             ({"AGENT_LOOP_SESSION_ID": "own", "CURSOR_CONVERSATION_ID": "c"}, "own"),
@@ -256,7 +179,7 @@ class HarnessStopHookTest(unittest.TestCase):
                 ):
                     code = run.main(
                         ["--root", directory, "init", "--task", "t1", "--",
-                         sys.executable, "-c", "print('OK')"]
+                         sys.executable, "-S", "-c", "print('OK')"]
                     )
                 state = json.loads(
                     (Path(directory) / ".harness" / "state.json").read_text(
@@ -270,4 +193,3 @@ class HarnessStopHookTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

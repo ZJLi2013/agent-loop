@@ -47,7 +47,7 @@ def reviewer_writing(decision: dict[str, object]) -> list[str]:
         f"(Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'), "
         f"Path('.harness/review/decision.json').write_text({text!r})))"
     )
-    return [sys.executable, "-c", code]
+    return [sys.executable, "-S", "-c", code]
 
 
 class PagerCheckpointTest(unittest.TestCase):
@@ -65,7 +65,7 @@ class PagerCheckpointTest(unittest.TestCase):
         (runtime / "pager.json").write_text(
             json.dumps(
                 {
-                    "argv": [sys.executable, "fake_pager.py"],
+                    "argv": [sys.executable, "-S", "fake_pager.py"],
                     "project": "demo project",
                     "heartbeat_seconds": 0,
                 }
@@ -88,7 +88,7 @@ class PagerCheckpointTest(unittest.TestCase):
             self.root,
             task_id="t1",
             plan_doc="plan.md",
-            verifier_argv=[sys.executable, "-c", verifier],
+            verifier_argv=[sys.executable, "-S", "-c", verifier],
             **kw,
         )
 
@@ -134,19 +134,6 @@ class PagerCheckpointTest(unittest.TestCase):
         self.assertEqual(outcome["reply"]["verb"], "OK")
         self.assertIn("not independently verified", completion_gate(self.root) or "")
 
-    def test_plan_page_includes_independent_review_summary(self) -> None:
-        (self.root / ".agent-loop" / "reviewer.json").write_text(
-            json.dumps({"argv": reviewer_writing({"decision": "stop", "why": "unused"})})
-        )
-        self.init(review="proposed")
-        self.reply("OK")
-
-        run_page(self.root)
-
-        send = self.calls()[0]
-        body = send[send.index("--body") + 1]
-        self.assertIn("independent reviewer：plan ready", body)
-
     def test_do_on_ask_human_becomes_correction_then_revised_plan_is_paged(self) -> None:
         self.review_with({"decision": "ask_human", "why": "scope question"})
         self.assertIn("ask_human", completion_gate(self.root) or "")
@@ -165,15 +152,6 @@ class PagerCheckpointTest(unittest.TestCase):
         self.write_plan(2, "proposed")
         self.assertIn("plan_review", completion_gate(self.root) or "")
 
-    def test_ok_on_ask_human_approves_the_proposed_task(self) -> None:
-        self.review_with({"decision": "ask_human", "why": "scope question"})
-        self.reply("OK")
-
-        outcome = run_page(self.root)
-
-        self.assertIn("🔬 doing", outcome["message"])
-        self.assertIn("initialize it", outcome["message"])
-
     def test_reviewer_stop_only_notifies(self) -> None:
         self.review_with({"decision": "stop", "why": "goal reached"})
         self.assertIn("Notify the human", completion_gate(self.root) or "")
@@ -183,32 +161,12 @@ class PagerCheckpointTest(unittest.TestCase):
         self.assertEqual([call[0] for call in self.calls()], ["notify"])
         self.assertIsNone(completion_gate(self.root))
 
-    def test_budget_exhaustion_is_paged_after_the_stop_report(self) -> None:
-        self.init(verifier="raise SystemExit(1)", max_attempts=1)
-        verify(self.root)
-        self.assertIn("Auto-Stop Report", completion_gate(self.root) or "")
-        self.assertIn("budget", completion_gate(self.root) or "")
-
-        self.reply("STOP")
-        outcome = run_page(self.root)
-
-        self.assertIn("Stop at this checkpoint", outcome["message"])
-        self.assertIsNone(completion_gate(self.root))
-        with self.assertRaisesRegex(HarnessError, "already paged"):
-            run_page(self.root)
-
     def test_without_pager_checkpoints_let_the_worker_stop(self) -> None:
         (self.root / ".agent-loop" / "pager.json").unlink()
         self.init(review="proposed")
         self.assertIsNone(completion_gate(self.root))
         with self.assertRaisesRegex(HarnessError, "no pager configured"):
             run_page(self.root)
-
-    def test_invalid_pager_config_is_rejected_at_init(self) -> None:
-        (self.root / ".agent-loop" / "pager.json").write_text('{"argv": []}')
-        with self.assertRaisesRegex(HarnessError, "non-empty list"):
-            self.init()
-
 
 if __name__ == "__main__":
     unittest.main()

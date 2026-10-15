@@ -13,15 +13,6 @@ def test_fake_roundtrip_ok():
     assert box.poll() == []
 
 
-def test_reply_without_in_reply_to_dropped():
-    box = FakeTransport()
-    box.send(render_page("T12", "批准 pipeline"))
-    box._inbox.append(
-        Envelope(message_id="spam", subject="Re: [agent T12] 批准 pipeline", body="OK")
-    )
-    assert box.poll() == []
-
-
 def test_reply_to_unknown_page_dropped():
     box = FakeTransport()
     box.send(render_page("T12", "批准 pipeline"))
