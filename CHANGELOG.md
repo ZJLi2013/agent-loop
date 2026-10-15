@@ -45,6 +45,8 @@ Goal, with every number traced to the experiment records. Usage documents how to
   (`AGENT_LOOP_SESSION_ID`, else `CURSOR_CONVERSATION_ID`) as the task's `owner`; the completion gate and
   COMPACT skip tasks owned by a different session, and a request without a session id counts as a different
   session. State written before this change has no owner and is handled as before.
+- A Cursor conversation is bound to every project whose task list it reads, not only the first one, so the
+  completion gate follows work that moves to another project in the same workspace.
 
 ## [0.1.0] - 2026-10-12
 
