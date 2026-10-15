@@ -186,8 +186,9 @@ reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checkli
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、
 plan / task / 设计文档直接链接的文件与设计列出的被测代码；缺了就报缺失，不自行搜索。
 
-task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下一步拍板。reviewer 选中的 successor
-保持 `📝 proposed`，human 或无人值守 policy 明确批准为 `🔬 doing` 后才能初始化。
+task 验证通过后，下一步由 reviewer 提议，worker 不给自己的下一步拍板。init 只要求 task 是 human 批准的
+`🔬 doing`，不要求等于 reviewer 的提议；reviewer 选 `ask_human` / `stop` 后，还要求 `Plan Review: approved`，
+无人值守的 `unreviewed` 不能越过它。
 两类调度都由确定性边界触发，不用 LLM 判断是否需要 review：
 
 | 时刻 | 调用 |
@@ -199,8 +200,10 @@ task 验证通过后，下一步由 reviewer 决定，worker 不给自己的下�
 
 reviewer 是项目 `.agent-loop/reviewer.json` 里的一条命令，init 时锁进 config；模型与宿主无关，原则上
 强于 worker。`harness verify` 通过后在同一 orchestration 中自动调用 reviewer；决策落盘前，
-runner 与下一 task 初始化都被 guard 拒绝。reviewer 只读落盘证据，改 plan / task，并写
-`continue | ask_human | stop` 决策；worker 只能以事实错误异议一次，仍分歧即 `ask_human`。
+runner 与下一 task 初始化都被 guard 拒绝。reviewer 只读落盘证据，更新 plan 的结论与下一步、按需写新 task，
+并写 `continue | ask_human | stop` 决策，可附不阻塞的 `findings`；标 done、把该 task 的 plan 段搬进
+`<plan>-archive.md`、改写指向被移走锚点的链接由 Harness 确定性地完成。worker 只能以事实错误异议一次，
+仍分歧即 `ask_human`。
 调研见 [`study/multi_agent.md`](study/multi_agent.md)。
 
 ### Human checkpoints on the phone

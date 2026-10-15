@@ -21,12 +21,12 @@ Goal, with every number traced to the experiment records. Usage documents how to
   written back into a design mid-task do not trigger a new review; only `resume` after a human correction
   re-checks. Open tasks have no per-task verdict yet and are reviewed once.
 
-- After the task reviewer chooses `ask_human` or `stop`, `init` starts the next task once the plan is at a newer
-  Plan Revision marked `approved`, instead of requiring `disable` first.
+- The task reviewer only judges. It writes its decision, optional non-blocking `findings` and its review notes;
+  Harness marks the task done, moves its plan sections to `<plan>-archive.md` with a pointer left behind, and
+  rewrites links to the moved anchors, including links in task rows moved to `archive/tasks.md`, which used to
+  break. `init` accepts any human-approved `doing` task rather than only the reviewer's pick; after `ask_human`
+  or `stop` it requires `Plan Review: approved`, but no newer Plan Revision.
 
-- A task-boundary review decision is valid only after the closed task's headed sections leave the active plan
-  document; the reviewer moves them to a sibling `<plan>-archive.md`, and a failed re-review can no longer fall
-  back to the previous decision while those sections remain.
 - Both reviewers take criteria only from the Goal, the listed repo checklist and checklists the design links;
   `archive/` content is history, not a criterion. Evidence is limited to the listed inputs, files the plan,
   task list or design links directly, and the code under test the design names; reviewers report missing
