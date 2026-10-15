@@ -211,7 +211,16 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
     }
 
     with state_lock(root):
-        config, state = load_runtime(root)
+        current_config, current = load_runtime(root)
+        if (current.get("review_running") or {}).get("run_id") != run_id or (
+            current["task_id"] != state["task_id"]
+        ):
+            atomic_write_json(run_dir / "result.json", result)
+            append_journal(root, result, int(current_config["limits"]["max_journal_entries"]))
+            raise HarnessError(
+                f"state changed while task reviewer run {run_id} was running; result journaled, state kept"
+            )
+        config, state = current_config, current
         state.pop("review_running", None)
         if result["outcome"] == "pass":
             decision, error = _read_decision(decision_path)

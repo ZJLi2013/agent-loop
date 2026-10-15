@@ -124,6 +124,10 @@ def initialize(
             raise HarnessError(
                 f"task {old.get('task_id')} is still active; finish or disable it first"
             )
+        if old.get("active") and old.get("review_running"):
+            raise HarnessError(
+                f"task reviewer for {old.get('task_id')} is running; wait for its decision"
+            )
         if old.get("active") and old.get("phase") == Phase.VERIFIED.value:
             old_config = read_json(base / CONFIG_FILE)
             if old_config.get("reviewer"):

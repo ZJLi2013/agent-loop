@@ -134,6 +134,8 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("is in progress", completion_gate(self.root) or "")
         with self.assertRaisesRegex(HarnessError, "is in progress"):
             run_review(self.root)
+        with self.assertRaisesRegex(HarnessError, "task reviewer for t1 is running"):
+            initialize(self.root, task_id="t2", verifier_argv=[sys.executable, "-S", "-c", "pass"])
         worker.join()
 
         self.assertEqual(load_runtime(self.root)[1]["review"]["decision"], "stop")
