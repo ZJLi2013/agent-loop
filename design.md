@@ -173,13 +173,14 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 
 ### Independent review boundaries
 
-每个 Plan Revision 提交后先运行 plan reviewer，再由 human 决定 `approve / revise / stop`。
-report 以 plan identity + revision 去重；reviewer 只有建议权。init、resume、pager 和无人值守
-`unreviewed` 都要求有效 report。human waiver（`plan-review --waive`）也是有效记录：只有当前 revision
-的每个未关闭 task 都已被更早的 reviewer 记录覆盖时才能写入，且要 `approved`，`unreviewed` 不认。
-连续 revise 或无实验的 revision 达到 3 时，Harness 不再为下一 revision 跑 reviewer，直到 human 选择继续重审
-（`--continue --reason`，记录 `brake_ack`）、带意见批准（waiver）或停；ack 与 waiver 让两条计数重新开始。
-它拦的是下一轮重审，不拦 human 批准。
+plan review 的单位是 task，不是 Plan Revision。每个未关闭 task 有一个设计摘要：task 标题、验收检查点，
+加上检查点直接链接的设计段（锚点段或整个文件）；`P`、`rev`、状态与行序不在其中。新增或摘要变化的 task 才交给
+reviewer，一次调用审完，每个 task 各得一条 `accept / revise`；记录在 `.harness/plan-review/tasks/<id>.json`。
+reviewer 只有建议权：init、resume、pager 和无人值守 `unreviewed` 只要求当前摘要有结论或 human 批准。
+被 revise 的 task 改过设计后，Harness 不再为它跑 reviewer，由 human 带意见批准（`plan-review --approve`，
+批准记在当时的摘要上）或允许再审一次（`--again`）；没审过的 task 不能直接批准，`unreviewed` 不认 human 批准记录。
+task reviewer 以 `continue` 写的 successor 记为已审。Plan Revision 只承担 human 纠偏。
+准入绑定在 `init` 时审过的摘要上：task 执行中把结果写回设计不触发重审；只有 human 纠偏后的 `resume` 按当前摘要重新检查。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、

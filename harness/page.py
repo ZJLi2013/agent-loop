@@ -11,14 +11,10 @@ from typing import Any
 from harness.errors import HarnessError
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_metadata, request_pause, resume
-from harness.plan_review import (
-    plan_review_record,
-    plan_review_ready,
-    review_brake,
-    run_plan_review,
-)
+from harness.plan_review import run_plan_review, task_record
 from harness.project import runtime_dir, task_file
 from harness.protocol import Phase
+from harness.records import open_task_ids, task_digest
 from harness.review import MAX_REVIEWS
 from harness.runner import execute_process
 from harness.storage import (
@@ -90,20 +86,27 @@ def _open_rows(root: Path) -> str:
     return "\n".join(rows[:6])
 
 
-def _plan_review_summary(root: Path, config: dict[str, Any]) -> str:
-    plan_doc = config.get("plan_doc")
-    if not plan_doc:
-        return ""
-    revision, _ = plan_metadata(root, str(plan_doc))
-    if revision is None:
-        return ""
-    record = plan_review_record(root, str(plan_doc), revision)
-    if not record or record.get("error"):
-        return ""
-    findings = "\n".join(f"- {item}" for item in record.get("findings", []))
-    warnings = "\n".join(f"⚠️ {item}" for item in review_brake(root, str(plan_doc)))
-    parts = [f"independent reviewer：{record['summary']}", findings, warnings]
-    return "\n".join(part for part in parts if part)
+def _plan_review_summary(root: Path) -> str:
+    summary = None
+    lines = []
+    for task_id in open_task_ids(root):
+        digest = task_digest(root, task_id)
+        review = next(
+            (
+                item
+                for item in reversed(task_record(root, task_id)["reviews"])
+                if item["digest"] == digest
+            ),
+            None,
+        )
+        if review is None:
+            continue
+        summary = summary or review.get("summary")
+        findings = "；".join(review["findings"])
+        lines.append(f"- {task_id} {review['verdict']}" + (f"：{findings}" if findings else ""))
+    if summary:
+        lines.insert(0, f"independent reviewer：{summary}")
+    return "\n".join(lines)
 
 
 def _checkpoint(
@@ -123,7 +126,7 @@ def _checkpoint(
                 "key": f"plan_review:{digest}",
                 "title": f"批准 plan？{plan_doc}",
                 "body": (
-                    f"{_goal(plan)}\n\n{_plan_review_summary(root, config)}"
+                    f"{_goal(plan)}\n\n{_plan_review_summary(root)}"
                     f"\n\n{_open_rows(root)}"
                 ),
             }
@@ -262,13 +265,11 @@ def run_page(root: Path) -> dict[str, Any]:
     if config.get("reviewer") and plan_doc:
         revision, review = plan_metadata(root, str(plan_doc))
         if revision is not None and review == "proposed":
-            reviewed, _ = plan_review_ready(root, str(plan_doc), revision)
-            if not reviewed:
-                run_plan_review(
-                    root,
-                    plan_doc=str(plan_doc),
-                    reviewer_config=config["reviewer"],
-                )
+            run_plan_review(
+                root,
+                plan_doc=str(plan_doc),
+                reviewer_config=config["reviewer"],
+            )
     with state_lock(root):
         config, state = load_runtime(root)
         pager = config.get("pager")

@@ -257,6 +257,18 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         }
         if decision:
             review.update(decision)
+            if decision["decision"] == "continue":
+                from harness.plan_review import record_task_review
+
+                record_task_review(
+                    root,
+                    str(decision["next_task"]),
+                    verdict="accept",
+                    findings=[],
+                    summary=decision["why"],
+                    source="task_review",
+                    run_id=run_id,
+                )
         elif previous.get("decision") and not leftover:
             review.update(
                 {key: previous[key] for key in ("decision", "next_task", "why")}

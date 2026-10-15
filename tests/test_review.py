@@ -14,7 +14,7 @@ from harness.core import (
     run_command,
     verify,
 )
-from harness.plan_review import run_plan_review
+from harness.plan_review import review_status, run_plan_review, task_record
 from harness.review import run_review
 
 DECISION = ".harness/review/decision.json"
@@ -303,7 +303,8 @@ PLAN_TASKS = REWRITTEN_TASKS.replace("| — |", "| r1 |")
 
 
 def plan_reviewer(*calls: tuple[dict[str, object] | None, str, bool]) -> list[str]:
-    report = json.dumps({"verdict": "accept", "summary": "ready", "findings": []})
+    accept = {"verdict": "accept", "findings": []}
+    report = json.dumps({"summary": "ready", "tasks": {"t1": accept, "t2": accept}})
     code = "\n".join(
         [
             "import json, sys",
@@ -372,6 +373,15 @@ class ClosedPlanSectionTest(unittest.TestCase):
         self.assertIn("### t1 boundary review", error)
         self.assertIn("plan-archive.md", error)
         self.assertNotIn("t2 本地设计", error)
+
+    def test_reviewer_written_successor_counts_as_reviewed(self) -> None:
+        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
+        (self.root / ".harness" / "plan-review" / "tasks" / "t2.json").unlink()
+
+        run_review(self.root)
+
+        self.assertEqual(review_status(self.root, "t2")[0], "reviewed")
+        self.assertEqual(task_record(self.root, "t2")["reviews"][-1]["source"], "task_review")
 
     def test_moved_sections_keep_decision_and_open_task_headings(self) -> None:
         self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))

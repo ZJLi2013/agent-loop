@@ -105,10 +105,10 @@ reviewer 还撤回了"两次运行逐值一致"这一条：另一次运行是 ru
 
 | 漏洞 | 建议 | 状态 |
 |---|---|---|
-| 门槛不分成本 | task 行声明成本档（如 `cpu-probe ≤ 1h` / `gpu`），低档 task 默认免 plan review、只做执行后的 task review；或由 human 在 Goal 层设定门槛 | 部分实施（[#23](https://github.com/ZJLi2013/agent-loop/pull/23)）：首轮之后低成本 task 可由 human 带意见批准；首轮审查保留 |
-| 刹车只是告警 | 达到阈值后 `plan-review` 返回 `brake`，要求 human 在继续 revise、直接批准、停止三者中选一；计数按"自上次产出新证据的 exec"累计，不被中间的 accept 清零 | 已实施（[#23](https://github.com/ZJLi2013/agent-loop/pull/23)） |
-| 一行修改也要整轮重审 | 增加 `accept_with_notes`，非阻塞意见写进 task 设计、不升 revision；重审只覆盖本 revision 改动过的 task，已批准且设计未变的不重开 | `accept_with_notes` 不另建，由 waiver 承接（意见写进设计、revision +1）；只重审改动过的 task 待设计（t45） |
-| human 不能免审 | `plan-review --waive --reason "<human 原话>"` 写一条 `verdict: waived` 的记录，`init` 认可 | 已实施（[#23](https://github.com/ZJLi2013/agent-loop/pull/23)） |
+| 门槛不分成本 | task 行声明成本档（如 `cpu-probe ≤ 1h` / `gpu`），低档 task 默认免 plan review、只做执行后的 task review；或由 human 在 Goal 层设定门槛 | 部分实施（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：首轮之后任何 task 都可由 human 带意见批准，审查只在设计变化时重跑；首轮审查保留 |
+| 刹车只是告警 | 达到阈值后 `plan-review` 返回 `brake`，要求 human 在继续 revise、直接批准、停止三者中选一；计数按"自上次产出新证据的 exec"累计，不被中间的 accept 清零 | 已替换（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：按 task 计，一次 revise 后改了设计就交 human，不再按 revision 计数 |
+| 一行修改也要整轮重审 | 增加 `accept_with_notes`，非阻塞意见写进 task 设计、不升 revision；重审只覆盖本 revision 改动过的 task，已批准且设计未变的不重开 | 已实施（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：结论按 task 设计摘要存，只改元数据不重审，只审新增或改过的 task；accept 可附意见 |
+| human 不能免审 | `plan-review --waive --reason "<human 原话>"` 写一条 `verdict: waived` 的记录，`init` 认可 | 已替换（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：`plan-review --approve <task> --reason` 把 human 批准记在 task 当前摘要上 |
 | reviewer 读不到项目外证据 | plan 可以声明外部证据路径，Harness 在 review 前把它们按固定版本拷进 `.harness/evidence/`，供 reviewer 读取 | 未实施（t56） |
 | task review 不分缺口轻重 | 增加 `accept_with_gaps`：缺口写进下一个 task 的设计（例如 v2 探针顺带落盘状态与版本），不单开补证 task；reviewer 判 ask_human 前先回答"补齐后下一条命令会不会变" | 未实施（t54） |
 | ask_human 后强制升 revision | human 批准 reviewer 写的 successor 时，记录 `approved_by: human` 即可 `init`，不要求新 revision | 不做：保留 [#20](https://github.com/ZJLi2013/agent-loop/pull/20) 的机制，successor 由更新的、human 批准的 revision 放行 |

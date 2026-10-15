@@ -146,28 +146,32 @@ def plan_can_run(
 
 
 def resume(root: Path) -> dict[str, Any]:
-    from harness.plan_review import plan_review_ready, run_plan_review
+    from harness.plan_review import admitted, plan_review_ready, review_status, run_plan_review
 
     root = root.resolve()
     config, state = load_runtime(root)
     plan_doc = config.get("plan_doc")
+    review_digest = state.get("review_digest")
     if config.get("reviewer") and plan_doc:
         revision, review = current_plan(root, config)
         if revision is None:
             raise HarnessError("configured plan document has no revision")
-        reviewed, _ = plan_review_ready(
-            root,
-            str(plan_doc),
-            revision,
-            review=review,
-            task_id=str(state["task_id"]),
-        )
+        task_id = str(state["task_id"])
+        correction = bool((pause_request(root) or {}).get("require_revision"))
+        if not correction and review_digest and admitted(root, task_id, review_digest):
+            reviewed = True
+        else:
+            reviewed, _ = plan_review_ready(root, task_id, review=review)
+            review_digest = review_status(root, task_id)[1]
         if not reviewed:
             run_plan_review(
                 root,
                 plan_doc=str(plan_doc),
                 reviewer_config=config["reviewer"],
             )
+            reviewed, reason = plan_review_ready(root, task_id, review=review)
+            if not reviewed:
+                raise HarnessError(reason or "plan review is incomplete")
             if review == "approved":
                 path = (root / str(plan_doc)).resolve()
                 content = path.read_text(encoding="utf-8")
@@ -216,6 +220,7 @@ def resume(root: Path) -> dict[str, Any]:
             raise HarnessError(str(exc)) from exc
         state["plan_revision"] = revision
         state["plan_review"] = review
+        state["review_digest"] = review_digest
         state["current_run_id"] = None
         state["verified_fingerprint"] = None
         state["stop_report_requested"] = False

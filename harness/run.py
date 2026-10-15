@@ -28,7 +28,7 @@ from harness.core import (  # noqa: E402
     verify,
 )
 from harness.page import run_page  # noqa: E402
-from harness.plan_review import run_plan_review, waive_plan_review  # noqa: E402
+from harness.plan_review import again_task, approve_task, run_plan_review  # noqa: E402
 from harness.review import run_review  # noqa: E402
 
 
@@ -95,23 +95,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review.add_argument("--objection", help="one factual error in the last decision")
     plan_review = commands.add_parser(
-        "plan-review", help="review one submitted Plan Revision"
+        "plan-review", help="review the tasks whose design is new or changed"
     )
     plan_review.add_argument("--plan-doc", required=True)
     human_choice = plan_review.add_mutually_exclusive_group()
     human_choice.add_argument(
-        "--waive",
-        action="store_true",
-        help="record the human's decision to approve this revision without review",
+        "--approve",
+        metavar="TASK",
+        help="record the human's approval of the task's current design",
     )
     human_choice.add_argument(
-        "--continue",
-        dest="continue_review",
-        action="store_true",
-        help="record the human's decision to review again past the brake",
+        "--again",
+        metavar="TASK",
+        help="record the human's decision to review a sent-back task once more",
     )
     plan_review.add_argument(
-        "--reason", help="the human's words; requires --waive or --continue"
+        "--reason", help="the human's words; requires --approve or --again"
     )
     commands.add_parser(
         "page", help="send the pending human checkpoint to the phone and wait"
@@ -196,18 +195,15 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 0 if outcome["review"]["decision"] else 1
         if args.action == "plan-review":
-            if args.reason is not None and not (args.waive or args.continue_review):
-                build_parser().error("--reason requires --waive or --continue")
+            if args.reason is not None and not (args.approve or args.again):
+                build_parser().error("--reason requires --approve or --again")
             reason = args.reason or ""
-            outcome = (
-                waive_plan_review(root, plan_doc=args.plan_doc, reason=reason)
-                if args.waive
-                else run_plan_review(
-                    root,
-                    plan_doc=args.plan_doc,
-                    ack_reason=reason if args.continue_review else None,
-                )
-            )
+            if args.approve:
+                outcome = approve_task(root, args.approve, reason=reason)
+            elif args.again:
+                outcome = again_task(root, args.again, reason=reason)
+            else:
+                outcome = run_plan_review(root, plan_doc=args.plan_doc)
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 0
         if args.action == "page":
