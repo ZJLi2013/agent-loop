@@ -36,6 +36,12 @@ def in_background(call, ready) -> "threading.Thread":
     return worker
 
 
+def gone_pid() -> int:
+    gone = subprocess.Popen([sys.executable, "-S", "-c", "pass"])
+    gone.wait()
+    return gone.pid
+
+
 class HarnessTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -86,6 +92,33 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(load_runtime(self.root)[1]["phase"], "ready")
         self.assertEqual(
             len((harness_dir(self.root) / "runs.jsonl").read_text().splitlines()), 1
+        )
+
+    def abandon_run(self) -> None:
+        run_dir = harness_dir(self.root) / "artifacts" / "r-killed"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "start.json").write_text(json.dumps({"argv": ["train.sh"], "started_at": "T0"}))
+        state_path = harness_dir(self.root) / "state.json"
+        state = json.loads(state_path.read_text())
+        state.update(phase="running", current_run_id="r-killed", runner_pid=gone_pid())
+        state_path.write_text(json.dumps(state))
+
+    def test_a_killed_run_is_reported_aborted_once(self) -> None:
+        self.init()
+        self.abandon_run()
+        message = completion_gate(self.root) or ""
+        self.abandon_run()
+        with self.assertRaisesRegex(HarnessError, "marked aborted"):
+            run_command(self.root, [sys.executable, "-S", "-c", "pass"], kind="exec")
+        self.assertEqual(load_runtime(self.root)[1]["phase"], "failed")
+        result = run_command(self.root, [sys.executable, "-S", "-c", "pass"], kind="exec")
+
+        self.assertIn("run r-killed (train.sh) started T0", message)
+        self.assertIn("check its outputs before running it again", message)
+        self.assertEqual(result["outcome"], "pass")
+        journal = (harness_dir(self.root) / "runs.jsonl").read_text().splitlines()
+        self.assertEqual(
+            [json.loads(line)["outcome"] for line in journal], ["aborted", "aborted", "pass"]
         )
 
     def test_timeout_kills_run_and_stops_at_budget(self) -> None:
@@ -241,9 +274,8 @@ class LockTest(unittest.TestCase):
         self.assertNotIn("Remove it with", message)
 
     def test_stale_lock_gives_the_removal_command(self) -> None:
-        gone = subprocess.Popen([sys.executable, "-S", "-c", "pass"])
-        gone.wait()
-        for content in (json.dumps({"pid": gone.pid}), f"{gone.pid}\n"):
+        pid = gone_pid()
+        for content in (json.dumps({"pid": pid}), f"{pid}\n"):
             with self.subTest(content=content):
                 self.assertIn("Remove it with", self.contend(content))
 

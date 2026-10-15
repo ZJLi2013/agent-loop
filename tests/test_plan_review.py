@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import threading
@@ -139,6 +140,17 @@ class PlanReviewTest(unittest.TestCase):
 
         self.assertEqual(self.calls(), "1")
         self.assertFalse(marker.exists())
+
+    def test_a_killed_plan_review_does_not_block(self) -> None:
+        self.configure(reviewer_writing({"t1": []}))
+        marker = self.root / ".harness" / "plan-review" / "running.json"
+        marker.parent.mkdir(parents=True)
+        gone = subprocess.Popen([sys.executable, "-S", "-c", "pass"])
+        gone.wait()
+        marker.write_text(json.dumps({"run_id": "pr-killed", "pid": gone.pid}))
+
+        self.review()
+        self.assertEqual(self.calls(), "1")
 
     def test_new_task_is_reviewed_alone(self) -> None:
         self.configure(reviewer_writing({"t1": [], "t2": []}))

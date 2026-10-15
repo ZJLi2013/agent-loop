@@ -46,6 +46,7 @@ from harness.storage import (
     config_digest,
     harness_dir,
     load_runtime,
+    pid_alive,
     read_json,
     state_lock,
     utc_now,
@@ -124,7 +125,8 @@ def initialize(
             raise HarnessError(
                 f"task {old.get('task_id')} is still active; finish or disable it first"
             )
-        if old.get("active") and old.get("review_running"):
+        running = old.get("review_running")
+        if old.get("active") and running and pid_alive(int(running["pid"])):
             raise HarnessError(
                 f"task reviewer for {old.get('task_id')} is running; wait for its decision"
             )
@@ -294,6 +296,10 @@ def run_command(
         config, state = load_runtime(root)
         if not state.get("active"):
             raise HarnessError("harness is disabled")
+        aborted = recover_aborted(root, config, state)
+        if aborted:
+            atomic_write_json(harness_dir(root) / STATE_FILE, state)
+            raise HarnessError(aborted)
         if state.get("phase") in {Phase.RUNNING.value, Phase.VERIFYING.value}:
             raise HarnessError(_in_progress(state))
         request = pause_request(root)
@@ -372,6 +378,10 @@ def run_command(
         run_id = new_run_id()
         run_dir = harness_dir(root) / "artifacts" / run_id
         run_dir.mkdir(parents=True)
+        atomic_write_json(
+            run_dir / "start.json",
+            {"argv": argv, "started_at": utc_now(), "pid": os.getpid()},
+        )
         _transition(
             state,
             Event.VERIFY_STARTED if kind == "verify" else Event.RUN_STARTED,
@@ -475,6 +485,65 @@ def run_command(
         return result
 
 
+def _aborted_entry(
+    root: Path, state: dict[str, Any], run_id: str, kind: str, argv: list[str], started_at: Any
+) -> dict[str, Any]:
+    return {
+        "version": 1,
+        "run_id": run_id,
+        "task_id": state["task_id"],
+        "kind": kind,
+        "argv": argv,
+        "cwd": str(root),
+        "started_at": started_at,
+        "duration_seconds": None,
+        "timed_out": False,
+        "exit_code": None,
+        "outcome": "aborted",
+    }
+
+
+def recover_aborted(root: Path, config: dict[str, Any], state: dict[str, Any]) -> str | None:
+    messages = []
+    limit = int(config["limits"]["max_journal_entries"])
+    pid = state.get("runner_pid")
+    running_phase = state.get("phase") in {Phase.RUNNING.value, Phase.VERIFYING.value}
+    if running_phase and pid and not pid_alive(int(pid)):
+        run_id = str(state["current_run_id"])
+        run_dir = harness_dir(root) / "artifacts" / run_id
+        start = read_json(run_dir / "start.json") if (run_dir / "start.json").exists() else {}
+        kind = "verify" if state["phase"] == Phase.VERIFYING.value else "exec"
+        entry = _aborted_entry(
+            root, state, run_id, kind, start.get("argv", []), start.get("started_at")
+        )
+        run_dir.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(run_dir / "result.json", entry)
+        append_journal(root, entry, limit)
+        _transition(state, Event.INTERRUPTED)
+        state.update(
+            current_run_id=None, runner_pid=None, last_run_id=run_id, last_outcome="aborted"
+        )
+        command = " ".join(entry["argv"]) or "command unknown"
+        started = entry["started_at"] or "at an unknown time"
+        messages.append(
+            f"run {run_id} ({command}) started {started} lost its runner (pid {pid}) and is "
+            "marked aborted. The command may have finished, or may still be running remotely: "
+            "check its outputs before running it again."
+        )
+    running = state.get("review_running")
+    if running and not pid_alive(int(running["pid"])):
+        state.pop("review_running")
+        entry = _aborted_entry(root, state, running["run_id"], "review", [], None)
+        append_journal(root, entry, limit)
+        messages.append(
+            f"task reviewer run {running['run_id']} lost its process (pid {running['pid']}) and is "
+            "marked aborted; run the review again."
+        )
+    if messages:
+        state["updated_at"] = utc_now()
+    return " ".join(messages) or None
+
+
 def _in_progress(state: dict[str, Any]) -> str:
     return (
         f"run {state.get('current_run_id')} of task {state['task_id']} is in progress "
@@ -548,6 +617,10 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             return f"Harness state is invalid: {exc}. Repair it before completing."
         if not state.get("active") or owned_by_other(state, session_id):
             return None
+        aborted = recover_aborted(root, config, state)
+        if aborted:
+            atomic_write_json(state_path, state)
+            return aborted
 
         request = pause_request(root)
         if request:
