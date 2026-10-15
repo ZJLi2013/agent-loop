@@ -76,7 +76,7 @@ Goal Review 管的是 task 内的下一动作；已验证 task 的下一步属�
 | review 期间长时间持锁 | `plan-review` 只在读写 record 时持锁，调用 reviewer 子进程期间释放；并发安全交给 record 去重与工作区指纹 | 未实施（t51） |
 | gate 越权写别人的状态 | `init` 把 conversation_id 记进 `state.json`；gate 只对自己 init 的任务写状态、发 followup，对其它会话的任务最多只读提示 | 未实施（t48） |
 | 报错不可操作 | 锁冲突报成"项目 X 正被进程 N（plan-review …）占用，稍后重试"，与真正的 gate 失败区分开 | 未实施（t50） |
-| 已验证的 task 被拉去 goal review | gate 在计时前处理 `VERIFIED`；COMPACT 跳过 `VERIFIED` 的项目 | 未实施（t47） |
+| 已验证的 task 被拉去 goal review | gate 在计时前处理 `VERIFIED`；COMPACT 跳过 `VERIFIED` 的项目 | 已实施（[#25](https://github.com/ZJLi2013/agent-loop/pull/25)） |
 
 ## worker 侧的教训
 

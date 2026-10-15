@@ -563,19 +563,6 @@ def completion_gate(root: Path) -> str | None:
                 "plan document and task.md, obtain review, then run resume."
             )
 
-        attention_reason = goal_review_reason(
-            config, state, {"outcome": "pass"}
-        )
-        if attention_reason:
-            schedule_goal_review(root, attention_reason)
-            _transition(state, Event.PAUSE_REQUESTED)
-            state["updated_at"] = utc_now()
-            atomic_write_json(state_path, state)
-            return (
-                f"Harness paused {state['task_id']} for Goal Review: "
-                f"{attention_reason}. Use work-planning before continuing."
-            )
-
         phase = Phase(str(state["phase"]))
         if phase == Phase.VERIFIED:
             reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
@@ -597,6 +584,19 @@ def completion_gate(root: Path) -> str | None:
             return (
                 f"Harness verification for {state['task_id']} is stale because the "
                 "workspace changed. Complete Goal Review before rerunning verifier."
+            )
+
+        attention_reason = goal_review_reason(
+            config, state, {"outcome": "pass"}
+        )
+        if attention_reason:
+            schedule_goal_review(root, attention_reason)
+            _transition(state, Event.PAUSE_REQUESTED)
+            state["updated_at"] = utc_now()
+            atomic_write_json(state_path, state)
+            return (
+                f"Harness paused {state['task_id']} for Goal Review: "
+                f"{attention_reason}. Use work-planning before continuing."
             )
 
         if phase == Phase.STOPPED:
