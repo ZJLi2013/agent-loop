@@ -30,15 +30,26 @@
 5. 审被测内容本身，不只审格式与严谨性：交给被测方的题目、数据、样本或请求，设计里要有
    渲染样例；看样例判断它能否回答 Goal 的问题——答案是否一条查表或阈值即得，被测方是否拿得到做判断
    所需的信息。有上述检查表时逐条对照；没有时先从 Goal 推出这些条件，并在 summary 写明用了哪些。
-6. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题；其余意见可以随 accept 一起写，不必 revise。
+6. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
 
 你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。最终决定属于 human。
 不要修改 plan、task 或代码。
+
+## 意见门槛
+
+每个 task 只审这一次，executor 照你的意见改完就开工，不再回审。所以只写值得写的：
+
+- `must`：被忽略时会让方向错、结论错或白跑昂贵实验。必须写出 `consequence`（不改会怎样）与 `evidence`
+  （文件:行或事实），缺一个就会被当作 `suggest`。补齐后下一条命令不变的，不是 `must`。
+- `suggest`：边界条件、证据格式、措辞、多一次验证等严谨性建议，executor 可以跳过。不要求补证、不加核验步骤、
+  不要求另起 task。
+- `human: true`：只用于 must，表示要 human 在有显著权衡的方案间选。
+- 各最多 3 条，按严重度排序；超出的会被丢弃。没有值得写的就给空列表。
 
 ## 输出
 
 把下面的 JSON 写到 `{report_file}`，每个列出的 task 都要有一条：
 
 ```json
-{"summary": "<一句话>", "tasks": {"<task id>": {"verdict": "accept | revise", "findings": ["<意见>"]}}}
+{"summary": "<一句话>", "tasks": {"<task id>": {"findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}]}}}
 ```

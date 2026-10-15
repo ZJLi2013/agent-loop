@@ -47,13 +47,13 @@ Plan Review: proposed
    交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
    渲染样例；改它们等于改设计。删除或放宽一道门时，写明它防的风险由哪道检查接替。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
-4. 配置 reviewer 时，提交后运行 `plan-review`：Harness 只把新增或设计改过的 task 交给 reviewer，
-   每个 task 各得一条结论；只改 `P`、`rev`、状态或行序不重审。reviewer 只给准入意见，不能批准 plan 或授权执行。
-5. 再用平台的结构化提问能力给 human：`approve / revise / continue automatically`，附上逐 task 结论。
-   被 revise 的 task 改过设计后，Harness 不再为它跑 reviewer，worker 不自行重审，交 human 二选一：
-   带意见批准（意见写进设计后，用 human 原话 `plan-review --approve <task> --reason`）或再审一次
-   （`plan-review --again <task> --reason`）。没审过的 task 不能直接批准；无人值守自批准不认 human 批准记录。
-   reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
+4. 配置 reviewer 时，提交后运行 `plan-review`：每个 task 只在第一次出现时审一次，设计之后再改也不重审。
+   reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
+5. 逐条回应 `must`：照改后 `plan-review --respond <task> --item N=applied`；只在与事实不符时
+   `--item N=reject --reason "<事实>"`，只驳一次。`suggest` 酌情改或跳过，不必回应。不回审。
+   再用平台的结构化提问能力给 human：`approve / revise / continue automatically`，附上逐 task 意见与回应。
+   带 `human: true` 的 must 由 human 选，用 human 原话 `plan-review --approve <task> --reason` 记下；
+   human 要求重审用 `--again`。reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
 6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
    `Plan Review: unreviewed`，但配置 reviewer 时仍须完成独立 plan review。
 
@@ -82,7 +82,7 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
 3. 旧 task 逐项保留、blocked 或 dropped；新 task 绑定新 `rN`；
 4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
-   而 human 决定开新 task 时，新 revision 批准为 `approved` 后对新 task 运行 `init`，不用 `disable`。
+   而 human 决定开新 task 时，human 把它批为 `🔬 doing` 后直接 `init`，不用 `disable`。
 
 对话里的「明白」不算 RECONCILE；四步落盘后才继续。
 
@@ -112,5 +112,5 @@ active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则
 
 项目配置了 reviewer 时，「更新下一步决策」归 reviewer：锁定 verifier 通过后 Harness 自动运行
 `harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。
-把关闭 task 的标题段移到 plan 同目录的 `<plan>-archive.md` 也归 reviewer；plan 仍有以该 task id
-开头的标题时，Harness 判这次决策无效。
+标 done、把关闭 task 的标题段移到 plan 同目录的 `<plan>-archive.md`、改写指向它们的链接由 Harness 在
+reviewer 决定落盘后完成，reviewer 与 worker 都不手工搬。

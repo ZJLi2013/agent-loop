@@ -11,21 +11,22 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Changed
 
-- Plan review is per task instead of per Plan Revision. A task is sent to the reviewer only when it is new or its
-  design digest changed (title, checkpoint, and the design sections the checkpoint links; not priority, `rev`,
-  status, or row order), and each task gets its own `accept` / `revise`. A task sent back with `revise` whose design
-  then changes waits for the human: `plan-review --approve <task> --reason` binds approval to its current digest,
-  `--again <task> --reason` allows one more review. A successor written by the task reviewer counts as reviewed.
-  The reviewer report now maps task ids to verdicts. This replaces the per-revision records, the brake, and the
-  waiver; a failed review is no longer cached. Admission binds to the digest reviewed at `init`, so results
-  written back into a design mid-task do not trigger a new review; only `resume` after a human correction
-  re-checks. Open tasks have no per-task verdict yet and are reviewed once.
+- Plan review is per task instead of per Plan Revision, and each task is reviewed once: when it first appears,
+  all unreviewed tasks go to the reviewer in one call, and later design edits do not trigger another review
+  (`plan-review --again <task>` asks for one). Reviewer items follow a must / suggest protocol: `must` means the
+  task goes the wrong way, reaches a wrong conclusion or wastes an expensive run if ignored, and needs a stated
+  consequence and evidence, otherwise it counts as `suggest`; at most 3 of each are kept. The executor answers
+  every `must` with `plan-review --respond <task> --item N=applied` or `N=reject --reason "<fact>"` before
+  `init`; `suggest` items may be skipped. A `must` marked `human: true` waits for `plan-review --approve`. This
+  replaces the per-revision records, the brake and the waiver; a failed review is no longer cached. Open tasks
+  have no per-task review yet and are reviewed once.
 
-- The task reviewer only judges. It writes its decision, optional non-blocking `findings` and its review notes;
+- The task reviewer only judges. It writes its decision, must / suggest `findings` and its review notes;
   Harness marks the task done, moves its plan sections to `<plan>-archive.md` with a pointer left behind, and
   rewrites links to the moved anchors, including links in task rows moved to `archive/tasks.md`, which used to
-  break. `init` accepts any human-approved `doing` task rather than only the reviewer's pick; after `ask_human`
-  or `stop` it requires `Plan Review: approved`, but no newer Plan Revision.
+  break. `init` accepts any human-approved `doing` task rather than only the reviewer's pick. Unattended
+  (`Plan Review: unreviewed`), it starts only the task the reviewer names: the `next_task` of `continue`, or of
+  `ask_human` when the question does not affect it; nothing after `stop`.
 
 - Both reviewers take criteria only from the Goal, the listed repo checklist and checklists the design links;
   `archive/` content is history, not a criterion. Evidence is limited to the listed inputs, files the plan,

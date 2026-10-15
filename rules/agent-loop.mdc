@@ -57,7 +57,8 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时，直到 user 再次说话：
 
 - Human Review Gate 选择最简单可逆方案自批准，plan document 标 `Plan Review: unreviewed`；
-- 自批准只替代 human 点击，不跳过独立 reviewer；task 之间不得自动继续或写远端串联脚本；
+- 自批准只替代 human 点击，不跳过独立 reviewer；按 reviewer 的一次建议继续：只 init reviewer 指名、
+  `must` 已回应、无 `human` 项的 task；遇 `human` 项、`stop`、失败上限或预算用尽即停；不写远端串联脚本；
 - 不问选择题，记录选中理由与放弃项；有显著权衡时标 `⚠️ 待确认`；
 - blocked task 跳过做下一条，全部 blocked 才停；不可逆操作仍跳过；
 - 环境重试上限不变；收工把状态、失败计数、待确认项和明早第一条命令写进夜间报告。
