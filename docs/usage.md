@@ -95,7 +95,12 @@ agent-loop-harness plan-review --plan-doc plan.md
 ```
 
 Read the report, approve or revise the plan, activate the task, and initialize as above. The plan reviewer
-advises but cannot approve the plan. After a verified task, the configured reviewer runs automatically,
+advises but cannot approve the plan. When every open task of a revision already passed an earlier plan review,
+the human can approve a revision without another review: `agent-loop-harness plan-review --plan-doc plan.md
+--waive --reason "<the human's words>"`, then mark it `approved`. After 3 revise verdicts in a row or 3
+revisions without an experiment, `plan-review` refuses to run the reviewer again until the human chooses: review
+again with `--continue --reason "<the human's words>"`, approve with notes (`--waive`), approve the last reviewed
+revision unchanged, or stop. After a verified task, the configured reviewer runs automatically,
 interprets the evidence, and selects `continue`, `ask_human`, or `stop`. Proposed successor tasks need explicit
 activation under the applicable approval policy. A project may add `.agent-loop/review-checklist.md` for
 domain-specific checks; sample inputs and actual outputs help the reviewer judge whether the work measured the Goal.

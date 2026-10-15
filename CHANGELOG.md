@@ -6,10 +6,18 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- `plan-review --waive --reason` records a human decision to approve a Plan Revision without another review.
+  Every open task of that revision must be covered by an earlier reviewer record, which now stores its task ids;
+  `init` and `resume` accept the waiver only with `Plan Review: approved` and for a covered task.
 - On-demand `research-to-paper` skill: an arXiv-style paper and an optional 5–15 s teaser from a closed research
 Goal, with every number traced to the experiment records. Usage documents how to invoke on-demand skills.
 
 ### Changed
+
+- The plan review brake now blocks: when the revise or no-experiment warning is active, `plan-review` (including
+  the one `init` triggers) refuses to run the reviewer for the next revision until the human chooses
+  `--continue --reason`, a waiver, or stop. The acknowledgment is stored as `brake_ack`; it and a waiver restart
+  both counts, while `accept` still counts toward the no-experiment signal. Human approval is not blocked.
 
 - After the task reviewer chooses `ask_human` or `stop`, `init` starts the next task once the plan is at a newer
   Plan Revision marked `approved`, instead of requiring `disable` first.

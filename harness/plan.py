@@ -155,7 +155,13 @@ def resume(root: Path) -> dict[str, Any]:
         revision, review = current_plan(root, config)
         if revision is None:
             raise HarnessError("configured plan document has no revision")
-        reviewed, _ = plan_review_ready(root, str(plan_doc), revision)
+        reviewed, _ = plan_review_ready(
+            root,
+            str(plan_doc),
+            revision,
+            review=review,
+            task_id=str(state["task_id"]),
+        )
         if not reviewed:
             run_plan_review(
                 root,

@@ -27,7 +27,7 @@ from harness.core import (  # noqa: E402
     verify,
 )
 from harness.page import run_page  # noqa: E402
-from harness.plan_review import run_plan_review  # noqa: E402
+from harness.plan_review import run_plan_review, waive_plan_review  # noqa: E402
 from harness.review import run_review  # noqa: E402
 
 
@@ -90,6 +90,21 @@ def build_parser() -> argparse.ArgumentParser:
         "plan-review", help="review one submitted Plan Revision"
     )
     plan_review.add_argument("--plan-doc", required=True)
+    human_choice = plan_review.add_mutually_exclusive_group()
+    human_choice.add_argument(
+        "--waive",
+        action="store_true",
+        help="record the human's decision to approve this revision without review",
+    )
+    human_choice.add_argument(
+        "--continue",
+        dest="continue_review",
+        action="store_true",
+        help="record the human's decision to review again past the brake",
+    )
+    plan_review.add_argument(
+        "--reason", help="the human's words; requires --waive or --continue"
+    )
     commands.add_parser(
         "page", help="send the pending human checkpoint to the phone and wait"
     )
@@ -172,7 +187,18 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 0 if outcome["review"]["decision"] else 1
         if args.action == "plan-review":
-            outcome = run_plan_review(root, plan_doc=args.plan_doc)
+            if args.reason is not None and not (args.waive or args.continue_review):
+                build_parser().error("--reason requires --waive or --continue")
+            reason = args.reason or ""
+            outcome = (
+                waive_plan_review(root, plan_doc=args.plan_doc, reason=reason)
+                if args.waive
+                else run_plan_review(
+                    root,
+                    plan_doc=args.plan_doc,
+                    ack_reason=reason if args.continue_review else None,
+                )
+            )
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 0
         if args.action == "page":
