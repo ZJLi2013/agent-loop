@@ -77,6 +77,11 @@ def review_status(root: Path, task_id: str) -> tuple[str, str | None]:
     return "needs_review", digest
 
 
+def admitted(root: Path, task_id: str, digest: str) -> bool:
+    record = task_record(root, task_id)
+    return any(item["digest"] == digest for item in record["reviews"] + record["approvals"])
+
+
 def plan_review_ready(
     root: Path, task_id: str, *, review: str | None = None
 ) -> tuple[bool, str | None]:

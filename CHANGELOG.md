@@ -17,7 +17,9 @@ Goal, with every number traced to the experiment records. Usage documents how to
   then changes waits for the human: `plan-review --approve <task> --reason` binds approval to its current digest,
   `--again <task> --reason` allows one more review. A successor written by the task reviewer counts as reviewed.
   The reviewer report now maps task ids to verdicts. This replaces the per-revision records, the brake, and the
-  waiver; a failed review is no longer cached. Open tasks have no per-task verdict yet and are reviewed once.
+  waiver; a failed review is no longer cached. Admission binds to the digest reviewed at `init`, so results
+  written back into a design mid-task do not trigger a new review; only `resume` after a human correction
+  re-checks. Open tasks have no per-task verdict yet and are reviewed once.
 
 - After the task reviewer chooses `ask_human` or `stop`, `init` starts the next task once the plan is at a newer
   Plan Revision marked `approved`, instead of requiring `disable` first.

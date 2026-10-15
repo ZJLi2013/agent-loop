@@ -348,6 +348,30 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(state["plan_revision"], 2)
         self.assertEqual(self.calls(), "1")
 
+    def test_results_written_into_the_design_after_init_do_not_block_execution(self) -> None:
+        self.configure(reviewer_writing({"t1": ACCEPT}))
+        self.write_plan(1, review="unreviewed")
+        self.init()
+        self.write_plan(1, review="unreviewed", a="alpha。结果：通过")
+
+        result = run_command(self.root, [sys.executable, "-c", "print('ok')"], kind="exec")
+
+        self.assertEqual(result["outcome"], "pass")
+        self.assertEqual(self.calls(), "1")
+
+    def test_resume_after_a_plain_pause_keeps_the_admitted_design(self) -> None:
+        self.configure(reviewer_writing({"t1": ACCEPT}))
+        self.init()
+        self.write_plan(1, review="approved")
+        resume(self.root)
+        self.write_plan(1, review="approved", a="alpha。结果：通过")
+        request_pause(self.root, reason="check in")
+
+        state = resume(self.root)
+
+        self.assertEqual(state["phase"], "ready")
+        self.assertEqual(self.calls(), "1")
+
     def test_missing_record_blocks_execution(self) -> None:
         self.configure(reviewer_writing({"t1": ACCEPT}))
         self.init()

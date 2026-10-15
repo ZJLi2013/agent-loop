@@ -32,7 +32,12 @@ from harness.plan import (
     task_plan_revision,
 )
 from harness.page import load_pager, page_followup
-from harness.plan_review import plan_review_ready, run_plan_review
+from harness.plan_review import (
+    admitted,
+    plan_review_ready,
+    review_status,
+    run_plan_review,
+)
 from harness.protocol import Event, Phase, TransitionError, apply_event
 from harness.records import active_task_status
 from harness.review import load_reviewer, review_followup, run_review
@@ -161,6 +166,7 @@ def initialize(
 
     revision: int | None = None
     review: str | None = None
+    review_digest: str | None = None
     if plan_doc:
         revision, review = plan_metadata(root, plan_doc)
         task_revision = task_plan_revision(root, task_id)
@@ -183,6 +189,7 @@ def initialize(
                 ready, reason = plan_review_ready(root, task_id, review=review)
                 if not ready:
                     raise HarnessError(reason or "plan review is incomplete")
+            review_digest = review_status(root, task_id)[1]
 
     created_at = utc_now()
     config: dict[str, Any] = {
@@ -221,6 +228,7 @@ def initialize(
         "phase": phase.value,
         "plan_revision": revision,
         "plan_review": review,
+        "review_digest": review_digest,
         "verify_attempts": 0,
         "wall_seconds_used": 0.0,
         "current_run_id": None,
@@ -319,7 +327,13 @@ def run_command(
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
             raise HarnessError(f"runner is paused: {plan_reason}")
         if config.get("reviewer") and config.get("plan_doc"):
-            reviewed, review_reason = plan_review_ready(root, str(state["task_id"]))
+            # Admission binds to the design reviewed at init, not to results written back later.
+            digest = state.get("review_digest")
+            reviewed, review_reason = (
+                (True, None)
+                if digest and admitted(root, str(state["task_id"]), digest)
+                else plan_review_ready(root, str(state["task_id"]))
+            )
             if not reviewed:
                 request_pause(
                     root,

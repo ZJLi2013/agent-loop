@@ -180,6 +180,7 @@ reviewer 只有建议权：init、resume、pager 和无人值守 `unreviewed` �
 被 revise 的 task 改过设计后，Harness 不再为它跑 reviewer，由 human 带意见批准（`plan-review --approve`，
 批准记在当时的摘要上）或允许再审一次（`--again`）；没审过的 task 不能直接批准，`unreviewed` 不认 human 批准记录。
 task reviewer 以 `continue` 写的 successor 记为已审。Plan Revision 只承担 human 纠偏。
+准入绑定在 `init` 时审过的摘要上：task 执行中把结果写回设计不触发重审；只有 human 纠偏后的 `resume` 按当前摘要重新检查。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、
