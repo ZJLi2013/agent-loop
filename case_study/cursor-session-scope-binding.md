@@ -72,10 +72,10 @@ Goal Review 管的是 task 内的下一动作；已验证 task 的下一步属�
 |---|---|---|
 | 绑定不随工作迁移 | 绑定改为"最近一次 `init` / `exec` / `verify` 的 `--root`"或"最近读到的 `task.md`"；或 stop 扫描会话期间触达过的所有项目，凡 `active` 的都检查 | 已实施（[#29](https://github.com/ZJLi2013/agent-loop/pull/29)）：绑定会话读过 `task.md` 的每个项目 |
 | 绑定可以静默指向已停止的项目 | gate 在绑定项目 `active=False`、同 workspace 内另有 `active` 项目时给出提示，而不是直接放行 | 不做：要扫描 workspace，与 lifecycle hook 不扫描其它项目的不变量冲突；t49 的触达集合已覆盖本例 |
-| gate 抢锁即失败 | gate 只读 `state.json`，不进独占锁；需要写状态时短暂重试。锁文件里已有 pid，抢锁失败时可报告持有者是谁、在做什么 | 未实施（t50） |
+| gate 抢锁即失败 | gate 只读 `state.json`，不进独占锁；需要写状态时短暂重试。锁文件里已有 pid，抢锁失败时可报告持有者是谁、在做什么 | 已实施（t50）：等几秒再报出持有者；gate 不再长时间撞锁见 #37 |
 | review 期间长时间持锁 | `plan-review` 只在读写 record 时持锁，调用 reviewer 子进程期间释放；并发安全交给 record 去重与工作区指纹 | 已实施（[#37](https://github.com/ZJLi2013/agent-loop/pull/37)）：exec、task review、plan review 运行期间都不持锁 |
 | gate 越权写别人的状态 | `init` 把 conversation_id 记进 `state.json`；gate 只对自己 init 的任务写状态、发 followup，对其它会话的任务最多只读提示 | 已实施（[#28](https://github.com/ZJLi2013/agent-loop/pull/28)）：owner 取自 CLI 环境里的会话 id；别的会话、或不带会话 id 的请求不写、不提示 |
-| 报错不可操作 | 锁冲突报成"项目 X 正被进程 N（plan-review …）占用，稍后重试"，与真正的 gate 失败区分开 | 未实施（t50） |
+| 报错不可操作 | 锁冲突报成"项目 X 正被进程 N（plan-review …）占用，稍后重试"，与真正的 gate 失败区分开 | 已实施（t50）：报错写出持有者的 pid、命令与启动时间 |
 | 已验证的 task 被拉去 goal review | gate 在计时前处理 `VERIFIED`；COMPACT 跳过 `VERIFIED` 的项目 | 已实施（[#25](https://github.com/ZJLi2013/agent-loop/pull/25)） |
 
 ## worker 侧的教训

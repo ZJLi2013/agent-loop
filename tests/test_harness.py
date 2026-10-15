@@ -22,6 +22,7 @@ from harness.core import (
     verify,
     workspace_fingerprint,
 )
+from harness.storage import state_lock
 
 
 def in_background(call, ready) -> "threading.Thread":
@@ -207,6 +208,44 @@ class WorkspaceFingerprintTest(unittest.TestCase):
             side_effect=AssertionError("fell back to the tree walk"),
         ):
             self.assert_scratch_ignored()
+
+
+
+class LockTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        (self.root / ".harness").mkdir()
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def contend(self, content: str) -> str:
+        (self.root / ".harness" / "lock").write_text(content, encoding="utf-8")
+        with self.assertRaises(HarnessError) as caught:
+            with state_lock(self.root, wait_seconds=0.3):
+                pass
+        return str(caught.exception)
+
+    def test_busy_lock_names_a_live_holder(self) -> None:
+        holder = subprocess.Popen([sys.executable, "-S", "-c", "import time; time.sleep(30)"])
+        try:
+            message = self.contend(
+                json.dumps({"pid": holder.pid, "argv": ["harness", "exec"], "started_at": "T0"})
+            )
+        finally:
+            holder.kill()
+            holder.wait()
+
+        self.assertIn(f"pid {holder.pid} (harness exec) since T0", message)
+        self.assertNotIn("Remove it with", message)
+
+    def test_stale_lock_gives_the_removal_command(self) -> None:
+        gone = subprocess.Popen([sys.executable, "-S", "-c", "pass"])
+        gone.wait()
+        for content in (json.dumps({"pid": gone.pid}), f"{gone.pid}\n"):
+            with self.subTest(content=content):
+                self.assertIn("Remove it with", self.contend(content))
 
 
 if __name__ == "__main__":

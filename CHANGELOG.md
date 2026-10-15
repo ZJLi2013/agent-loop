@@ -39,6 +39,9 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Fixed
 
+- A busy state lock now waits a few seconds, then names its holder (pid, command, start time). When the holder
+  is gone, the error includes the command that removes the stale lock; Harness does not remove it itself. Lock
+  files written before this change, which hold only a pid, read the same way.
 - Commands and reviewers no longer hold the state lock while they run. A running exec or verify is marked in
   `state.json` (run id and runner pid), a task review in `review_running`, a plan review in
   `plan-review/running.json`; `status`, `pause` and the completion gate keep working meanwhile, and a second run
