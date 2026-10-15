@@ -9,6 +9,8 @@ from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
 from harness.core import HarnessError, completion_gate
 from harness.plan import request_pause
 from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file
+from harness.protocol import Phase
+from harness.storage import STATE_FILE, harness_dir, read_json
 
 TRIGGER = "task.md"
 STORES = ("facts.md", "episodes.md", "lessons.md")
@@ -139,6 +141,9 @@ def request_goal_review(roots: tuple[Path, ...]) -> int:
     count = 0
     for root in roots:
         try:
+            state = read_json(harness_dir(root) / STATE_FILE)
+            if state.get("phase") == Phase.VERIFIED.value:
+                continue
             request_pause(
                 root,
                 reason="goal_review_due: context compacted",

@@ -36,6 +36,12 @@ Goal, with every number traced to the experiment records. Usage documents how to
 - Usage recommends an editable CLI install for Cursor enforced mode, so the CLI and the linked hooks run the
   same checkout. `sync-to-cursor.ps1` warns when the CLI is not installed from that checkout.
 
+### Fixed
+
+- A verified task no longer enters Goal Review when it sits idle past the timer or the context is compacted.
+  The completion gate hands it to the reviewer or the human instead of pausing it, which used to send it back to
+  `ready` and clear its verification.
+
 ## [0.1.0] - 2026-10-12
 
 ### Added
