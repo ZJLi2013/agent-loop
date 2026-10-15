@@ -152,6 +152,145 @@ def active_task_status(root: Path, task_id: str) -> str | None:
     return cells[5] if cells else None
 
 
+_TARGET = re.compile(r"(\]\()([^)\s]+)(\))")
+_ANCHOR_LINE = re.compile(r'^<a id="([^"]+)"></a>\s*$')
+
+
+def _local(target: str) -> tuple[str, str] | None:
+    if re.match(r"^[a-z][a-z0-9+.-]*:", target, re.I):
+        return None
+    name, _, anchor = target.partition("#")
+    return name, anchor
+
+
+def _rewrite(text: str, change) -> str:
+    def replace(match: re.Match[str]) -> str:
+        parts = _local(match.group(2))
+        new = change(*parts) if parts else None
+        return f"{match.group(1)}{new}{match.group(3)}" if new else match.group(0)
+
+    return _TARGET.sub(replace, text)
+
+
+def _relpath(path: Path, base: Path) -> str:
+    return Path(os.path.relpath(path.resolve(), base.resolve())).as_posix()
+
+
+def _relink(text: str, source: Path, target: Path) -> str:
+    def change(name: str, anchor: str) -> str | None:
+        if not name:
+            return None
+        moved = _relpath(source / name, target)
+        return f"{moved}#{anchor}" if anchor else moved
+
+    return _rewrite(text, change)
+
+
+def _retarget(text: str, base: Path, plan: Path, archive: Path, moved: set[str]) -> str:
+    def change(name: str, anchor: str) -> str | None:
+        if anchor not in moved or (base / name).resolve() != plan.resolve():
+            return None
+        return f"{_relpath(archive, base)}#{anchor}"
+
+    return _rewrite(text, change)
+
+
+def _task_sections(lines: list[str], task_id: str) -> list[tuple[int, int]]:
+    spans = []
+    for index, line in enumerate(lines):
+        match = _HEADING.match(line)
+        if not match or re.split(r"[\s:：]", match.group(2).strip(), maxsplit=1)[0] != task_id:
+            continue
+        start = index - 1 if index and _ANCHOR_LINE.match(lines[index - 1]) else index
+        end = next(
+            (
+                later
+                for later in range(index + 1, len(lines))
+                if _ANCHOR_LINE.match(lines[later])
+                or (
+                    (heading := _HEADING.match(lines[later]))
+                    and len(heading.group(1)) <= len(match.group(1))
+                )
+            ),
+            len(lines),
+        )
+        spans.append((start, end))
+    return spans
+
+
+def _mark_done(root: Path, task_id: str) -> None:
+    active = task_file(root)
+    if not active.exists():
+        return
+    lines = active.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        cells = _cells(line)
+        if cells and len(cells) >= 6 and _task_id(line) == task_id and not _closed(line):
+            cells[5] = "✅ done"
+            lines[index] = "| " + " | ".join(cells) + " |"
+            _atomic_write(active, "\n".join(lines) + "\n")
+            return
+
+
+def _move_sections(root: Path, plan: Path, task_id: str, review: str | None) -> None:
+    archive = plan.with_name(f"{plan.stem}-archive{plan.suffix}")
+    lines = plan.read_text(encoding="utf-8").splitlines()
+    spans = _task_sections(lines, task_id)
+    if not spans and not review:
+        return
+    moved_lines = [line for start, end in spans for line in lines[start:end]]
+    anchors = [m.group(1) for line in moved_lines if (m := _ANCHOR_LINE.match(line))]
+    moved = set(anchors)
+
+    kept = [
+        line
+        for index, line in enumerate(lines)
+        if not any(start <= index < end for start, end in spans)
+    ]
+    if spans:
+        link = f"{archive.name}#{anchors[0]}" if anchors else archive.name
+        kept.insert(spans[0][0], f"{task_id} 的设计、结果与 review 依据见 [归档]({link})。")
+
+    def to_archive(name: str, anchor: str) -> str | None:
+        return f"{archive.name}#{anchor}" if not name and anchor in moved else None
+
+    def into_archive(name: str, anchor: str) -> str | None:
+        if not name:
+            return f"{plan.name}#{anchor}" if anchor not in moved else None
+        if anchor in moved and (plan.parent / name).resolve() == plan:
+            return f"#{anchor}"
+        return None
+
+    def within_archive(name: str, anchor: str) -> str | None:
+        return into_archive(name, anchor) if name else None
+
+    body = _retarget(_rewrite("\n".join(kept), to_archive), plan.parent, plan, archive, moved)
+    section = _rewrite("\n".join(moved_lines), into_archive).strip()
+    if review:
+        section = f"{section}\n\n### {task_id} boundary review\n\n{review.strip()}".strip()
+    existing = archive.read_text(encoding="utf-8").rstrip() if archive.exists() else ""
+    existing = _rewrite(existing, within_archive)
+    _atomic_write(archive, f"{existing}\n\n{section}\n".lstrip("\n"))
+    _atomic_write(plan, body.rstrip() + "\n")
+
+    if not moved:
+        return
+    for doc in runtime_dir(root).rglob("*.md"):
+        if doc.resolve() in {plan, archive.resolve()}:
+            continue
+        text = doc.read_text(encoding="utf-8")
+        updated = _retarget(text, doc.parent, plan, archive, moved)
+        if updated != text:
+            _atomic_write(doc, updated)
+
+
+def close_task(root: Path, plan_doc: str | None, task_id: str, review: str | None) -> None:
+    _mark_done(root, task_id)
+    if plan_doc and (root / plan_doc).is_file():
+        _move_sections(root, (root / plan_doc).resolve(), task_id, review)
+    archive_closed_tasks(root)
+
+
 def archive_closed_tasks(root: Path) -> list[str]:
     active_path = task_file(root)
     if not active_path.exists():
@@ -182,6 +321,9 @@ def archive_closed_tasks(root: Path) -> list[str]:
                 *table_headers,
             ]
         )
+    closed_rows = [
+        _relink(line, active_path.parent, archive_path.parent) for line in closed_rows
+    ]
     # Task ids restart across Goals; only an identical row is a duplicate.
     existing = {line.strip() for line in archive.splitlines()}
     new_rows = [line for line in closed_rows if line.strip() not in existing]

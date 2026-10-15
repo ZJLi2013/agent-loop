@@ -250,9 +250,8 @@ def _apply(
         return "Human approved the plan via pager. Continue with the doing task.", True
     if verb == "OK" and kind == "ask_human":
         return (
-            "Human accepted the reviewer's proposal via pager. Apply it with "
-            "work-planning: Plan Revision +1, write the tasks, Plan Review: proposed, "
-            "then run independent plan review before human approval.",
+            "Human accepted the reviewer's proposal via pager. Mark the proposed task "
+            "🔬 doing, keep Plan Review: approved, and initialize it.",
             False,
         )
     return f"Human replied {verb} via pager. Stop at this checkpoint.", False

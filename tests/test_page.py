@@ -165,14 +165,14 @@ class PagerCheckpointTest(unittest.TestCase):
         self.write_plan(2, "proposed")
         self.assertIn("plan_review", completion_gate(self.root) or "")
 
-    def test_ok_on_ask_human_requires_revised_plan_review(self) -> None:
+    def test_ok_on_ask_human_approves_the_proposed_task(self) -> None:
         self.review_with({"decision": "ask_human", "why": "scope question"})
         self.reply("OK")
 
         outcome = run_page(self.root)
 
-        self.assertIn("Plan Review: proposed", outcome["message"])
-        self.assertIn("independent plan review", outcome["message"])
+        self.assertIn("🔬 doing", outcome["message"])
+        self.assertIn("initialize it", outcome["message"])
 
     def test_reviewer_stop_only_notifies(self) -> None:
         self.review_with({"decision": "stop", "why": "goal reached"})

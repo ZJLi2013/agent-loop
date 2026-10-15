@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +16,7 @@ from harness.project import (
     task_file,
 )
 from harness.protocol import Phase
-from harness.records import active_task_status, archive_closed_tasks, archived_task_ids
+from harness.records import CLOSED_MARKERS, active_task_status, close_task
 from harness.runner import execute_process
 from harness.storage import (
     HARNESS_DIR,
@@ -35,8 +34,6 @@ REVIEW_DIR = "review"
 DECISIONS = ("continue", "ask_human", "stop")
 MAX_REVIEWS = 2
 DEFAULT_REVIEW_TIMEOUT_SECONDS = 1800.0
-HEADING = re.compile(r"^#{1,6}\s+(.*)$")
-
 
 def load_reviewer(root: Path) -> dict[str, Any] | None:
     path = runtime_dir(root) / REVIEWER_FILE
@@ -56,37 +53,6 @@ def load_reviewer(root: Path) -> dict[str, Any] | None:
 
 def _review_dir(root: Path) -> Path:
     return harness_dir(root) / REVIEW_DIR
-
-
-def _plan_archive(plan_doc: str) -> str:
-    path = Path(plan_doc)
-    return path.with_name(f"{path.stem}-archive{path.suffix}").as_posix()
-
-
-def _closed_task_headings(text: str, task_id: str) -> list[str]:
-    return [
-        line.strip()
-        for line in text.splitlines()
-        if (match := HEADING.match(line))
-        and re.split(r"[\s:：]", match.group(1).strip(), maxsplit=1)[0] == task_id
-    ]
-
-
-def _closed_plan_sections(
-    root: Path, config: dict[str, Any], task_id: str
-) -> str | None:
-    plan_doc = config.get("plan_doc")
-    if not plan_doc or not (root / plan_doc).is_file():
-        return None
-    text = (root / plan_doc).read_text(encoding="utf-8")
-    headings = _closed_task_headings(text, task_id)
-    if not headings:
-        return None
-    listed = ", ".join(f'"{heading}"' for heading in headings)
-    return (
-        f"plan document {plan_doc} still has sections of closed task {task_id}: "
-        f"{listed}; move them to {_plan_archive(plan_doc)}"
-    )
 
 
 def _relative(root: Path, path: Path) -> str:
@@ -123,17 +89,12 @@ def _prompt(
         )
     elif previous.get("error"):
         extra = f"\n## 上一次 review 无效\n\n{previous['error']}\n\n补齐后再写决策。\n"
-    plan_doc = config.get("plan_doc")
-    archive = _plan_archive(plan_doc) if plan_doc else "<plan>-archive.md"
     return render_prompt(
         "task_review.md",
         task_id=state["task_id"],
         inputs="\n".join(inputs),
         extra=extra,
         decision_file=f"{HARNESS_DIR}/{REVIEW_DIR}/decision.json",
-        plan_name=Path(plan_doc).name if plan_doc else "<plan>.md",
-        plan_archive=archive,
-        plan_archive_name=Path(archive).name,
     )
 
 
@@ -153,10 +114,20 @@ def _read_decision(path: Path) -> tuple[dict[str, str] | None, str | None]:
         return None, "continue requires next_task"
     if not (isinstance(why, str) and why.strip()):
         return None, "why is required"
+    findings = value.get("findings", [])
+    if not isinstance(findings, list) or not all(
+        isinstance(item, str) and item.strip() for item in findings
+    ):
+        return None, "findings must be a list of non-empty strings"
+    review = value.get("review")
+    if review is not None and not isinstance(review, str):
+        return None, "review must be a string"
     return {
         "decision": decision,
         "next_task": next_task if isinstance(next_task, str) else None,
         "why": why.strip(),
+        "findings": [item.strip() for item in findings],
+        "review": review,
     }, None
 
 
@@ -225,25 +196,16 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             decision, error = _read_decision(decision_path)
         else:
             decision, error = None, f"reviewer {result['outcome']}"
-        archived = []
         if decision and decision["decision"] == "continue":
             next_task = str(decision["next_task"])
-            if "📝 proposed" not in (active_task_status(root, next_task) or ""):
+            status = active_task_status(root, next_task) or ""
+            if not status or any(marker in status for marker in CLOSED_MARKERS):
                 decision = None
-                error = f"next task {next_task} must be 📝 proposed"
+                error = f"next task {next_task} must be an open task in the task list"
         if decision:
-            archived = archive_closed_tasks(root)
-            if str(state["task_id"]) not in archived_task_ids(root):
-                decision = None
-                error = (
-                    f"reviewer must mark task {state['task_id']} as "
-                    "✅ done or ❌ dropped"
-                )
-        result["archived_tasks"] = archived
-        leftover = _closed_plan_sections(root, config, str(state["task_id"]))
-        if leftover:
-            decision = None
-            error = f"{error}; {leftover}" if error else leftover
+            close_task(
+                root, config.get("plan_doc"), str(state["task_id"]), decision.pop("review")
+            )
 
         review = {
             "verify_run_id": previous["verify_run_id"],
@@ -269,7 +231,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
                     source="task_review",
                     run_id=run_id,
                 )
-        elif previous.get("decision") and not leftover:
+        elif previous.get("decision"):
             review.update(
                 {key: previous[key] for key in ("decision", "next_task", "why")}
             )
@@ -304,8 +266,9 @@ def review_followup(
             if int(review.get("attempts", 0)) < MAX_REVIEWS
             else ""
         )
+        findings = "".join(f" Non-blocking: {item}" for item in review.get("findings") or [])
         return (
-            f"Reviewer chose continue -> {review['next_task']}: {review['why']}. "
+            f"Reviewer chose continue -> {review['next_task']}: {review['why']}.{findings} "
             "Read the updated task list and check the rewrite only for factual "
             "errors (wrong path or number, already done, cannot run here, over "
             f"budget).{objection} Otherwise initialize the Harness for "

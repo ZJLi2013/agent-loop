@@ -139,26 +139,13 @@ def initialize(
                     raise HarnessError(
                         f"task {old.get('task_id')} is awaiting reviewer decision"
                     )
-                decision = prior_review["decision"]
-                if decision == "continue":
-                    if prior_review.get("next_task") != task_id:
-                        raise HarnessError(
-                            f"reviewer selected {prior_review.get('next_task')}, "
-                            f"not {task_id}"
-                        )
-                else:
-                    human_revision, human_review = (
-                        plan_metadata(root, plan_doc) if plan_doc else (None, None)
+                if prior_review["decision"] != "continue" and (
+                    not plan_doc or plan_metadata(root, plan_doc)[1] != "approved"
+                ):
+                    raise HarnessError(
+                        f"reviewer chose {prior_review['decision']}; another task starts "
+                        "only after the human approves the plan (Plan Review: approved)"
                     )
-                    if (
-                        human_revision is None
-                        or human_revision <= int(old.get("plan_revision") or 0)
-                        or human_review != "approved"
-                    ):
-                        raise HarnessError(
-                            f"reviewer chose {decision}; start another task only "
-                            "from a newer, human-approved Plan Revision"
-                        )
                 if "🔬 doing" not in (active_task_status(root, task_id) or ""):
                     raise HarnessError(
                         f"task {task_id} must be approved as 🔬 doing before init"
