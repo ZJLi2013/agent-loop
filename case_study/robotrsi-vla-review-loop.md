@@ -99,16 +99,18 @@ task review 返回 `ask_human` 后，`init` 要求一个比它更新、且 human
 
 r8 之后 CPU 探针已不跑 plan review，task review 仍是唯一门槛。c2（18 分钟 CPU）的探针判定 `fix_supports_A`，reviewer 自己从 117 段原始轨迹复算全部门槛也通过，仍判 `ask_human` 并提出补证任务 c3：完整物理状态没有落盘、配对前没有比较完整状态、版本与坐标系没有记录。这三条确实是设计写了而产物没做到的。但补齐之后，不论结果如何，下一条命令都是 v2，因为被测臂和基线的运动不依赖配对，配对只在失败时用来分流。task review 没有"证据有缺口但不影响下一步"这一档，只能把每个缺口升级成一个新 task。
 
+v2（约 4 分钟 CPU，判定 `contract_consistent`）重复了同一模式：设计要求落盘的 45 个请求点原始观测与图像，确实写在了节点的输出目录里，项目里只带回了一个点的样例。reviewer 读不到节点，判 `ask_human` 并提出 c4"补齐原始证据"。c4 的全部工作是一次 29 MB 的拷贝加一次重新判定，但仍要走"human 批准 → init → exec → verify → task review"一整轮。根因就是第 5 条：证据在项目外，Harness 没有替 worker 把它带进来。
+
 reviewer 还撤回了"两次运行逐值一致"这一条：另一次运行是 runner 被中止后的孤儿结果（见 [stale runner lock](robotrsi-stale-runner-lock.md)），不在 reviewer 的允许输入里。
 
 ## 修复
 
 | 漏洞 | 建议 | 状态 |
 |---|---|---|
-| 门槛不分成本 | task 行声明成本档（如 `cpu-probe ≤ 1h` / `gpu`），低档 task 默认免 plan review、只做执行后的 task review；或由 human 在 Goal 层设定门槛 | 部分实施（[#23](https://github.com/ZJLi2013/agent-loop/pull/23)）：首轮之后低成本 task 可由 human 带意见批准；首轮审查保留 |
-| 刹车只是告警 | 达到阈值后 `plan-review` 返回 `brake`，要求 human 在继续 revise、直接批准、停止三者中选一；计数按"自上次产出新证据的 exec"累计，不被中间的 accept 清零 | 已实施（[#23](https://github.com/ZJLi2013/agent-loop/pull/23)） |
-| 一行修改也要整轮重审 | 增加 `accept_with_notes`，非阻塞意见写进 task 设计、不升 revision；重审只覆盖本 revision 改动过的 task，已批准且设计未变的不重开 | `accept_with_notes` 不另建，由 waiver 承接（意见写进设计、revision +1）；只重审改动过的 task 待设计（t45） |
-| human 不能免审 | `plan-review --waive --reason "<human 原话>"` 写一条 `verdict: waived` 的记录，`init` 认可 | 已实施（[#23](https://github.com/ZJLi2013/agent-loop/pull/23)） |
+| 门槛不分成本 | task 行声明成本档（如 `cpu-probe ≤ 1h` / `gpu`），低档 task 默认免 plan review、只做执行后的 task review；或由 human 在 Goal 层设定门槛 | 部分实施（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：首轮之后任何 task 都可由 human 带意见批准，审查只在设计变化时重跑；首轮审查保留 |
+| 刹车只是告警 | 达到阈值后 `plan-review` 返回 `brake`，要求 human 在继续 revise、直接批准、停止三者中选一；计数按"自上次产出新证据的 exec"累计，不被中间的 accept 清零 | 已替换（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：按 task 计，一次 revise 后改了设计就交 human，不再按 revision 计数 |
+| 一行修改也要整轮重审 | 增加 `accept_with_notes`，非阻塞意见写进 task 设计、不升 revision；重审只覆盖本 revision 改动过的 task，已批准且设计未变的不重开 | 已实施（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：结论按 task 设计摘要存，只改元数据不重审，只审新增或改过的 task；accept 可附意见 |
+| human 不能免审 | `plan-review --waive --reason "<human 原话>"` 写一条 `verdict: waived` 的记录，`init` 认可 | 已替换（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：`plan-review --approve <task> --reason` 把 human 批准记在 task 当前摘要上 |
 | reviewer 读不到项目外证据 | plan 可以声明外部证据路径，Harness 在 review 前把它们按固定版本拷进 `.harness/evidence/`，供 reviewer 读取 | 未实施（t56） |
 | task review 不分缺口轻重 | 增加 `accept_with_gaps`：缺口写进下一个 task 的设计（例如 v2 探针顺带落盘状态与版本），不单开补证 task；reviewer 判 ask_human 前先回答"补齐后下一条命令会不会变" | 未实施（t54） |
 | ask_human 后强制升 revision | human 批准 reviewer 写的 successor 时，记录 `approved_by: human` 即可 `init`，不要求新 revision | 不做：保留 [#20](https://github.com/ZJLi2013/agent-loop/pull/20) 的机制，successor 由更新的、human 批准的 revision 放行 |
