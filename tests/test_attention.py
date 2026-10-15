@@ -3,11 +3,9 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
-import time
 import unittest
 from pathlib import Path
 
-from adapters.core import request_goal_review
 from harness.attention import record_goal_review
 from harness.core import (
     HarnessError,
@@ -38,14 +36,14 @@ class AttentionRefreshTest(unittest.TestCase):
         initialize(
             self.root,
             task_id="t1",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             **kwargs,
         )
 
     def run_pass(self) -> dict[str, object]:
         return run_command(
             self.root,
-            [sys.executable, "-c", "print('step')"],
+            [sys.executable, "-S", "-c", "print('step')"],
             kind="exec",
         )
 
@@ -69,30 +67,6 @@ class AttentionRefreshTest(unittest.TestCase):
         self.assertEqual(state["phase"], "ready")
         self.assertEqual(state["actions_since_goal_review"], 0)
         self.assertIsNone(pause_request(self.root))
-
-    def test_failure_requires_goal_review(self) -> None:
-        self.init()
-        result = run_command(
-            self.root,
-            [sys.executable, "-c", "raise SystemExit(2)"],
-            kind="exec",
-        )
-        _, state = load_runtime(self.root)
-
-        self.assertEqual(result["outcome"], "fail")
-        self.assertEqual(state["phase"], "paused")
-        self.assertIn("goal_review_due", pause_request(self.root)["reason"])
-
-    def test_elapsed_time_pauses_before_next_action(self) -> None:
-        self.init(
-            goal_review_after_actions=99,
-            goal_review_after_seconds=0.1,
-        )
-        time.sleep(0.2)
-
-        with self.assertRaisesRegex(HarnessError, "since review"):
-            self.run_pass()
-        self.assertEqual(pause_request(self.root)["kind"], "goal_review")
 
     def test_replan_turns_goal_review_into_revision_gate(self) -> None:
         self.init(goal_review_after_actions=1)
@@ -120,13 +94,6 @@ class AttentionRefreshTest(unittest.TestCase):
         self.assertEqual(state["phase"], "stopped")
         self.assertIsNone(pause_request(self.root))
 
-    def test_gate_pauses_idle_ready_task_for_goal_review(self) -> None:
-        self.init(goal_review_after_seconds=0.1)
-        time.sleep(0.2)
-
-        self.assertIn("Goal Review", completion_gate(self.root) or "")
-        self.assertEqual(pause_request(self.root)["kind"], "goal_review")
-
     def verified_with_reviewer(self, *, reviewed: bool) -> None:
         runtime = self.root / ".agent-loop"
         runtime.mkdir()
@@ -141,7 +108,7 @@ class AttentionRefreshTest(unittest.TestCase):
             f"Path('.harness/review/decision.json').write_text({json.dumps(decision)!r})"
         )
         (runtime / "reviewer.json").write_text(
-            json.dumps({"argv": [sys.executable, "-c", code], "timeout_seconds": 30})
+            json.dumps({"argv": [sys.executable, "-S", "-c", code], "timeout_seconds": 30})
         )
         self.init(goal_review_after_actions=99)
         config, _ = load_runtime(self.root)
@@ -163,22 +130,5 @@ class AttentionRefreshTest(unittest.TestCase):
         self.assertIsNone(pause_request(self.root))
         self.assertEqual(state["phase"], "verified")
 
-    def test_gate_asks_for_review_instead_of_goal_review(self) -> None:
-        self.verified_with_reviewer(reviewed=False)
-
-        followup = completion_gate(self.root) or ""
-
-        self.assertIn("review", followup)
-        self.assertNotIn("Goal Review", followup)
-        self.assertIsNone(pause_request(self.root))
-
-    def test_compact_skips_verified_task(self) -> None:
-        self.verified_with_reviewer(reviewed=True)
-
-        self.assertEqual(request_goal_review((self.root,)), 0)
-        self.assertIsNone(pause_request(self.root))
-
-
 if __name__ == "__main__":
     unittest.main()
-

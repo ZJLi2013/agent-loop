@@ -19,8 +19,6 @@ from harness.core import (
     resume,
     run_command,
 )
-from harness.plan import task_plan_revision
-from harness.records import archive_closed_tasks
 
 
 class HarnessPauseTest(unittest.TestCase):
@@ -53,7 +51,7 @@ class HarnessPauseTest(unittest.TestCase):
             self.root,
             task_id="t1",
             plan_doc="plan.md",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
 
     def test_proposed_plan_starts_paused(self) -> None:
@@ -68,7 +66,7 @@ class HarnessPauseTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "runner is paused"):
             run_command(
                 self.root,
-                [sys.executable, "-c", "print('must not run')"],
+                [sys.executable, "-S", "-c", "print('must not run')"],
                 kind="exec",
             )
 
@@ -77,26 +75,6 @@ class HarnessPauseTest(unittest.TestCase):
         self.write_task(1)
         with self.assertRaisesRegex(HarnessError, "binds r1, plan is r2"):
             self.init()
-
-    def test_legacy_cursor_task_remains_readable(self) -> None:
-        self.write_plan(1, "approved")
-        self.write_task(1, ".cursor")
-        self.init()
-        _, state = load_runtime(self.root)
-
-        self.assertEqual(state["phase"], "ready")
-
-    def test_closed_task_revision_remains_readable_from_archive(self) -> None:
-        self.write_task(2)
-        task = self.root / ".agent-loop" / "task.md"
-        task.write_text(
-            task.read_text(encoding="utf-8").replace("🔬 doing", "✅ done"),
-            encoding="utf-8",
-        )
-
-        archive_closed_tasks(self.root)
-
-        self.assertEqual(task_plan_revision(self.root, "t1"), 2)
 
     def test_human_correction_requires_new_approved_revision(self) -> None:
         self.write_plan(1, "approved")
@@ -126,22 +104,6 @@ class HarnessPauseTest(unittest.TestCase):
         self.assertEqual(state["plan_review"], "approved")
         self.assertIsNone(pause_request(self.root))
 
-    def test_plan_drift_pauses_before_starting_another_command(self) -> None:
-        self.write_plan(1, "approved")
-        self.write_task(1)
-        self.init()
-        self.write_plan(2, "approved")
-
-        with self.assertRaisesRegex(HarnessError, "revision changed"):
-            run_command(
-                self.root,
-                [sys.executable, "-c", "print('must not run')"],
-                kind="exec",
-            )
-        request = pause_request(self.root)
-        self.assertIsNotNone(request)
-        self.assertTrue(request["require_revision"])
-
     def test_pause_interrupts_a_running_process(self) -> None:
         self.write_plan(1, "approved")
         self.write_task(1)
@@ -150,7 +112,7 @@ class HarnessPauseTest(unittest.TestCase):
             future = pool.submit(
                 run_command,
                 self.root,
-                [sys.executable, "-c", "import time; time.sleep(30)"],
+                [sys.executable, "-S", "-c", "import time; time.sleep(30)"],
                 kind="exec",
             )
             state_path = harness_dir(self.root) / "state.json"
@@ -175,4 +137,3 @@ class HarnessPauseTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

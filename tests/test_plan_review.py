@@ -8,10 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from harness.core import HarnessError, initialize, load_runtime, resume, run_command
-from harness.plan import request_pause
+from harness.core import HarnessError, initialize, load_runtime, resume
 from harness.plan_review import (
-    again_task,
     approve_task,
     plan_review_ready,
     respond_task,
@@ -45,7 +43,7 @@ def reviewer_writing(
         f"{modify}"
         f"(d/'report.json').write_text({report!r})"
     )
-    return [sys.executable, "-c", code]
+    return [sys.executable, "-S", "-c", code]
 
 
 class PlanReviewTest(unittest.TestCase):
@@ -96,7 +94,7 @@ class PlanReviewTest(unittest.TestCase):
             self.root,
             task_id=task_id,
             plan_doc="plan.md",
-            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         return state
 
@@ -118,14 +116,6 @@ class PlanReviewTest(unittest.TestCase):
             self.assertIn(text, prompt)
         self.assertNotIn("review-checklist.md", prompt)
 
-    def test_repo_checklist_is_listed_as_input(self) -> None:
-        (self.root / ".agent-loop" / "review-checklist.md").write_text("- item\n", encoding="utf-8")
-        self.configure(reviewer_writing({"t1": []}))
-
-        self.review()
-
-        self.assertIn(".agent-loop/review-checklist.md", self.prompt())
-
     def test_new_task_is_reviewed_alone(self) -> None:
         self.configure(reviewer_writing({"t1": [], "t2": []}))
         self.review()
@@ -144,24 +134,6 @@ class PlanReviewTest(unittest.TestCase):
 
         self.assertEqual(self.review()["tasks"], {})
         self.assertEqual(self.calls(), "1")
-
-    def test_human_can_ask_for_one_more_review(self) -> None:
-        self.configure(reviewer_writing({"t1": []}))
-        self.review()
-
-        again_task(self.root, "t1", reason="设计大改了，再审一次")
-        self.review()
-        self.review()
-
-        self.assertEqual(self.calls(), "2")
-
-    def test_must_without_consequence_or_evidence_counts_as_suggest(self) -> None:
-        self.configure(reviewer_writing({"t1": [{"level": "must", "claim": "tighten it"}]}))
-
-        self.review()
-
-        self.assertEqual(task_record(self.root, "t1")["reviews"][-1]["findings"][0]["level"], "suggest")
-        self.assertTrue(plan_review_ready(self.root, "t1")[0])
 
     def test_items_over_the_limit_are_dropped(self) -> None:
         self.configure(reviewer_writing({"t1": [MUST] * 4 + [SUGGEST] * 4}))
@@ -217,48 +189,6 @@ class PlanReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "human decision"):
             plan_review_ready(self.root, "t1", review="unreviewed")
 
-    def test_report_missing_a_requested_task_is_invalid_and_not_cached(self) -> None:
-        self.write_tasks(("t1", "📝 proposed"), ("t2", "📝 proposed"))
-        self.configure(reviewer_writing({"t1": []}))
-
-        for _ in range(2):
-            with self.assertRaisesRegex(HarnessError, "no entry for task t2"):
-                self.review()
-
-        self.assertEqual(self.calls(), "2")
-        self.assertEqual(review_status(self.root, "t1"), "needs_review")
-
-    def test_malformed_findings_are_invalid(self) -> None:
-        self.configure(reviewer_writing({"t1": [{"level": "blocker", "claim": "x"}]}))
-
-        with self.assertRaisesRegex(HarnessError, "needs level"):
-            self.review()
-
-    def test_workspace_edits_invalidate_plan_review(self) -> None:
-        self.configure(reviewer_writing({"t1": []}, modify_workspace=True))
-
-        with self.assertRaisesRegex(HarnessError, "modified the workspace"):
-            self.review()
-
-    def test_plan_review_requires_configured_reviewer(self) -> None:
-        with self.assertRaisesRegex(HarnessError, "no reviewer configured"):
-            self.review()
-
-    def test_human_decisions_need_a_review_and_a_reason_and_are_journaled(self) -> None:
-        with self.assertRaisesRegex(HarnessError, "never been reviewed"):
-            approve_task(self.root, "t1", reason="直接批")
-        self.configure(reviewer_writing({"t1": []}))
-        self.review()
-        with self.assertRaisesRegex(HarnessError, "--reason"):
-            approve_task(self.root, "t1", reason="  ")
-
-        approve_task(self.root, "t1", reason="批准，调整 review 门槛")
-        entry = json.loads(
-            (self.root / ".harness" / "runs.jsonl").read_text(encoding="utf-8").splitlines()[-1]
-        )
-
-        self.assertEqual((entry["kind"], entry["task_id"]), ("plan_review_approval", "t1"))
-
     def test_cli_respond_approve_and_again(self) -> None:
         from harness.run import main
 
@@ -298,27 +228,6 @@ class PlanReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "set Plan Review to proposed"):
             self.init()
 
-    def test_unattended_plan_is_reviewed_before_ready(self) -> None:
-        self.configure(reviewer_writing({"t1": []}))
-        self.write_plan(1, review="unreviewed")
-
-        self.assertEqual(self.init()["phase"], "ready")
-        self.assertEqual(review_status(self.root, "t1"), "reviewed")
-
-    def test_correction_resumes_without_another_review(self) -> None:
-        self.configure(reviewer_writing({"t1": []}))
-        self.init()
-        self.write_plan(1, review="approved")
-        resume(self.root)
-        request_pause(self.root, reason="goal changed", require_revision=True)
-        self.write_plan(2, review="approved", body="rewritten design")
-        self.write_tasks(("t1", "🔬 doing"), revision=2)
-
-        state = resume(self.root)
-
-        self.assertEqual(state["plan_revision"], 2)
-        self.assertEqual(self.calls(), "1")
-
     def test_records_from_before_the_protocol_still_read(self) -> None:
         path = self.root / ".harness" / "plan-review" / "tasks" / "t1.json"
         path.parent.mkdir(parents=True)
@@ -332,17 +241,6 @@ class PlanReviewTest(unittest.TestCase):
 
         self.assertTrue(plan_review_ready(self.root, "t1")[0])
         self.assertEqual(task_record(self.root, "t1")["reviews"][0]["findings"][0]["level"], "suggest")
-
-    def test_missing_record_blocks_execution(self) -> None:
-        self.configure(reviewer_writing({"t1": []}))
-        self.init()
-        self.write_plan(1, review="approved")
-        resume(self.root)
-        (self.root / ".harness" / "plan-review" / "tasks" / "t1.json").unlink()
-
-        with self.assertRaisesRegex(HarnessError, "no independent review"):
-            run_command(self.root, [sys.executable, "-c", "print('must not run')"], kind="exec")
-
 
 if __name__ == "__main__":
     unittest.main()

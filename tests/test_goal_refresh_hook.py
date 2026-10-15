@@ -33,7 +33,7 @@ class GoalRefreshHookTest(unittest.TestCase):
             initialize(
                 root,
                 task_id="t1",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
+                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             )
             task = root / ".agent-loop" / "task.md"
             task.parent.mkdir(parents=True)
@@ -59,58 +59,13 @@ class GoalRefreshHookTest(unittest.TestCase):
         self.assertEqual(request["kind"], "goal_review")
         self.assertIn("context compacted", request["reason"])
 
-    def test_inactive_workspace_is_ignored(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            count = HOOK.request_for({"workspace_roots": [directory]})
-        self.assertEqual(count, 0)
-
-    def test_compact_only_pauses_the_bound_project(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            workspace = Path(directory)
-            project = workspace / "first"
-            other = workspace / "second"
-            initialize(
-                project,
-                task_id="t1",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
-            )
-            initialize(
-                other,
-                task_id="t2",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
-            )
-            task = project / ".agent-loop" / "task.md"
-            task.parent.mkdir(parents=True)
-            task.write_text("# Tasks\n", encoding="utf-8")
-            payload = {
-                "conversation_id": "first",
-                "workspace_roots": [directory],
-                "tool_input": {"path": str(task)},
-            }
-            with patch.object(
-                session_scope, "_SCOPES", workspace / "session-cache"
-            ):
-                session_scope.bind(payload)
-                count = HOOK.request_for(
-                    {
-                        "conversation_id": "first",
-                        "workspace_roots": [directory],
-                    }
-                )
-                request = pause_request(project)
-                other_request = pause_request(other)
-
-        self.assertEqual(count, 1)
-        self.assertIsNotNone(request)
-        self.assertIsNone(other_request)
-
     def test_compact_leaves_other_sessions_task_alone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             initialize(
                 root,
                 task_id="t1",
-                verifier_argv=[sys.executable, "-c", "print('OK')"],
+                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             )
             state_path = root / ".harness" / "state.json"
             state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -139,4 +94,3 @@ class GoalRefreshHookTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

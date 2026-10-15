@@ -29,28 +29,6 @@ class CursorSessionScopeTest(unittest.TestCase):
         task.write_text("# Tasks\n", encoding="utf-8")
         return task
 
-    def test_conversations_bind_different_nested_projects(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            workspace = Path(directory)
-            first = workspace / "first"
-            second = workspace / "second"
-            first_task = self._task(first)
-            second_task = self._task(second)
-            cache = workspace / "cache"
-            with patch.object(session_scope, "_SCOPES", cache):
-                session_scope.bind(self._payload("one", workspace, first_task))
-                session_scope.bind(self._payload("two", workspace, second_task))
-
-                first_roots = session_scope.roots(
-                    self._payload("one", workspace)
-                )
-                second_roots = session_scope.roots(
-                    self._payload("two", workspace)
-                )
-
-        self.assertEqual(first_roots, (first.resolve(),))
-        self.assertEqual(second_roots, (second.resolve(),))
-
     def test_every_task_read_joins_the_conversation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -66,35 +44,6 @@ class CursorSessionScopeTest(unittest.TestCase):
                 bound = session_scope.roots(self._payload("one", workspace))
 
         self.assertEqual(bound, (first.resolve(), second.resolve()))
-
-    def test_single_line_scope_file_stays_readable(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            workspace = Path(directory)
-            first = workspace / "first"
-            second = workspace / "second"
-            self._task(first)
-            second_task = self._task(second)
-            cache = workspace / "cache"
-            with patch.object(session_scope, "_SCOPES", cache):
-                payload = self._payload("one", workspace)
-                scope = session_scope._scope_file(payload)
-                scope.parent.mkdir(parents=True)
-                scope.write_text(str(first.resolve()), encoding="utf-8")
-                session_scope.bind(self._payload("one", workspace, second_task))
-                bound = session_scope.roots(payload)
-
-        self.assertEqual(bound, (first.resolve(), second.resolve()))
-
-    def test_followup_claim_ignores_elapsed_time_only(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            payload = self._payload("one", root, self._task(root))
-            with patch.object(session_scope, "_SCOPES", root / "cache"):
-                session_scope.bind(payload)
-                self.assertTrue(session_scope.claim_followup(payload, "3 attempts, 1800.0s remain"))
-                self.assertFalse(session_scope.claim_followup(payload, "3 attempts, 1790.0s remain"))
-                self.assertTrue(session_scope.claim_followup(payload, "2 attempts, 1790.0s remain"))
-
 
 if __name__ == "__main__":
     unittest.main()

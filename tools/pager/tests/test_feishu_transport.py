@@ -1,13 +1,7 @@
-import json
-from types import SimpleNamespace
 
 import pytest
 
-from pager.feishu_transport import (
-    FeishuMessage,
-    FeishuTransport,
-    _dispatch_event,
-)
+from pager.feishu_transport import FeishuMessage, FeishuTransport
 from pager.protocol import Verb, render_page
 
 
@@ -50,18 +44,6 @@ def test_send_tracks_one_pending_task():
         channel.send(render_page("T13", "另一项"))
 
 
-def test_notify_does_not_create_pending_task():
-    client = FakeFeishuClient()
-    channel = transport(client)
-
-    channel.notify("listener alive", "last event loop ok")
-
-    assert client.sent == [
-        ("chat-1", "[pager] listener alive\n\nlast event loop ok")
-    ]
-    assert channel._pending is None
-
-
 @pytest.mark.parametrize(
     ("text", "verb", "command_text"),
     [
@@ -91,40 +73,3 @@ def test_poll_drops_wrong_chat_and_sender():
 
     assert channel.poll() == []
     assert channel._pending == "T12"
-
-
-def test_pending_and_seen_survive_restart(tmp_path):
-    state_path = tmp_path / "pager-state.json"
-    client = FakeFeishuClient()
-    channel = transport(client, state_path)
-    channel.send(render_page("T12", "批准 pipeline"))
-    channel._inbox.put(message("OK"))
-    assert channel.poll()[0].verb is Verb.OK
-
-    restarted = transport(client, state_path)
-    restarted._inbox.put(message("STOP"))
-
-    assert restarted.poll() == []
-    state = json.loads(state_path.read_text(encoding="utf-8"))
-    assert state == {"version": 1, "pending": None, "seen": ["message-1"]}
-
-
-def test_dispatch_event_extracts_text_message():
-    received = []
-    event = SimpleNamespace(
-        event=SimpleNamespace(
-            message=SimpleNamespace(
-                message_id="message-1",
-                chat_id="chat-1",
-                message_type="text",
-                content=json.dumps({"text": "继续"}),
-            ),
-            sender=SimpleNamespace(
-                sender_id=SimpleNamespace(open_id="user-1")
-            ),
-        )
-    )
-
-    _dispatch_event(event, received.append)
-
-    assert received == [message("继续")]

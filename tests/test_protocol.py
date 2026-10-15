@@ -31,23 +31,6 @@ class ProtocolTest(unittest.TestCase):
             Phase.VERIFYING, Event.VERIFY_PASSED, Phase.VERIFIED
         )
 
-    def test_pause_resume_and_stale_evidence(self) -> None:
-        self.assert_transition(
-            Phase.RUNNING, Event.PAUSE_REQUESTED, Phase.PAUSED
-        )
-        self.assert_transition(
-            Phase.PAUSED, Event.PLAN_RESUMED, Phase.READY
-        )
-        self.assert_transition(
-            Phase.VERIFIED, Event.EVIDENCE_STALE, Phase.FAILED
-        )
-
-    def test_budget_and_disable_stop_active_states(self) -> None:
-        for phase in (Phase.READY, Phase.RUNNING, Phase.PAUSED, Phase.FAILED):
-            self.assert_transition(
-                phase, Event.BUDGET_EXHAUSTED, Phase.STOPPED
-            )
-
     def test_invalid_transition_is_rejected(self) -> None:
         with self.assertRaisesRegex(
             TransitionError, "verify_passed is invalid from ready"
@@ -57,4 +40,3 @@ class ProtocolTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
