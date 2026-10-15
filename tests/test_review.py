@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import threading
@@ -138,6 +139,19 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             initialize(self.root, task_id="t2", verifier_argv=[sys.executable, "-S", "-c", "pass"])
         worker.join()
 
+        self.assertEqual(load_runtime(self.root)[1]["review"]["decision"], "stop")
+
+    def test_a_killed_task_review_does_not_block(self) -> None:
+        self.init(reviewer_writing({"decision": "stop", "why": "done"}))
+        gone = subprocess.Popen([sys.executable, "-S", "-c", "pass"])
+        gone.wait()
+        state_path = self.root / ".harness" / "state.json"
+        state = json.loads(state_path.read_text())
+        state["review_running"] = {"run_id": "rv-killed", "pid": gone.pid}
+        state_path.write_text(json.dumps(state))
+
+        self.assertIn("rv-killed lost its process", completion_gate(self.root) or "")
+        run_review(self.root)
         self.assertEqual(load_runtime(self.root)[1]["review"]["decision"], "stop")
 
     def test_verify_automatically_runs_reviewer(self) -> None:

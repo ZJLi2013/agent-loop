@@ -15,6 +15,7 @@ from harness.runner import execute_process
 from harness.storage import (
     atomic_write_json,
     harness_dir,
+    pid_alive,
     read_json,
     state_lock,
     utc_now,
@@ -206,8 +207,8 @@ def run_plan_review(
         review_dir = _review_dir(root)
         review_dir.mkdir(parents=True, exist_ok=True)
         running = review_dir / RUNNING_FILE
-        if running.exists():
-            holder = read_json(running)
+        holder = read_json(running) if running.exists() else None
+        if holder and pid_alive(int(holder["pid"])):
             raise HarnessError(
                 f"plan review run {holder.get('run_id')} is in progress "
                 f"(pid {holder.get('pid')}); wait for it to finish"

@@ -52,8 +52,8 @@ agent 看到的是"命令启动失败"，以为什么都没跑；实际上远端
 |---|---|---|
 | 死锁不自愈 | 抢锁失败时读 pid：进程不在就视为陈旧锁，记一条 `stale_lock_recovered` 后接管；进程还在就在报错里写出 pid、启动时间与命令 | 部分实施（t50）：报出持有者、持有者已不在时给出删锁命令；按 [#35](https://github.com/ZJLi2013/agent-loop/issues/35) 不自动回收 |
 | exec 全程持锁 | 只在读写 `state.json` 与 journal 时短暂持锁；运行期间改用 `state.phase=running` 加 run_id 表示占用，第二个 `exec` 以"已有运行中的 run"拒绝 | 已实施（[#37](https://github.com/ZJLi2013/agent-loop/pull/37)） |
-| 状态停在 running | 进入 `exec` / `verify` / gate 时，若 `phase=running` 而记录的 runner pid 已死，就触发已有的 `INTERRUPTED`，转成 `failed` 并记入 journal，之后按正常失败路径重试 | 未实施（t52） |
-| 中止的运行无痕迹 | 启动时先把 `{run_id, pid, argv, started_at}` 写进 artifact 和 `runs.jsonl`，日志流式写入；下次进入时发现 pid 已死、却没有结束记录，就补记 `outcome: aborted` | 未实施（t52） |
+| 状态停在 running | 进入 `exec` / `verify` / gate 时，若 `phase=running` 而记录的 runner pid 已死，就触发已有的 `INTERRUPTED`，转成 `failed` 并记入 journal，之后按正常失败路径重试 | 已实施（t52）：本次 exec / verify 只报 aborted 不执行，下一次照常执行 |
+| 中止的运行无痕迹 | 启动时先把 `{run_id, pid, argv, started_at}` 写进 artifact 和 `runs.jsonl`，日志流式写入；下次进入时发现 pid 已死、却没有结束记录，就补记 `outcome: aborted` | 部分实施（t52）：写 `start.json`、补记 aborted；按 human 选择不做日志流式写入 |
 | 远端孤儿作业 | 文档要求远端长作业用 `agent-heartbeat` 的 detach + 日志模式，runner 只负责启动和轮询；或者 `ssh -t` 让远端随连接结束 | 未实施（t53：选 detach + 日志） |
 
 ## worker 侧的教训

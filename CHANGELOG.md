@@ -11,6 +11,12 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Changed
 
+- A run whose runner process was killed no longer blocks the task. The next `exec`, `verify` or completion gate
+  marks it `failed`, adds an `aborted` entry with its command and start time to `runs.jsonl`, and reports that
+  the command may have finished or may still be running remotely, so its outputs should be checked before it is
+  run again; the next `exec` runs normally. Each run directory now starts with `start.json`. A task or plan
+  reviewer whose process is gone no longer blocks another review.
+
 - Plan review is per task instead of per Plan Revision, and each task is reviewed once: when it first appears,
   all unreviewed tasks go to the reviewer in one call, and later design edits do not trigger another review
   (`plan-review --again <task>` asks for one). Reviewer items follow a must / suggest protocol: `must` means the

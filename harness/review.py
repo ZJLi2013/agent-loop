@@ -26,6 +26,7 @@ from harness.storage import (
     atomic_write_json,
     harness_dir,
     load_runtime,
+    pid_alive,
     read_json,
     state_lock,
     utc_now,
@@ -159,7 +160,8 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         request = pause_request(root)
         if request:
             raise HarnessError(f"runner is paused: {request['reason']}")
-        if state.get("review_running"):
+        running = state.get("review_running")
+        if running and pid_alive(int(running["pid"])):
             raise HarnessError(_review_in_progress(state))
 
         previous = state.get("review") or {}
