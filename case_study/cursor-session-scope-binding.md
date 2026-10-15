@@ -70,7 +70,7 @@ Goal Review 管的是 task 内的下一动作；已验证 task 的下一步属�
 
 | 漏洞 | 建议 | 状态 |
 |---|---|---|
-| 绑定不随工作迁移 | 绑定改为"最近一次 `init` / `exec` / `verify` 的 `--root`"或"最近读到的 `task.md`"；或 stop 扫描会话期间触达过的所有项目，凡 `active` 的都检查 | 未实施（t49：绑定会话读过 `task.md` 的每个项目） |
+| 绑定不随工作迁移 | 绑定改为"最近一次 `init` / `exec` / `verify` 的 `--root`"或"最近读到的 `task.md`"；或 stop 扫描会话期间触达过的所有项目，凡 `active` 的都检查 | 已实施（[#29](https://github.com/ZJLi2013/agent-loop/pull/29)）：绑定会话读过 `task.md` 的每个项目 |
 | 绑定可以静默指向已停止的项目 | gate 在绑定项目 `active=False`、同 workspace 内另有 `active` 项目时给出提示，而不是直接放行 | 不做：要扫描 workspace，与 lifecycle hook 不扫描其它项目的不变量冲突；t49 的触达集合已覆盖本例 |
 | gate 抢锁即失败 | gate 只读 `state.json`，不进独占锁；需要写状态时短暂重试。锁文件里已有 pid，抢锁失败时可报告持有者是谁、在做什么 | 未实施（t50） |
 | review 期间长时间持锁 | `plan-review` 只在读写 record 时持锁，调用 reviewer 子进程期间释放；并发安全交给 record 去重与工作区指纹 | 未实施（t51） |

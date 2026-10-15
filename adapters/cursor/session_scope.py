@@ -50,10 +50,15 @@ def _inside(root: Path, workspaces: tuple[Path, ...]) -> bool:
     )
 
 
+def _scope_lines(scope: Path) -> list[str]:
+    try:
+        text = scope.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
 def bind(payload: dict[str, object]) -> Path | None:
-    existing = roots(payload)
-    if existing:
-        return existing[0]
     scope = _scope_file(payload)
     task = _task_path(payload.get("tool_input"))
     workspaces = workspace_roots(payload.get("workspace_roots"))
@@ -76,13 +81,12 @@ def bind(payload: dict[str, object]) -> Path | None:
     if root is None:
         return None
 
-    scope.parent.mkdir(parents=True, exist_ok=True)
+    lines = _scope_lines(scope)
+    if str(root) in lines:
+        return root
     try:
-        with scope.open("x", encoding="utf-8") as stream:
-            stream.write(str(root))
-    except FileExistsError:
-        existing = roots(payload)
-        return existing[0] if existing else None
+        scope.parent.mkdir(parents=True, exist_ok=True)
+        scope.write_text("\n".join([*lines, str(root)]) + "\n", encoding="utf-8")
     except OSError:
         return None
     return root
@@ -93,11 +97,12 @@ def roots(payload: dict[str, object]) -> tuple[Path, ...]:
     workspaces = workspace_roots(payload.get("workspace_roots"))
     if scope is None or not workspaces:
         return ()
-    try:
-        root = Path(scope.read_text(encoding="utf-8")).resolve()
-    except OSError:
-        return ()
-    return (root,) if _inside(root, workspaces) else ()
+    found: list[Path] = []
+    for line in _scope_lines(scope):
+        root = Path(line).resolve()
+        if _inside(root, workspaces) and root not in found:
+            found.append(root)
+    return tuple(found)
 
 
 def claim_followup(payload: dict[str, object], message: str) -> bool:

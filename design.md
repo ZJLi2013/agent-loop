@@ -233,7 +233,8 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 
 CLI `init` 把会话 id（`AGENT_LOOP_SESSION_ID`，否则 `CURSOR_CONVERSATION_ID`）记为 task 的 `owner`。
 gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
-没有 owner 的 state 照旧处理。
+没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 `COMPACT` 遍历这些项目，
+不扫描 workspace 里的其它项目。
 
 | Adapter | 职责 |
 |---|---|

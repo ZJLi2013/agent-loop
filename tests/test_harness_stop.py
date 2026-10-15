@@ -162,6 +162,50 @@ class HarnessStopHookTest(unittest.TestCase):
 
         self.assertIn("Goal Review", followup or "")
 
+    def test_stop_checks_every_project_the_session_read(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            stopped = workspace / "wm_forge"
+            running = workspace / "robotRSI"
+            tasks = []
+            for root, task_id in ((stopped, "w32"), (running, "c2")):
+                task = root / ".agent-loop" / "task.md"
+                task.parent.mkdir(parents=True)
+                task.write_text("# Tasks\n", encoding="utf-8")
+                tasks.append(task)
+                initialize(
+                    root,
+                    task_id=task_id,
+                    verifier_argv=[sys.executable, "-c", "print('OK')"],
+                    owner="s",
+                )
+            run.main(["--root", str(stopped), "disable"])
+            state_path = running / ".harness" / "state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["phase"] = "running"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            with patch.object(
+                session_scope, "_SCOPES", workspace / "session-cache"
+            ), redirect_stdout(io.StringIO()):
+                for task in tasks:
+                    session_scope.bind(
+                        {
+                            "conversation_id": "s",
+                            "workspace_roots": [str(workspace)],
+                            "tool_input": {"path": str(task)},
+                        }
+                    )
+                followup = HOOK.followup_for(
+                    {
+                        "conversation_id": "s",
+                        "status": "completed",
+                        "workspace_roots": [str(workspace)],
+                    }
+                )
+
+        self.assertIn("Task c2 is not independently verified", followup or "")
+        self.assertNotIn("w32", followup or "")
+
     def owned_task_with_goal_review_due(self, root: Path) -> Path:
         initialize(
             root,
