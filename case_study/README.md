@@ -12,5 +12,8 @@ they are not controlled benchmarks or guarantees of performance on other project
 | [Plan growth](robojev-plan-growth.md) | Why a reviewer-maintained plan grew with every closed task, and what a CLOSE guard must check |
 | [RoboTwin memory](robotwin-memory-consolidation.md) | Consolidating project memory |
 | [Chained tasks](wmforge-r8-chained-tasks.md) | How task chaining bypassed design/review boundaries and motivated a guard |
+| [Review loop](robotrsi-vla-review-loop.md) | Why one plan-review gate for every task cost more than it found on cheap CPU probes (open) |
+| [Session scope](cursor-session-scope-binding.md) | How first-read session binding pointed the completion gate at the wrong project, surfaced another session's lock as a gate failure, and let one session pause another session's task (open) |
+| [Stale runner lock](robotrsi-stale-runner-lock.md) | Why an aborted runner left a stale lock, a phase stuck in running, an empty journal, and an orphaned remote job (open) |
 
 Current behavior is defined in [design.md](../design.md), rather than reconstructed from historical cases.
