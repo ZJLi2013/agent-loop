@@ -110,8 +110,8 @@ reviewer 还撤回了"两次运行逐值一致"这一条：另一次运行是 ru
 | 一行修改也要整轮重审 | 增加 `accept_with_notes`，非阻塞意见写进 task 设计、不升 revision；重审只覆盖本 revision 改动过的 task，已批准且设计未变的不重开 | 已实施（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：结论按 task 设计摘要存，只改元数据不重审，只审新增或改过的 task；accept 可附意见 |
 | human 不能免审 | `plan-review --waive --reason "<human 原话>"` 写一条 `verdict: waived` 的记录，`init` 认可 | 已替换（[#31](https://github.com/ZJLi2013/agent-loop/pull/31)）：`plan-review --approve <task> --reason` 把 human 批准记在 task 当前摘要上 |
 | reviewer 读不到项目外证据 | plan 可以声明外部证据路径，Harness 在 review 前把它们按固定版本拷进 `.harness/evidence/`，供 reviewer 读取 | 未实施（t56） |
-| task review 不分缺口轻重 | 增加 `accept_with_gaps`：缺口写进下一个 task 的设计（例如 v2 探针顺带落盘状态与版本），不单开补证 task；reviewer 判 ask_human 前先回答"补齐后下一条命令会不会变" | 未实施（t54） |
-| ask_human 后强制升 revision | human 批准 reviewer 写的 successor 时，记录 `approved_by: human` 即可 `init`，不要求新 revision | 不做：保留 [#20](https://github.com/ZJLi2013/agent-loop/pull/20) 的机制，successor 由更新的、human 批准的 revision 放行 |
+| task review 不分缺口轻重 | 增加 `accept_with_gaps`：缺口写进下一个 task 的设计（例如 v2 探针顺带落盘状态与版本），不单开补证 task；reviewer 判 ask_human 前先回答"补齐后下一条命令会不会变" | 已实施（[#32](https://github.com/ZJLi2013/agent-loop/pull/32)）：`findings` 记不阻塞的缺口并转给 worker，不升级成补证 task |
+| ask_human 后强制升 revision | human 批准 reviewer 写的 successor 时，记录 `approved_by: human` 即可 `init`，不要求新 revision | 已实施（[#32](https://github.com/ZJLi2013/agent-loop/pull/32)）：`init` 只要求 human 批准的 doing task 与 `Plan Review: approved`，不再升 revision |
 | review 失败不能重试 | `plan-review --retry` 清除 error 记录后重跑；error 信息里点明是哪些文件改动了 | 未实施（t55） |
 
 ## worker 侧的教训
