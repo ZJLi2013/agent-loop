@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -102,6 +103,38 @@ class GoalRefreshHookTest(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertIsNotNone(request)
         self.assertIsNone(other_request)
+
+    def test_compact_leaves_other_sessions_task_alone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initialize(
+                root,
+                task_id="t1",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
+            state_path = root / ".harness" / "state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["owner"] = "A"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            task = root / ".agent-loop" / "task.md"
+            task.parent.mkdir(parents=True)
+            task.write_text("# Tasks\n", encoding="utf-8")
+            payload = {
+                "conversation_id": "B",
+                "workspace_roots": [str(root)],
+                "tool_input": {"path": str(task)},
+            }
+            with patch.object(
+                session_scope, "_SCOPES", root / "session-cache"
+            ):
+                session_scope.bind(payload)
+                count = HOOK.request_for(
+                    {"conversation_id": "B", "workspace_roots": [str(root)]}
+                )
+                request = pause_request(root)
+
+        self.assertEqual(count, 0)
+        self.assertIsNone(request)
 
 
 if __name__ == "__main__":

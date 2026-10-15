@@ -25,6 +25,7 @@ class HookRequest:
     tool_name: str = ""
     tool_input: Any = None
     status: str = ""
+    session_id: str | None = None
 
 
 @dataclass(frozen=True)
