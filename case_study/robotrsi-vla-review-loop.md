@@ -99,8 +99,6 @@ task review 返回 `ask_human` 后，`init` 要求一个比它更新、且 human
 
 r8 之后 CPU 探针已不跑 plan review，task review 仍是唯一门槛。c2（18 分钟 CPU）的探针判定 `fix_supports_A`，reviewer 自己从 117 段原始轨迹复算全部门槛也通过，仍判 `ask_human` 并提出补证任务 c3：完整物理状态没有落盘、配对前没有比较完整状态、版本与坐标系没有记录。这三条确实是设计写了而产物没做到的。但补齐之后，不论结果如何，下一条命令都是 v2，因为被测臂和基线的运动不依赖配对，配对只在失败时用来分流。task review 没有"证据有缺口但不影响下一步"这一档，只能把每个缺口升级成一个新 task。
 
-v2（约 4 分钟 CPU，判定 `contract_consistent`）重复了同一模式：设计要求落盘的 45 个请求点原始观测与图像，确实写在了节点的输出目录里，项目里只带回了一个点的样例。reviewer 读不到节点，判 `ask_human` 并提出 c4"补齐原始证据"。c4 的全部工作是一次 29 MB 的拷贝加一次重新判定，但仍要走"human 批准 → init → exec → verify → task review"一整轮。根因就是第 5 条：证据在项目外，Harness 没有替 worker 把它带进来。
-
 reviewer 还撤回了"两次运行逐值一致"这一条：另一次运行是 runner 被中止后的孤儿结果（见 [stale runner lock](robotrsi-stale-runner-lock.md)），不在 reviewer 的允许输入里。
 
 ## 修复
