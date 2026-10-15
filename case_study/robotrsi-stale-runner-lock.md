@@ -67,4 +67,4 @@ agent 看到的是"命令启动失败"，以为什么都没跑；实际上远端
 
 - `.harness/lock`：内容 `38928`，写入时间 21:09:11；该 pid 已不存在
 - `.harness/artifacts/20261014T130911Z-f9589e18/`：空目录
-- 远端 `/data/zhengjli/robotrsi/vla-c2/results.json`：节点本地时间 08:27（UTC 13:27）写出
+- 远端 `<workdir>/vla-c2/results.json`：节点本地时间 08:27（UTC 13:27）写出
