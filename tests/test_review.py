@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -117,6 +119,24 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
+
+    def test_gate_reports_a_running_task_review(self) -> None:
+        slow = reviewer_writing({"decision": "stop", "why": "done"})
+        slow[-1] = "import time; time.sleep(2); " + slow[-1]
+        self.init(slow)
+        worker = threading.Thread(target=run_review, args=(self.root,))
+        worker.start()
+        deadline = time.monotonic() + 20
+        while not load_runtime(self.root)[1].get("review_running"):
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.05)
+
+        self.assertIn("is in progress", completion_gate(self.root) or "")
+        with self.assertRaisesRegex(HarnessError, "is in progress"):
+            run_review(self.root)
+        worker.join()
+
+        self.assertEqual(load_runtime(self.root)[1]["review"]["decision"], "stop")
 
     def test_verify_automatically_runs_reviewer(self) -> None:
         self.init(

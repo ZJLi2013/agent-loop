@@ -5,6 +5,8 @@ import io
 import json
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -17,6 +19,7 @@ from harness.plan_review import (
     run_plan_review,
     task_record,
 )
+from harness.storage import state_lock
 
 MUST = {
     "level": "must",
@@ -115,6 +118,27 @@ class PlanReviewTest(unittest.TestCase):
         ):
             self.assertIn(text, prompt)
         self.assertNotIn("review-checklist.md", prompt)
+
+    def test_lock_is_free_while_the_reviewer_runs(self) -> None:
+        slow = reviewer_writing({"t1": []})
+        slow[-1] = "import time; time.sleep(2); " + slow[-1]
+        self.configure(slow)
+        worker = threading.Thread(target=self.review)
+        worker.start()
+        marker = self.root / ".harness" / "plan-review" / "running.json"
+        deadline = time.monotonic() + 20
+        while not marker.exists():
+            self.assertLess(time.monotonic(), deadline)
+            time.sleep(0.05)
+
+        with state_lock(self.root):
+            pass
+        with self.assertRaisesRegex(HarnessError, "is in progress"):
+            self.review()
+        worker.join()
+
+        self.assertEqual(self.calls(), "1")
+        self.assertFalse(marker.exists())
 
     def test_new_task_is_reviewed_alone(self) -> None:
         self.configure(reviewer_writing({"t1": [], "t2": []}))

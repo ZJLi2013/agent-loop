@@ -169,7 +169,8 @@ Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profil
 下一动作开始前，Policy 必须落盘四项：当前 Goal、新 evidence、下一动作为何推进 Goal、
 `continue / replan / stop`。`continue` 更新 review 计数并 resume；`replan` 进入现有 revision /
 review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模型 turn，timer 只写 pause request，
-反思发生在安全轮询点或命令结束后。已验证的 task 不触发 timer 与 `COMPACT`：它的下一步属于 reviewer 或 human。
+反思发生在安全轮询点或命令结束后。命令与 reviewer 运行期间不持状态锁：`running` / `verifying` 加 run id 与 runner pid、
+`review_running`、`plan-review/running.json` 表示占用，status、pause 与 gate 照常可用，第二次运行被拒；锁只包住状态的读写。已验证的 task 不触发 timer 与 `COMPACT`：它的下一步属于 reviewer 或 human。
 
 ### Independent review boundaries
 

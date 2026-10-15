@@ -39,6 +39,10 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Fixed
 
+- Commands and reviewers no longer hold the state lock while they run. A running exec or verify is marked in
+  `state.json` (run id and runner pid), a task review in `review_running`, a plan review in
+  `plan-review/running.json`; `status`, `pause` and the completion gate keep working meanwhile, and a second run
+  is refused with the running one's id. The gate reports a `running` phase instead of marking it interrupted.
 - A verified task no longer enters Goal Review when it sits idle past the timer or the context is compacted.
   The completion gate hands it to the reviewer or the human instead of pausing it, which used to send it back to
   `ready` and clear its verification.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from harness.storage import (
 )
 
 PLAN_REVIEW_DIR = "plan-review"
+RUNNING_FILE = "running.json"
 TASK_RECORDS = "tasks"
 RESPONSES = ("applied", "skipped", "reject")
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
@@ -203,6 +205,13 @@ def run_plan_review(
 
         review_dir = _review_dir(root)
         review_dir.mkdir(parents=True, exist_ok=True)
+        running = review_dir / RUNNING_FILE
+        if running.exists():
+            holder = read_json(running)
+            raise HarnessError(
+                f"plan review run {holder.get('run_id')} is in progress "
+                f"(pid {holder.get('pid')}); wait for it to finish"
+            )
         report_path = review_dir / "report.json"
         prompt_path = harness_dir(root) / "review" / "prompt.md"
         report_path.unlink(missing_ok=True)
@@ -223,6 +232,9 @@ def run_plan_review(
         run_id = new_run_id()
         run_dir = harness_dir(root) / "artifacts" / run_id
         run_dir.mkdir(parents=True)
+        atomic_write_json(running, {"run_id": run_id, "pid": os.getpid(), "at": utc_now()})
+
+    try:
         execution = execute_process(
             root,
             list(reviewer["argv"]),
@@ -238,6 +250,11 @@ def run_plan_review(
         )
         if before != workspace_fingerprint(root):
             report, error = None, "plan reviewer modified the workspace"
+    except BaseException:
+        running.unlink(missing_ok=True)
+        raise
+
+    with state_lock(root):
         result = {
             "version": 1,
             "run_id": run_id,
@@ -254,12 +271,14 @@ def run_plan_review(
         append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
         prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
         if error or report is None:
+            running.unlink(missing_ok=True)
             raise HarnessError(f"plan review failed: {error}")
         for task_id, entry in report["tasks"].items():
             record_task_review(
                 root, task_id, **entry, summary=report["summary"],
                 source="plan_review", run_id=run_id,
             )
+        running.unlink(missing_ok=True)
         return report
 
 

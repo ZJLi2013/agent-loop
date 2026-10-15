@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -158,6 +159,8 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         request = pause_request(root)
         if request:
             raise HarnessError(f"runner is paused: {request['reason']}")
+        if state.get("review_running"):
+            raise HarnessError(_review_in_progress(state))
 
         previous = state.get("review") or {}
         if previous.get("verify_run_id") == state.get("last_run_id"):
@@ -185,24 +188,31 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         run_id = new_run_id()
         run_dir = harness_dir(root) / "artifacts" / run_id
         run_dir.mkdir(parents=True)
-        argv = list(reviewer["argv"])
-        execution = execute_process(
-            root,
-            argv,
-            timeout_seconds=float(reviewer["timeout_seconds"]),
-            run_dir=run_dir,
-            max_output_bytes=int(config["limits"]["max_output_bytes"]),
-            is_paused=lambda: pause_request(root) is not None,
-        )
-        result: dict[str, Any] = {
-            "version": 1,
-            "run_id": run_id,
-            "task_id": state["task_id"],
-            "kind": "review",
-            "argv": argv,
-            "cwd": str(root),
-            **execution,
-        }
+        state["review_running"] = {"run_id": run_id, "pid": os.getpid()}
+        atomic_write_json(harness_dir(root) / STATE_FILE, state)
+
+    argv = list(reviewer["argv"])
+    execution = execute_process(
+        root,
+        argv,
+        timeout_seconds=float(reviewer["timeout_seconds"]),
+        run_dir=run_dir,
+        max_output_bytes=int(config["limits"]["max_output_bytes"]),
+        is_paused=lambda: pause_request(root) is not None,
+    )
+    result: dict[str, Any] = {
+        "version": 1,
+        "run_id": run_id,
+        "task_id": state["task_id"],
+        "kind": "review",
+        "argv": argv,
+        "cwd": str(root),
+        **execution,
+    }
+
+    with state_lock(root):
+        config, state = load_runtime(root)
+        state.pop("review_running", None)
         if result["outcome"] == "pass":
             decision, error = _read_decision(decision_path)
         else:
@@ -256,6 +266,14 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         return {"result": result, "review": review}
 
 
+def _review_in_progress(state: dict[str, Any]) -> str:
+    running = state.get("review_running") or {}
+    return (
+        f"task reviewer run {running.get('run_id')} for {state['task_id']} is in progress "
+        f"(pid {running.get('pid')}); wait for it to finish"
+    )
+
+
 def review_followup(
     root: Path,
     config: dict[str, Any],
@@ -264,6 +282,8 @@ def review_followup(
 ) -> str | None:
     runner = Path(__file__).with_name("run.py")
     command = f'python "{runner}" --root "{root.resolve()}" review'
+    if state.get("review_running"):
+        return _review_in_progress(state)
     review = state.get("review") or {}
     if review.get("verify_run_id") != state.get("last_run_id"):
         if not config.get("reviewer"):

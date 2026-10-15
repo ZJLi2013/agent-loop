@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -289,6 +290,8 @@ def run_command(
         config, state = load_runtime(root)
         if not state.get("active"):
             raise HarnessError("harness is disabled")
+        if state.get("phase") in {Phase.RUNNING.value, Phase.VERIFYING.value}:
+            raise HarnessError(_in_progress(state))
         request = pause_request(root)
         if request:
             if state.get("phase") != Phase.PAUSED.value:
@@ -370,33 +373,43 @@ def run_command(
             Event.VERIFY_STARTED if kind == "verify" else Event.RUN_STARTED,
         )
         state["current_run_id"] = run_id
+        state["runner_pid"] = os.getpid()
         state["updated_at"] = utc_now()
         atomic_write_json(harness_dir(root) / STATE_FILE, state)
 
-        execution = execute_process(
-            root,
-            argv,
-            timeout_seconds=timeout,
-            run_dir=run_dir,
-            max_output_bytes=int(config["limits"]["max_output_bytes"]),
-            is_paused=lambda: pause_request(root) is not None,
-        )
-        result: dict[str, Any] = {
-            "version": 1,
-            "run_id": run_id,
-            "task_id": state["task_id"],
-            "kind": kind,
-            "argv": argv,
-            "cwd": str(root),
-            **execution,
-        }
+    execution = execute_process(
+        root,
+        argv,
+        timeout_seconds=timeout,
+        run_dir=run_dir,
+        max_output_bytes=int(config["limits"]["max_output_bytes"]),
+        is_paused=lambda: pause_request(root) is not None,
+    )
+    result: dict[str, Any] = {
+        "version": 1,
+        "run_id": run_id,
+        "task_id": state["task_id"],
+        "kind": kind,
+        "argv": argv,
+        "cwd": str(root),
+        **execution,
+    }
 
+    with state_lock(root):
+        config, state = load_runtime(root)
+        if state.get("current_run_id") != run_id:
+            atomic_write_json(run_dir / "result.json", result)
+            append_journal(root, result, int(config["limits"]["max_journal_entries"]))
+            raise HarnessError(
+                f"state changed while run {run_id} was running; result journaled, state kept"
+            )
         state["wall_seconds_used"] = round(
             float(state["wall_seconds_used"])
             + float(result["duration_seconds"]),
             6,
         )
         state["current_run_id"] = None
+        state["runner_pid"] = None
         state["last_run_id"] = run_id
 
         if result["paused"]:
@@ -456,6 +469,13 @@ def run_command(
         )
         prune_artifacts(root, int(config["limits"]["max_artifacts"]))
         return result
+
+
+def _in_progress(state: dict[str, Any]) -> str:
+    return (
+        f"run {state.get('current_run_id')} of task {state['task_id']} is in progress "
+        f"(runner pid {state.get('runner_pid')}); wait for it to finish"
+    )
 
 
 def _matches_contract(
@@ -611,11 +631,7 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
         runner = Path(__file__).with_name("run.py")
         verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
         if phase in {Phase.RUNNING, Phase.VERIFYING}:
-            _transition(state, Event.INTERRUPTED)
-            state["current_run_id"] = None
-            state["last_outcome"] = "interrupted"
-            state["updated_at"] = utc_now()
-            atomic_write_json(state_path, state)
+            return _in_progress(state)
         return (
             f"Task {state['task_id']} is not independently verified "
             f"({remaining_attempts} attempts, {remaining_wall:.1f}s remain). "
