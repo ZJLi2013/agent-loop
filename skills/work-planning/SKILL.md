@@ -47,16 +47,12 @@ Plan Review: proposed
    交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
    渲染样例；改它们等于改设计。删除或放宽一道门时，写明它防的风险由哪道检查接替。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
-4. 配置 reviewer 时，先对当前 Plan Revision 运行独立 plan review；报告按 plan 路径与
-   revision 去重。reviewer 只给准入意见，不能批准 plan 或授权执行。
-5. 再用平台的结构化提问能力给 human：`approve / revise / continue automatically`。
-   plan review 返回 `warnings`（连续 revise、多个 revision 没有实验）时不自行修订，原样附上让 human 选：
-   task 都已过首轮且都 ≤ 1 小时、0 GPU →「继续重审 / 带意见批准 / 停」；含高成本 task →「继续重审 /
-   按刚审过的 revision 原样批准 / 停」。继续重审用 `plan-review --continue --reason "<human 原话>"`；原样批准
-   不改文档、直接标 `approved`；停用 `goal-review --decision stop`。worker 没停时，Harness 拒绝为下一 revision 跑 reviewer。
-   本 revision 的 task 都已过首轮 plan review、且预算都 ≤ 1 小时 wall time、0 GPU 时，另给「带意见批准」：
-   意见写进 task 设计、revision +1，用 human 原话 `plan-review --waive --reason` 后标 `approved`。
-   高成本 task 与无人值守不提供此项；新 task 先过首轮，Harness 拒绝其 waiver。
+4. 配置 reviewer 时，提交后运行 `plan-review`：Harness 只把新增或设计改过的 task 交给 reviewer，
+   每个 task 各得一条结论；只改 `P`、`rev`、状态或行序不重审。reviewer 只给准入意见，不能批准 plan 或授权执行。
+5. 再用平台的结构化提问能力给 human：`approve / revise / continue automatically`，附上逐 task 结论。
+   被 revise 的 task 改过设计后，Harness 不再为它跑 reviewer，worker 不自行重审，交 human 二选一：
+   带意见批准（意见写进设计后，用 human 原话 `plan-review --approve <task> --reason`）或再审一次
+   （`plan-review --again <task> --reason`）。没审过的 task 不能直接批准；无人值守自批准不认 human 批准记录。
    reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
 6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
    `Plan Review: unreviewed`，但配置 reviewer 时仍须完成独立 plan review。

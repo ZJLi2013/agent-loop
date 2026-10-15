@@ -6,18 +6,18 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
-- `plan-review --waive --reason` records a human decision to approve a Plan Revision without another review.
-  Every open task of that revision must be covered by an earlier reviewer record, which now stores its task ids;
-  `init` and `resume` accept the waiver only with `Plan Review: approved` and for a covered task.
 - On-demand `research-to-paper` skill: an arXiv-style paper and an optional 5–15 s teaser from a closed research
 Goal, with every number traced to the experiment records. Usage documents how to invoke on-demand skills.
 
 ### Changed
 
-- The plan review brake now blocks: when the revise or no-experiment warning is active, `plan-review` (including
-  the one `init` triggers) refuses to run the reviewer for the next revision until the human chooses
-  `--continue --reason`, a waiver, or stop. The acknowledgment is stored as `brake_ack`; it and a waiver restart
-  both counts, while `accept` still counts toward the no-experiment signal. Human approval is not blocked.
+- Plan review is per task instead of per Plan Revision. A task is sent to the reviewer only when it is new or its
+  design digest changed (title, checkpoint, and the design sections the checkpoint links; not priority, `rev`,
+  status, or row order), and each task gets its own `accept` / `revise`. A task sent back with `revise` whose design
+  then changes waits for the human: `plan-review --approve <task> --reason` binds approval to its current digest,
+  `--again <task> --reason` allows one more review. A successor written by the task reviewer counts as reviewed.
+  The reviewer report now maps task ids to verdicts. This replaces the per-revision records, the brake, and the
+  waiver; a failed review is no longer cached. Open tasks have no per-task verdict yet and are reviewed once.
 
 - After the task reviewer chooses `ask_human` or `stop`, `init` starts the next task once the plan is at a newer
   Plan Revision marked `approved`, instead of requiring `disable` first.
@@ -29,8 +29,6 @@ Goal, with every number traced to the experiment records. Usage documents how to
   `archive/` content is history, not a criterion. Evidence is limited to the listed inputs, files the plan,
   task list or design links directly, and the code under test the design names; reviewers report missing
   evidence instead of searching and stop reading once they can decide.
-- Plan review results and the pager's plan-approval message warn, without blocking, when the plan was sent back
-  with `revise` 3 times in a row or 3 revisions were reviewed since the last `exec` / `verify` run.
 - Reviewer prompts live in `harness/prompts/plan_review.md` and `harness/prompts/task_review.md` and ship with
   the wheel; rendered prompts are unchanged.
 - Usage recommends an editable CLI install for Cursor enforced mode, so the CLI and the linked hooks run the

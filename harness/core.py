@@ -169,9 +169,7 @@ def initialize(
                 f"task {task_id} binds r{task_revision}, plan is r{revision}"
             )
         if reviewer:
-            ready, reason = plan_review_ready(
-                root, plan_doc, revision, review=review, task_id=task_id
-            )
+            ready, reason = plan_review_ready(root, task_id, review=review)
             if not ready:
                 if review == "approved":
                     raise HarnessError(
@@ -182,6 +180,9 @@ def initialize(
                     plan_doc=plan_doc,
                     reviewer_config=reviewer,
                 )
+                ready, reason = plan_review_ready(root, task_id, review=review)
+                if not ready:
+                    raise HarnessError(reason or "plan review is incomplete")
 
     created_at = utc_now()
     config: dict[str, Any] = {
@@ -318,11 +319,7 @@ def run_command(
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
             raise HarnessError(f"runner is paused: {plan_reason}")
         if config.get("reviewer") and config.get("plan_doc"):
-            reviewed, review_reason = plan_review_ready(
-                root,
-                str(config["plan_doc"]),
-                int(state["plan_revision"]),
-            )
+            reviewed, review_reason = plan_review_ready(root, str(state["task_id"]))
             if not reviewed:
                 request_pause(
                     root,

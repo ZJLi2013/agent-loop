@@ -32,7 +32,7 @@ if args[0] == "serve":
 def reviewer_writing(decision: dict[str, object]) -> list[str]:
     text = json.dumps(decision)
     report = json.dumps(
-        {"verdict": "accept", "summary": "plan ready", "findings": []}
+        {"summary": "plan ready", "tasks": {"t1": {"verdict": "accept", "findings": []}}}
     )
     tasks = (
         "| P | id | rev | task | check | status | fail |\n"
@@ -43,7 +43,7 @@ def reviewer_writing(decision: dict[str, object]) -> list[str]:
         "from pathlib import Path; "
         "p=Path('.harness/review/prompt.md').read_text(encoding='utf-8'); "
         f"(Path('.harness/plan-review/report.json').write_text({report!r}) "
-        "if '# Plan revision review' in p else "
+        "if '# Plan task review' in p else "
         f"(Path('.agent-loop/task.md').write_text({tasks!r}, encoding='utf-8'), "
         f"Path('.harness/review/decision.json').write_text({text!r})))"
     )
