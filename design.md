@@ -232,7 +232,8 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 不在共享 core 中增加平台分支。自己的 driver 可以直接发送内部 request，不需要 codec。
 
 CLI `init` 把会话 id（`AGENT_LOOP_SESSION_ID`，否则 `CURSOR_CONVERSATION_ID`）记为 task 的 `owner`。
-gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 followup；没有 owner 的 state 照旧处理。
+gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
+没有 owner 的 state 照旧处理。
 
 | Adapter | 职责 |
 |---|---|

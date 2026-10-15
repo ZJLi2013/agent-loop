@@ -524,7 +524,7 @@ def disable(root: Path) -> dict[str, Any]:
 
 def owned_by_other(state: dict[str, Any], session_id: str | None) -> bool:
     owner = state.get("owner")
-    return bool(owner and session_id and owner != session_id)
+    return bool(owner and owner != session_id)
 
 
 def completion_gate(root: Path, session_id: str | None = None) -> str | None:

@@ -11,9 +11,11 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+from adapters.core import request_goal_review
 from adapters.cursor import session_scope
 from harness import run
-from harness.core import initialize
+from harness.core import completion_gate, initialize
+from harness.plan import pause_request
 
 HOOK_PATH = (
     Path(__file__).resolve().parents[1]
@@ -159,6 +161,38 @@ class HarnessStopHookTest(unittest.TestCase):
             )
 
         self.assertIn("Goal Review", followup or "")
+
+    def owned_task_with_goal_review_due(self, root: Path) -> Path:
+        initialize(
+            root,
+            task_id="t1",
+            verifier_argv=[sys.executable, "-c", "print('OK')"],
+            owner="A",
+        )
+        state_path = root / ".harness" / "state.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["last_goal_review_at"] = "2000-01-01T00:00:00+00:00"
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+        return state_path
+
+    def test_gate_without_session_leaves_owned_task_alone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state_path = self.owned_task_with_goal_review_due(root)
+            before = state_path.read_bytes()
+
+            message = completion_gate(root)
+
+            self.assertIsNone(message)
+            self.assertEqual(state_path.read_bytes(), before)
+
+    def test_compact_without_session_leaves_owned_task_alone(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.owned_task_with_goal_review_due(root)
+
+            self.assertEqual(request_goal_review((root,)), 0)
+            self.assertIsNone(pause_request(root))
 
     def test_cli_init_records_session_as_owner(self) -> None:
         cases = (
