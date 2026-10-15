@@ -158,7 +158,7 @@ class HarnessStopHookTest(unittest.TestCase):
                     }
                 )
 
-        self.assertIn("Task c2 is not independently verified", followup or "")
+        self.assertIn("of task c2 is in progress", followup or "")
         self.assertNotIn("w32", followup or "")
 
     def test_cli_init_records_session_as_owner(self) -> None:

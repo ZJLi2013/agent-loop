@@ -5,6 +5,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -20,6 +22,17 @@ from harness.core import (
     verify,
     workspace_fingerprint,
 )
+
+
+def in_background(call, ready) -> "threading.Thread":
+    worker = threading.Thread(target=call)
+    worker.start()
+    deadline = time.monotonic() + 20
+    while not ready():
+        if time.monotonic() > deadline or not worker.is_alive():
+            raise AssertionError("background run did not start")
+        time.sleep(0.05)
+    return worker
 
 
 class HarnessTest(unittest.TestCase):
@@ -52,6 +65,26 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(
             len((harness_dir(self.root) / "runs.jsonl").read_text().splitlines()),
             1,
+        )
+
+    def test_status_and_gate_work_while_a_command_runs(self) -> None:
+        self.init()
+        worker = in_background(
+            lambda: run_command(
+                self.root, [sys.executable, "-S", "-c", "import time; time.sleep(2)"], kind="exec"
+            ),
+            lambda: (harness_dir(self.root) / "state.json").exists()
+            and load_runtime(self.root)[1]["phase"] == "running",
+        )
+
+        self.assertIn("is in progress", completion_gate(self.root) or "")
+        with self.assertRaisesRegex(HarnessError, "is in progress"):
+            run_command(self.root, [sys.executable, "-S", "-c", "pass"], kind="exec")
+        worker.join()
+
+        self.assertEqual(load_runtime(self.root)[1]["phase"], "ready")
+        self.assertEqual(
+            len((harness_dir(self.root) / "runs.jsonl").read_text().splitlines()), 1
         )
 
     def test_timeout_kills_run_and_stops_at_budget(self) -> None:
