@@ -82,6 +82,7 @@ def initialize(
     goal_review_on_failure: bool = True,
     expect_regex: str | None = None,
     forbid_regex: str | None = None,
+    owner: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if not task_id.strip():
         raise HarnessError("task_id is required")
@@ -229,6 +230,7 @@ def initialize(
         "last_goal_review": None,
         "verified_fingerprint": None,
         "stop_report_requested": False,
+        "owner": owner,
         "config_sha256": config_digest(config),
         "created_at": created_at,
         "updated_at": created_at,
@@ -520,7 +522,12 @@ def disable(root: Path) -> dict[str, Any]:
         return state
 
 
-def completion_gate(root: Path) -> str | None:
+def owned_by_other(state: dict[str, Any], session_id: str | None) -> bool:
+    owner = state.get("owner")
+    return bool(owner and owner != session_id)
+
+
+def completion_gate(root: Path, session_id: str | None = None) -> str | None:
     state_path = harness_dir(root) / STATE_FILE
     if not state_path.exists():
         return None
@@ -529,7 +536,7 @@ def completion_gate(root: Path) -> str | None:
             config, state = load_runtime(root)
         except HarnessError as exc:
             return f"Harness state is invalid: {exc}. Repair it before completing."
-        if not state.get("active"):
+        if not state.get("active") or owned_by_other(state, session_id):
             return None
 
         request = pause_request(root)

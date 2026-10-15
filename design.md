@@ -227,9 +227,13 @@ human 纠偏 = `pause --require-revision`，worker 按 `work-planning` 改 plan 
 native event → platform codec → HookRequest → adapter core → HookResponse → platform codec
 ```
 
-`HookRequest` 只使用 `TOOL_USED / COMPACT / STOP` 与 workspace、tool、status；
+`HookRequest` 只使用 `TOOL_USED / COMPACT / STOP` 与 workspace、tool、status、session；
 `HookResponse` 只使用 `ALLOW / CONTEXT / CONTINUE`。新增平台只实现两端 codec 和安装配置，
 不在共享 core 中增加平台分支。自己的 driver 可以直接发送内部 request，不需要 codec。
+
+CLI `init` 把会话 id（`AGENT_LOOP_SESSION_ID`，否则 `CURSOR_CONVERSATION_ID`）记为 task 的 `owner`。
+gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
+没有 owner 的 state 照旧处理。
 
 | Adapter | 职责 |
 |---|---|

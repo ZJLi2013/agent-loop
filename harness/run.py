@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,8 +32,15 @@ from harness.plan_review import run_plan_review, waive_plan_review  # noqa: E402
 from harness.review import run_review  # noqa: E402
 
 
+SESSION_ENV = ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID")
+
+
 def _command(value: list[str]) -> list[str]:
     return value[1:] if value and value[0] == "--" else value
+
+
+def _session_id() -> str | None:
+    return next((os.environ[name] for name in SESSION_ENV if os.environ.get(name)), None)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -145,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
                 goal_review_on_failure=args.goal_review_on_failure,
                 expect_regex=args.expect_regex,
                 forbid_regex=args.forbid_regex,
+                owner=_session_id(),
             )
             print(
                 json.dumps(

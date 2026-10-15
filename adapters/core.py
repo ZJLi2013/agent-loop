@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
-from harness.core import HarnessError, completion_gate
+from harness.core import HarnessError, completion_gate, owned_by_other
 from harness.plan import request_pause
 from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file
 from harness.protocol import Phase
@@ -137,12 +137,16 @@ def memory_context(task_path: Path) -> str | None:
     return "\n\n".join(parts)
 
 
-def request_goal_review(roots: tuple[Path, ...]) -> int:
+def request_goal_review(
+    roots: tuple[Path, ...], session_id: str | None = None
+) -> int:
     count = 0
     for root in roots:
         try:
             state = read_json(harness_dir(root) / STATE_FILE)
-            if state.get("phase") == Phase.VERIFIED.value:
+            if state.get("phase") == Phase.VERIFIED.value or owned_by_other(
+                state, session_id
+            ):
                 continue
             request_pause(
                 root,
@@ -166,7 +170,7 @@ def handle(request: HookRequest) -> HookResponse:
         return HookResponse()
 
     if request.event == HookEvent.COMPACT:
-        request_goal_review(request.workspace_roots)
+        request_goal_review(request.workspace_roots, request.session_id)
         return HookResponse()
 
     if request.event == HookEvent.STOP and request.status == "completed":
@@ -183,7 +187,7 @@ def handle(request: HookRequest) -> HookResponse:
                 )
                 continue
             try:
-                message = completion_gate(root)
+                message = completion_gate(root, request.session_id)
             except HarnessError as exc:
                 message = f"Harness completion gate failed: {exc}"
             if message:

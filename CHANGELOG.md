@@ -41,6 +41,10 @@ Goal, with every number traced to the experiment records. Usage documents how to
 - A verified task no longer enters Goal Review when it sits idle past the timer or the context is compacted.
   The completion gate hands it to the reviewer or the human instead of pausing it, which used to send it back to
   `ready` and clear its verification.
+- A session no longer pauses or prompts about another session's task. `init` records the session id
+  (`AGENT_LOOP_SESSION_ID`, else `CURSOR_CONVERSATION_ID`) as the task's `owner`; the completion gate and
+  COMPACT skip tasks owned by a different session, and a request without a session id counts as a different
+  session. State written before this change has no owner and is handled as before.
 
 ## [0.1.0] - 2026-10-12
 
