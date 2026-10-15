@@ -12,9 +12,14 @@ from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR
 _SCOPES = Path(tempfile.gettempdir()) / "agent-loop-cursor-sessions"
 
 
+def session_id(payload: dict[str, object]) -> str | None:
+    value = payload.get("conversation_id")
+    return value if isinstance(value, str) and value else None
+
+
 def _scope_file(payload: dict[str, object]) -> Path | None:
-    conversation_id = payload.get("conversation_id")
-    if not isinstance(conversation_id, str) or not conversation_id:
+    conversation_id = session_id(payload)
+    if conversation_id is None:
         return None
     name = hashlib.sha256(conversation_id.encode()).hexdigest()
     return _SCOPES / name

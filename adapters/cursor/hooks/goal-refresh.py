@@ -11,11 +11,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
 from adapters.core import request_goal_review  # noqa: E402
-from adapters.cursor.session_scope import roots  # noqa: E402
+from adapters.cursor.session_scope import roots, session_id  # noqa: E402
 
 
 def request_for(payload: dict[str, object]) -> int:
-    return request_goal_review(roots(payload))
+    return request_goal_review(roots(payload), session_id(payload))
 
 
 def main() -> None:
