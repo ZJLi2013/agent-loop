@@ -173,22 +173,20 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 
 ### Independent review boundaries
 
-plan review 的单位是 task，不是 Plan Revision。每个未关闭 task 有一个设计摘要：task 标题、验收检查点，
-加上检查点直接链接的设计段（锚点段或整个文件）；`P`、`rev`、状态与行序不在其中。新增或摘要变化的 task 才交给
-reviewer，一次调用审完，每个 task 各得一条 `accept / revise`；记录在 `.harness/plan-review/tasks/<id>.json`。
-reviewer 只有建议权：init、resume、pager 和无人值守 `unreviewed` 只要求当前摘要有结论或 human 批准。
-被 revise 的 task 改过设计后，Harness 不再为它跑 reviewer，由 human 带意见批准（`plan-review --approve`，
-批准记在当时的摘要上）或允许再审一次（`--again`）；没审过的 task 不能直接批准，`unreviewed` 不认 human 批准记录。
-task reviewer 以 `continue` 写的 successor 记为已审。Plan Revision 只承担 human 纠偏。
-准入绑定在 `init` 时审过的摘要上：task 执行中把结果写回设计不触发重审；只有 human 纠偏后的 `resume` 按当前摘要重新检查。
+plan review 的单位是 task：每个 task 只在第一次出现时审一次，一次调用审完所有未审的 task，设计之后再改也不重审；
+human 可用 `plan-review --again` 要求重审。记录在 `.harness/plan-review/tasks/<id>.json`。
+reviewer 与 executor 之间的协议：意见分 `must`（不改就方向错、结论错或白跑昂贵实验，须写后果与依据，否则按
+`suggest` 记）与 `suggest`（严谨性，executor 可跳过），各最多 3 条，超出的丢弃。`must` 必须由 executor 逐条回应
+`applied` 或带事实的 `reject`，init 前检查；带 `human: true` 的 must 须 human 用 `--approve` 选择，`unreviewed` 不认。
+task reviewer 写的 successor 若未审过，记为已审。Plan Revision 只承担 human 纠偏。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、
 plan / task / 设计文档直接链接的文件与设计列出的被测代码；缺了就报缺失，不自行搜索。
 
 task 验证通过后，下一步由 reviewer 提议，worker 不给自己的下一步拍板。init 只要求 task 是 human 批准的
-`🔬 doing`，不要求等于 reviewer 的提议；reviewer 选 `ask_human` / `stop` 后，还要求 `Plan Review: approved`，
-无人值守的 `unreviewed` 不能越过它。
+`🔬 doing`，不要求等于 reviewer 的提议。无人值守（`Plan Review: unreviewed`）时只能 init reviewer 指名的 task：
+`continue` 的 `next_task`，或 `ask_human` 附带的不受该问题影响的 `next_task`；`stop` 后不能 init。
 两类调度都由确定性边界触发，不用 LLM 判断是否需要 review：
 
 | 时刻 | 调用 |

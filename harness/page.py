@@ -9,12 +9,13 @@ from pathlib import Path
 from typing import Any
 
 from harness.errors import HarnessError
+from harness.findings import describe
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_metadata, request_pause, resume
 from harness.plan_review import run_plan_review, task_record
 from harness.project import runtime_dir, task_file
 from harness.protocol import Phase
-from harness.records import open_task_ids, task_digest
+from harness.records import open_task_ids
 from harness.review import MAX_REVIEWS
 from harness.runner import execute_process
 from harness.storage import (
@@ -90,20 +91,12 @@ def _plan_review_summary(root: Path) -> str:
     summary = None
     lines = []
     for task_id in open_task_ids(root):
-        digest = task_digest(root, task_id)
-        review = next(
-            (
-                item
-                for item in reversed(task_record(root, task_id)["reviews"])
-                if item["digest"] == digest
-            ),
-            None,
-        )
-        if review is None:
+        reviews = task_record(root, task_id)["reviews"]
+        if not reviews:
             continue
-        summary = summary or review.get("summary")
-        findings = "；".join(review["findings"])
-        lines.append(f"- {task_id} {review['verdict']}" + (f"：{findings}" if findings else ""))
+        summary = summary or reviews[-1].get("summary")
+        findings = describe(reviews[-1]["findings"])
+        lines.append(f"- {task_id}：{findings or 'no items'}")
     if summary:
         lines.insert(0, f"independent reviewer：{summary}")
     return "\n".join(lines)

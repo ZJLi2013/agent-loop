@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any
 
 from harness.errors import HarnessError
+from harness.findings import normalize_findings
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.project import render_prompt, review_checklist, task_file
-from harness.records import open_task_ids, task_digest, task_row
+from harness.records import open_task_ids, task_row
 from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
@@ -20,7 +21,7 @@ from harness.storage import (
 
 PLAN_REVIEW_DIR = "plan-review"
 TASK_RECORDS = "tasks"
-VERDICTS = ("accept", "revise")
+RESPONSES = ("applied", "skipped", "reject")
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
 DEFAULT_MAX_ARTIFACTS = 20
 DEFAULT_MAX_JOURNAL_ENTRIES = 1000
@@ -57,53 +58,67 @@ def task_record(root: Path, task_id: str) -> dict[str, Any]:
     path = _record_path(root, task_id)
     if not path.exists():
         return {"task_id": task_id, "reviews": [], "approvals": [], "again": []}
-    return read_json(path)
+    record = read_json(path)
+    # Records written before the must / suggest protocol hold plain-string findings.
+    for review in record["reviews"]:
+        review.setdefault("responses", {})
+        review.setdefault("dropped", 0)
+        review["findings"] = [
+            {"level": "suggest", "claim": item, "consequence": "", "evidence": "", "change": "", "human": False}
+            if isinstance(item, str)
+            else item
+            for item in review["findings"]
+        ]
+    return record
 
 
-def review_status(root: Path, task_id: str) -> tuple[str, str | None]:
-    digest = task_digest(root, task_id)
-    if digest is None:
-        return "missing", None
+def _write(root: Path, record: dict[str, Any]) -> None:
+    atomic_write_json(_record_path(root, record["task_id"]), record)
+
+
+def review_status(root: Path, task_id: str) -> str:
+    if task_row(root, task_id) is None:
+        return "missing"
     record = task_record(root, task_id)
-    if any(item["digest"] == digest for item in record["approvals"]):
-        return "approved", digest
     reviews = record["reviews"]
-    if any(item["digest"] == digest for item in reviews):
-        return "reviewed", digest
-    if reviews and reviews[-1]["verdict"] == "revise":
-        decided = [item["at"] for item in record["approvals"] + record["again"]]
-        if not any(at >= reviews[-1]["at"] for at in decided):
-            return "needs_human", digest
-    return "needs_review", digest
-
-
-def admitted(root: Path, task_id: str, digest: str) -> bool:
-    record = task_record(root, task_id)
-    return any(item["digest"] == digest for item in record["reviews"] + record["approvals"])
+    if not reviews or any(item["at"] >= reviews[-1]["at"] for item in record["again"]):
+        return "needs_review"
+    return "reviewed"
 
 
 def plan_review_ready(
     root: Path, task_id: str, *, review: str | None = None
 ) -> tuple[bool, str | None]:
-    status, _ = review_status(root, task_id)
-    if status == "approved":
-        if review == "unreviewed":
-            raise HarnessError(
-                f"task {task_id} rests on a human approval, which needs "
-                "Plan Review: approved, not unreviewed self-approval"
-            )
-        return True, None
-    if status == "reviewed":
-        return True, None
+    status = review_status(root, task_id)
     if status == "missing":
         return False, f"task {task_id} is missing from the task list"
-    if status == "needs_human":
+    if status == "needs_review":
+        return False, f"task {task_id} has no independent review"
+    record = task_record(root, task_id)
+    last = record["reviews"][-1]
+    findings = last["findings"]
+    open_items = [
+        str(index)
+        for index, item in enumerate(findings, start=1)
+        if item["level"] == "must" and str(index) not in last["responses"]
+    ]
+    if open_items:
         return False, (
-            f"the reviewer sent task {task_id} back; ask the human to choose: "
-            f'plan-review --approve {task_id} --reason "<human words>" or '
-            f'plan-review --again {task_id} --reason "<human words>"'
+            f"answer the reviewer's must items {', '.join(open_items)} of task {task_id}: "
+            f"plan-review --respond {task_id} --item N=applied (or N=reject --reason \"<fact>\")"
         )
-    return False, f"task {task_id} has no independent review of its current design"
+    if any(item["human"] for item in findings):
+        if not any(item["at"] >= last["at"] for item in record["approvals"]):
+            return False, (
+                f"task {task_id} has a reviewer item for the human to decide: "
+                f'plan-review --approve {task_id} --reason "<human words>"'
+            )
+        if review == "unreviewed":
+            raise HarnessError(
+                f"task {task_id} rests on a human decision, which needs "
+                "Plan Review: approved, not unreviewed self-approval"
+            )
+    return True, None
 
 
 def _read_report(
@@ -120,26 +135,17 @@ def _read_report(
     if not isinstance(summary, str) or not summary.strip():
         return None, "summary is required"
     if not isinstance(entries, dict):
-        return None, "tasks must map each requested task id to its verdict"
-    verdicts = {}
+        return None, "tasks must map each requested task id to its findings"
+    reviewed = {}
     for task_id in tasks:
         entry = entries.get(task_id)
         if not isinstance(entry, dict):
-            return None, f"report has no verdict for task {task_id}"
-        verdict, findings = entry.get("verdict"), entry.get("findings")
-        if verdict not in VERDICTS:
-            return None, f"task {task_id}: verdict must be one of {', '.join(VERDICTS)}"
-        if not isinstance(findings, list) or not all(
-            isinstance(item, str) and item.strip() for item in findings
-        ):
-            return None, f"task {task_id}: findings must be a list of non-empty strings"
-        if verdict == "revise" and not findings:
-            return None, f"task {task_id}: revise requires at least one finding"
-        verdicts[task_id] = {
-            "verdict": verdict,
-            "findings": [item.strip() for item in findings],
-        }
-    return {"summary": summary.strip(), "tasks": verdicts}, None
+            return None, f"report has no entry for task {task_id}"
+        findings, dropped, error = normalize_findings(entry.get("findings", []))
+        if error:
+            return None, f"task {task_id}: {error}"
+        reviewed[task_id] = {"findings": findings, "dropped": dropped}
+    return {"summary": summary.strip(), "tasks": reviewed}, None
 
 
 def _task_lines(root: Path, tasks: list[str]) -> str:
@@ -151,28 +157,27 @@ def _task_lines(root: Path, tasks: list[str]) -> str:
     return "\n".join(lines)
 
 
-def _append(root: Path, task_id: str, key: str, entry: dict[str, Any]) -> None:
-    record = task_record(root, task_id)
-    record[key].append(entry)
-    atomic_write_json(_record_path(root, task_id), record)
-
-
 def record_task_review(
-    root: Path, task_id: str, *, verdict: str, findings: list[str], summary: str,
-    source: str, run_id: str | None,
+    root: Path,
+    task_id: str,
+    *,
+    findings: list[dict[str, Any]],
+    dropped: int,
+    summary: str,
+    source: str,
+    run_id: str | None,
 ) -> None:
-    digest = task_digest(root, task_id)
-    if digest is None:
-        raise HarnessError(f"task {task_id} is missing from the task list")
-    _append(root, task_id, "reviews", {
-        "digest": digest,
-        "verdict": verdict,
+    record = task_record(root, task_id)
+    record["reviews"].append({
         "findings": findings,
+        "dropped": dropped,
         "summary": summary,
         "source": source,
         "run_id": run_id,
+        "responses": {},
         "at": utc_now(),
     })
+    _write(root, record)
 
 
 def run_plan_review(
@@ -188,11 +193,13 @@ def run_plan_review(
     _, relative = _plan_path(root, plan_doc)
 
     with state_lock(root):
-        statuses = {task_id: review_status(root, task_id)[0] for task_id in open_task_ids(root)}
-        pending = [task_id for task_id, status in statuses.items() if status == "needs_review"]
-        waiting = [task_id for task_id, status in statuses.items() if status == "needs_human"]
+        pending = [
+            task_id
+            for task_id in open_task_ids(root)
+            if review_status(root, task_id) == "needs_review"
+        ]
         if not pending:
-            return {"summary": None, "tasks": {}, "waiting": waiting}
+            return {"summary": None, "tasks": {}}
 
         review_dir = _review_dir(root)
         review_dir.mkdir(parents=True, exist_ok=True)
@@ -253,48 +260,86 @@ def run_plan_review(
                 root, task_id, **entry, summary=report["summary"],
                 source="plan_review", run_id=run_id,
             )
-        return {"summary": report["summary"], "tasks": report["tasks"], "waiting": waiting}
+        return report
 
 
-def _human_decision(root: Path, task_id: str, reason: str, *, key: str, kind: str) -> dict[str, Any]:
+def _journal_decision(root: Path, task_id: str, kind: str, entry: dict[str, Any]) -> None:
+    run_id = new_run_id()
+    run_dir = harness_dir(root) / "artifacts" / run_id
+    run_dir.mkdir(parents=True)
+    result = {
+        "version": 1,
+        "run_id": run_id,
+        "task_id": task_id,
+        "kind": kind,
+        "argv": [],
+        "started_at": utc_now(),
+        "duration_seconds": 0.0,
+        "timed_out": False,
+        "exit_code": 0,
+        "outcome": "pass",
+        **entry,
+    }
+    atomic_write_json(run_dir / "result.json", result)
+    append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
+    prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
+
+
+def _reviewed_record(root: Path, task_id: str) -> dict[str, Any]:
+    if task_row(root, task_id) is None:
+        raise HarnessError(f"task {task_id} is missing from the task list")
+    record = task_record(root, task_id)
+    if not record["reviews"]:
+        raise HarnessError(f"task {task_id} has never been reviewed; run plan-review first")
+    return record
+
+
+def _human(root: Path, task_id: str, reason: str, *, key: str, kind: str) -> dict[str, Any]:
     root = root.resolve()
     if not reason.strip():
         raise HarnessError(f"--{key} requires --reason quoting the human decision")
     with state_lock(root):
-        status, digest = review_status(root, task_id)
-        if status == "missing":
-            raise HarnessError(f"task {task_id} is missing from the task list")
-        if not task_record(root, task_id)["reviews"]:
-            raise HarnessError(f"task {task_id} has never been reviewed; run plan-review first")
-        if key == "again" and status != "needs_human":
-            raise HarnessError(f"task {task_id} does not need a human decision ({status})")
-        entry = {"digest": digest, "reason": reason.strip(), "at": utc_now()}
-        _append(root, task_id, "approvals" if key == "approve" else "again", entry)
-        run_id = new_run_id()
-        run_dir = harness_dir(root) / "artifacts" / run_id
-        run_dir.mkdir(parents=True)
-        result = {
-            "version": 1,
-            "run_id": run_id,
-            "task_id": task_id,
-            "kind": kind,
-            "argv": [],
-            "started_at": entry["at"],
-            "duration_seconds": 0.0,
-            "timed_out": False,
-            "exit_code": 0,
-            "outcome": "pass",
-            **entry,
-        }
-        atomic_write_json(run_dir / "result.json", result)
-        append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
-        prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
+        record = _reviewed_record(root, task_id)
+        entry = {"reason": reason.strip(), "at": utc_now()}
+        record["approvals" if key == "approve" else "again"].append(entry)
+        _write(root, record)
+        _journal_decision(root, task_id, kind, entry)
     return {"task_id": task_id, key: entry}
 
 
 def approve_task(root: Path, task_id: str, *, reason: str) -> dict[str, Any]:
-    return _human_decision(root, task_id, reason, key="approve", kind="plan_review_approval")
+    return _human(root, task_id, reason, key="approve", kind="plan_review_approval")
 
 
 def again_task(root: Path, task_id: str, *, reason: str) -> dict[str, Any]:
-    return _human_decision(root, task_id, reason, key="again", kind="plan_review_again")
+    return _human(root, task_id, reason, key="again", kind="plan_review_again")
+
+
+def respond_task(
+    root: Path, task_id: str, *, items: list[str], reason: str | None = None
+) -> dict[str, Any]:
+    root = root.resolve()
+    with state_lock(root):
+        record = _reviewed_record(root, task_id)
+        last = record["reviews"][-1]
+        for item in items:
+            index, _, status = item.partition("=")
+            if not index.isdigit() or not 1 <= int(index) <= len(last["findings"]):
+                raise HarnessError(f"task {task_id} has no reviewer item {index}")
+            if status not in RESPONSES:
+                raise HarnessError(f"response must be one of {', '.join(RESPONSES)}")
+            finding = last["findings"][int(index) - 1]
+            if finding["level"] == "must" and status == "skipped":
+                raise HarnessError(f"must item {index} is applied or rejected, not skipped")
+            if status == "reject" and not (reason or "").strip():
+                raise HarnessError("reject requires --reason naming the fact the item gets wrong")
+            if index in last["responses"]:
+                raise HarnessError(f"item {index} of task {task_id} is already answered")
+            last["responses"][index] = {
+                "status": status,
+                "reason": (reason or "").strip() or None,
+                "at": utc_now(),
+            }
+        _write(root, record)
+        _journal_decision(root, task_id, "plan_review_response", {"items": items, "reason": reason})
+    return {"task_id": task_id, "responses": last["responses"]}

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.errors import HarnessError
+from harness.findings import describe, normalize_findings
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import pause_request
@@ -89,6 +90,17 @@ def _prompt(
         )
     elif previous.get("error"):
         extra = f"\n## 上一次 review 无效\n\n{previous['error']}\n\n补齐后再写决策。\n"
+    from harness.plan_review import task_record
+
+    reviews = task_record(root, str(state["task_id"]))["reviews"]
+    if reviews and reviews[-1]["findings"]:
+        last = reviews[-1]
+        lines = [
+            f"{index}. [{item['level']}] {item['claim']} → "
+            + json.dumps(last["responses"].get(str(index), {"status": "skipped"}), ensure_ascii=False)
+            for index, item in enumerate(last["findings"], start=1)
+        ]
+        extra += "\n## 开工前的审查意见与 executor 回应\n\n" + "\n".join(lines) + "\n"
     return render_prompt(
         "task_review.md",
         task_id=state["task_id"],
@@ -114,11 +126,9 @@ def _read_decision(path: Path) -> tuple[dict[str, str] | None, str | None]:
         return None, "continue requires next_task"
     if not (isinstance(why, str) and why.strip()):
         return None, "why is required"
-    findings = value.get("findings", [])
-    if not isinstance(findings, list) or not all(
-        isinstance(item, str) and item.strip() for item in findings
-    ):
-        return None, "findings must be a list of non-empty strings"
+    findings, dropped, error = normalize_findings(value.get("findings", []))
+    if error:
+        return None, error
     review = value.get("review")
     if review is not None and not isinstance(review, str):
         return None, "review must be a string"
@@ -126,7 +136,8 @@ def _read_decision(path: Path) -> tuple[dict[str, str] | None, str | None]:
         "decision": decision,
         "next_task": next_task if isinstance(next_task, str) else None,
         "why": why.strip(),
-        "findings": [item.strip() for item in findings],
+        "findings": findings,
+        "dropped": dropped,
         "review": review,
     }, None
 
@@ -196,7 +207,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             decision, error = _read_decision(decision_path)
         else:
             decision, error = None, f"reviewer {result['outcome']}"
-        if decision and decision["decision"] == "continue":
+        if decision and decision["next_task"]:
             next_task = str(decision["next_task"])
             status = active_task_status(root, next_task) or ""
             if not status or any(marker in status for marker in CLOSED_MARKERS):
@@ -219,18 +230,19 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         }
         if decision:
             review.update(decision)
-            if decision["decision"] == "continue":
-                from harness.plan_review import record_task_review
+            if decision["next_task"]:
+                from harness.plan_review import record_task_review, task_record
 
-                record_task_review(
-                    root,
-                    str(decision["next_task"]),
-                    verdict="accept",
-                    findings=[],
-                    summary=decision["why"],
-                    source="task_review",
-                    run_id=run_id,
-                )
+                if not task_record(root, str(decision["next_task"]))["reviews"]:
+                    record_task_review(
+                        root,
+                        str(decision["next_task"]),
+                        findings=[],
+                        dropped=0,
+                        summary=decision["why"],
+                        source="task_review",
+                        run_id=run_id,
+                    )
         elif previous.get("decision"):
             review.update(
                 {key: previous[key] for key in ("decision", "next_task", "why")}
@@ -266,9 +278,9 @@ def review_followup(
             if int(review.get("attempts", 0)) < MAX_REVIEWS
             else ""
         )
-        findings = "".join(f" Non-blocking: {item}" for item in review.get("findings") or [])
+        findings = describe(review.get("findings") or [])
         return (
-            f"Reviewer chose continue -> {review['next_task']}: {review['why']}.{findings} "
+            f"Reviewer chose continue -> {review['next_task']}: {review['why']}. {findings} "
             "Read the updated task list and check the rewrite only for factual "
             "errors (wrong path or number, already done, cannot run here, over "
             f"budget).{objection} Otherwise initialize the Harness for "

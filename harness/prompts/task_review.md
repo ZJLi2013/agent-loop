@@ -34,14 +34,27 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    - `ask_human`：需要改 Goal / scope，要在有显著权衡的方案间选型，或实际产物与设计不一致、
      不在测 Goal 要测的东西（要改设计，由 human 决定修正还是换方向）；
    - `stop`：Goal 已达成，或继续不再改变主线。
-   证据有缺口但补齐后下一条命令不变时，选 `continue`，把缺口写进 `findings`，不升级成补证 task。
+   证据有缺口但补齐后下一条命令不变时，选 `continue`，把缺口写成 `suggest`，不升级成补证 task。
+   选 `ask_human` 时，若有不受这个问题影响的 task，写进 `next_task`；human 不在时 executor 会先做它。
+   上面若列出了开工前的审查意见与回应，核对被驳回的 `must` 驳得是否成立。
 4. 只改 plan document 与 task 列表；不改代码，不跑实验。task 列表保持原有表格、一行一个 task、原有状态词。
    本次 review 的推理与依据写进 `review` 字段，Harness 把它归档到 {task_id} 名下。
+
+## 意见门槛
+
+每个 task 只审这一次，executor 照你的意见改完就开工，不再回审。所以只写值得写的：
+
+- `must`：被忽略时会让方向错、结论错或白跑昂贵实验。必须写出 `consequence`（不改会怎样）与 `evidence`
+  （文件:行或事实），缺一个就会被当作 `suggest`。补齐后下一条命令不变的，不是 `must`。
+- `suggest`：边界条件、证据格式、措辞、多一次验证等严谨性建议，executor 可以跳过。不要求补证、不加核验步骤、
+  不要求另起 task。
+- `human: true`：只用于 must，表示要 human 在有显著权衡的方案间选。
+- 各最多 3 条，按严重度排序；超出的会被丢弃。没有值得写的就给空列表。
 
 ## 输出
 
 把下面的 JSON 写到 `{decision_file}`：
 
 ```json
-{"decision": "continue | ask_human | stop", "next_task": "<task id，continue 时必填>", "why": "<一句话：为什么这一步推进 Goal>", "findings": ["<不阻塞的缺口，可省略>"], "review": "<本 task 的 review 依据>"}
+{"decision": "continue | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}], "review": "<本 task 的 review 依据>"}
 ```

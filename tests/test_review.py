@@ -14,7 +14,7 @@ from harness.core import (
     run_command,
     verify,
 )
-from harness.plan_review import review_status, task_record
+from harness.plan_review import record_task_review, respond_task, review_status, task_record
 from harness.records import close_task
 from harness.review import run_review
 
@@ -274,7 +274,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
                 {"decision": "continue", "next_task": "t2", "why": "next", "findings": [1]}
             )
         )
-        self.assertIn("findings must be", run_review(self.root)["review"]["error"])
+        self.assertIn("each finding needs level", run_review(self.root)["review"]["error"])
 
     def test_non_blocking_findings_reach_the_worker(self) -> None:
         self.init(
@@ -283,14 +283,14 @@ class TaskBoundaryReviewTest(unittest.TestCase):
                     "decision": "continue",
                     "next_task": "t2",
                     "why": "next",
-                    "findings": ["state snapshot not saved"],
+                    "findings": [{"level": "suggest", "claim": "state snapshot not saved"}],
                 }
             )
         )
 
         run_review(self.root)
 
-        self.assertIn("Non-blocking: state snapshot not saved", completion_gate(self.root) or "")
+        self.assertIn("Suggest: state snapshot not saved", completion_gate(self.root) or "")
 
     def test_review_requires_fresh_verification(self) -> None:
         self.init(reviewer_writing({"decision": "stop", "why": "done"}))
@@ -398,7 +398,7 @@ class ClosedPlanSectionTest(unittest.TestCase):
 
         run_review(self.root)
 
-        self.assertEqual(review_status(self.root, "t2")[0], "reviewed")
+        self.assertEqual(review_status(self.root, "t2"), "reviewed")
         self.assertEqual(task_record(self.root, "t2")["reviews"][-1]["source"], "task_review")
 
     def test_prompt_leaves_clerical_work_to_harness(self) -> None:
@@ -410,7 +410,23 @@ class ClosedPlanSectionTest(unittest.TestCase):
         self.assertIn("都由 Harness 做", prompt)
         self.assertIn("只改 plan document 与 task 列表", prompt)
         self.assertIn("不给它加交接或核验步骤", prompt)
-        self.assertIn("`findings`", prompt)
+        self.assertIn("写成 `suggest`", prompt)
+        self.assertIn("被忽略时会让方向错", prompt)
+
+    def test_prompt_lists_plan_review_items_and_answers(self) -> None:
+        self.init(plan_reviewer((CONTINUE, PLAN_MOVED, False)))
+        record_task_review(
+            self.root, "t1", summary="s", source="plan_review", run_id=None, dropped=0,
+            findings=[{"level": "must", "claim": "lock race", "consequence": "c",
+                       "evidence": "e", "change": "", "human": False}],
+        )
+        respond_task(self.root, "t1", items=["1=reject"], reason="the lock is per process")
+
+        run_review(self.root)
+
+        self.assertIn("开工前的审查意见与 executor 回应", self.prompt())
+        self.assertIn("[must] lock race", self.prompt())
+        self.assertIn("the lock is per process", self.prompt())
 
     def test_retry_prompt_carries_previous_error(self) -> None:
         self.init(plan_reviewer((None, PLAN_MOVED, True), (CONTINUE, PLAN_MOVED, False)))
@@ -433,8 +449,11 @@ class HumanSuccessorTest(unittest.TestCase):
     tearDown = ClosedPlanSectionTest.tearDown
     init = ClosedPlanSectionTest.init
 
-    def review_as(self, decision: str) -> None:
-        self.init(plan_reviewer(({"decision": decision, "why": "human decides"}, PLAN_MOVED, False)))
+    def review_as(self, decision: str, next_task: str | None = None) -> None:
+        verdict = {"decision": decision, "why": "human decides"}
+        if next_task:
+            verdict["next_task"] = next_task
+        self.init(plan_reviewer((verdict, PLAN_MOVED, False)))
         self.assertEqual(run_review(self.root)["review"]["decision"], decision)
 
     def human_decides(self, revision: int, review: str) -> None:
@@ -471,12 +490,38 @@ class HumanSuccessorTest(unittest.TestCase):
     def test_successor_after_stop_starts_on_a_newer_approved_revision(self) -> None:
         self.assert_successor_starts("stop", 2)
 
-    def test_successor_after_ask_human_needs_human_approval(self) -> None:
-        self.review_as("ask_human")
-        self.human_decides(1, "unreviewed")
+    def test_unattended_release_follows_the_reviewer(self) -> None:
+        cases = (
+            ("stop", None, False),
+            ("ask_human", None, False),
+            ("ask_human", "t2", True),
+            ("continue", "t2", True),
+        )
+        for decision, next_task, starts in cases:
+            with self.subTest(decision=decision, next_task=next_task):
+                self.tearDown()
+                self.setUp()
+                self.review_as(decision, next_task)
+                self.human_decides(1, "unreviewed")
+                if starts:
+                    self.assertEqual(self.init_successor()["task_id"], "t2")
+                else:
+                    with self.assertRaisesRegex(HarnessError, "unattended after"):
+                        self.init_successor()
 
-        with self.assertRaisesRegex(HarnessError, "human approves the plan"):
-            self.init_successor()
+    def test_unattended_ask_human_starts_only_the_named_task(self) -> None:
+        self.review_as("ask_human", "t2")
+        (self.root / "plan.md").write_text(PLAN_MOVED, encoding="utf-8")
+        (self.root / ".agent-loop" / "task.md").write_text(
+            SUCCESSOR_TASKS.format(revision=1) + "| P0 | t3 | r1 | other | check | 🔬 doing | 0 |\n",
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(HarnessError, r"only the reviewer's next task \(t2\)"):
+            initialize(
+                self.root, task_id="t3", plan_doc="plan.md",
+                verifier_argv=[sys.executable, "-c", "print('OK')"],
+            )
 
 
 CLOSE_PLAN = (
