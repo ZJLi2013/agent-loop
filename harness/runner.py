@@ -4,7 +4,6 @@ import contextlib
 import os
 import signal
 import subprocess
-import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -56,9 +55,10 @@ def execute_process(
     error: str | None = None
     exit_code: int | None = None
 
-    with tempfile.TemporaryDirectory(prefix="agent-loop-harness-") as temp_dir:
-        raw_stdout = Path(temp_dir) / "stdout"
-        raw_stderr = Path(temp_dir) / "stderr"
+    # Raw output stays under run_dir: agent sandboxes (dsh on Windows) may deny the system temp dir.
+    raw_stdout = run_dir / "stdout.raw"
+    raw_stderr = run_dir / "stderr.raw"
+    try:
         try:
             with raw_stdout.open("wb") as stdout_fh, raw_stderr.open(
                 "wb"
@@ -98,6 +98,9 @@ def execute_process(
         stderr_hash, stderr_truncated = write_artifact(
             run_dir / "stderr.log", raw_stderr, max_output_bytes
         )
+    finally:
+        raw_stdout.unlink(missing_ok=True)
+        raw_stderr.unlink(missing_ok=True)
 
     pause_detected = pause_detected or is_paused()
     outcome = (
