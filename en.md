@@ -5,12 +5,11 @@
 [![tests](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml/badge.svg)](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**An agent for engineering and research: it drives a project through rounds of design, experiment, and verification, and each round's evidence decides the next.**
+**Keep coding agents moving through research and engineering projects: plan, execute, verify, and choose the next step from evidence.**
 
 Verified on **Cursor, Codex, and DeepSeek Harness (dsh)**.
 
-agent-loop has no model of its own. It runs inside a host agent: the host loads its rules and skills,
-calls its Harness CLI, and, through the host's hooks, cannot finish a task that is not verified. Use it for iterative experiments, engineering
+agent-loop adds a project control loop to an existing agent. Use it for iterative experiments, engineering
 changes with explicit acceptance criteria, and long tasks that need continuity across context windows.
 You define the Goal and project criteria. A worker executes, an independent verifier checks the result,
 and an optional reviewer interprets the evidence and proposes the next step.
