@@ -26,7 +26,8 @@ class DshHooksTest(unittest.TestCase):
         self.task.write_text("# Tasks\n| P1 | g1 | — | probe | ok | 🔬 doing | 0 |\n", encoding="utf-8")
         markers = Path(self.tmp.name) / "markers"
         markers.mkdir()
-        self.env = {**os.environ, "TEMP": str(markers), "TMP": str(markers), "TMPDIR": str(markers)}
+        self.env = {**os.environ, "TEMP": str(markers), "TMP": str(markers), "TMPDIR": str(markers),
+                    "PYTHONIOENCODING": "cp1252"}
 
     def hook(self, name: str, payload: dict[str, object]) -> dict[str, object]:
         result = subprocess.run(
@@ -87,7 +88,7 @@ class DshHooksTest(unittest.TestCase):
     def test_session_start_injects_memory_index(self) -> None:
         memory = self.task.parent / "memory"
         memory.mkdir()
-        (memory / "INDEX.md").write_text("- facts: gateway\n", encoding="utf-8")
+        (memory / "INDEX.md").write_text("- facts: 网关\n", encoding="utf-8")
 
         output = self.hook("memory-lookup.py", {
             "session_id": "S", "cwd": str(self.root), "hook_event_name": "SessionStart",
@@ -95,7 +96,7 @@ class DshHooksTest(unittest.TestCase):
 
         specific = output["hookSpecificOutput"]
         self.assertEqual(specific["hookEventName"], "SessionStart")
-        self.assertIn("- facts: gateway", specific["additionalContext"])
+        self.assertIn("- facts: 网关", specific["additionalContext"])
 
     def test_session_start_outside_a_project_is_silent(self) -> None:
         output = self.hook("memory-lookup.py", {

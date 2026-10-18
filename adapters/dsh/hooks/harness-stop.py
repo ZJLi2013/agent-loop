@@ -46,7 +46,8 @@ def main() -> None:
         payload = {}
     reason = block_reason(payload if isinstance(payload, dict) else {})
     output = {"decision": "block", "reason": reason} if reason else {}
-    sys.stdout.write(json.dumps(output, ensure_ascii=False))
+    # ASCII escapes: on Windows the hook's piped stdout uses the ANSI code page, not UTF-8.
+    sys.stdout.write(json.dumps(output))
 
 
 if __name__ == "__main__":

@@ -43,7 +43,8 @@ def main() -> None:
         "hookEventName": "SessionStart",
         "additionalContext": context,
     }} if context else {}
-    sys.stdout.write(json.dumps(output, ensure_ascii=False))
+    # ASCII escapes: on Windows the hook's piped stdout uses the ANSI code page, not UTF-8.
+    sys.stdout.write(json.dumps(output))
 
 
 if __name__ == "__main__":
