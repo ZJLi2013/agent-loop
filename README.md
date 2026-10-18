@@ -5,12 +5,12 @@
 [![tests](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml/badge.svg)](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**给你正在用的 coding agent 加一层项目级控制环：逐步规划、执行、验证，再根据证据决定下一步。**
+**面向工程与科研的 agent：按「设计 → 实验 → 验证」逐轮推进项目，每一轮的证据决定下一步。**
 
 已在 **Cursor、Codex、DeepSeek Harness (dsh)** 上验证。
 
-agent-loop 本身不是 agent，也不调用模型：它跑在宿主 agent 里，由宿主加载它的 rules / skills、调用它的
-Harness CLI，并通过宿主的 hooks 守住「未验证不算完成」。适合多轮实验、需要验证的工程改造，以及需要跨上下文
+agent-loop 没有自己的模型：它跑在宿主 agent 里，由宿主加载它的 rules / skills、调用它的 Harness CLI，
+并通过宿主的 hooks 守住「未验证不算完成」。适合多轮实验、需要验证的工程改造，以及需要跨上下文
 接续的长任务。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer
 核对证据、提出下一步，方向变化时交回 human。
 
