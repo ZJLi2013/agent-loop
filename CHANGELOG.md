@@ -8,9 +8,17 @@ All notable user-facing changes are documented here. This project follows Semant
 
 - On-demand `research-to-paper` skill: an arXiv-style paper and an optional 5–15 s teaser from a closed research
 Goal, with every number traced to the experiment records. Usage documents how to invoke on-demand skills.
+- dsh (DeepSeek Harness) enforced adapter: through dsh's `hooks-codex` bridge, a dsh worker is held by the
+  completion gate until the task is verified, and the memory index is injected at session start.
+  `scripts/sync-to-dsh.ps1` renders the always-apply rules into `$DSH_HOME/AGENTS.md` and links the skills into
+  `$DSH_HOME/skills`. `reviewer.json` can point at dsh headless running a different model. `init` records
+  `DSH_SESSION_ID` as the task owner. The model stays the host's provider config; usage covers configuring one.
 
 ### Changed
 
+- The runner writes raw command output under the run directory instead of the system temp directory, which an
+  agent sandbox (dsh on Windows) may not let the command's identity write.
+- Study notes moved to `docs/study/<feature>/`; `docs/usage.md` is now in Chinese.
 - A run whose runner process was killed no longer blocks the task. The next `exec`, `verify` or completion gate
   marks it `failed`, adds an `aborted` entry with its command and start time to `runs.jsonl`, and reports that
   the command may have finished or may still be running remotely, so its outputs should be checked before it is
