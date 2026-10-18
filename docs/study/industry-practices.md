@@ -1,7 +1,7 @@
 # 业界实践与 agent-loop 的能力边界
 
 > 2026-10-12 联网读取下列一手页面与公开 README；未运行这些系统，也不视作完整业界盘点。
-> 本文是调研与范围判断，导航见 [Study 索引](README.md)，当前架构见 [design.md](../design.md)。
+> 本文是调研与范围判断，导航见 [Study 索引](README.md)，当前架构见 [design.md](../../design.md)。
 
 ## 定位
 
@@ -18,7 +18,7 @@ agent-loop 为工作项目提供规划、执行、验证、评审和记忆机制
 |---|---|---|
 | [Anthropic：Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)，2025-11-26 | 初始化环境、增量工作、持久化交接、端到端验证 | 与本库 task、交接、verifier 有对应关系；原文主要验证 Web 开发，研究任务的判据仍需项目定义 |
 | [Anthropic：Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)，2026-01-09 | 区分 task / trial / grader / outcome；组合代码、模型与人工评分；区分能力与回归评估 | 借鉴实际结果与判据的对应关系。所服务项目若开发 agent，可据此建立自己的 eval；普通工程或研究项目使用适合自己的测试与实验指标，无需统一成 agent benchmark |
-| [Karpathy：autoresearch](https://github.com/karpathy/autoresearch)，本次读取当前 README | 固定实验时长、val_bpb、保留或丢弃改动；默认 agent 改 `train.py`，人改 `program.md` | 参照有限范围的项目优化循环。固定硬件与预算下才有可比性；详细历史版本分析见 [autoresearch](autoresearch.md) |
+| [Karpathy：autoresearch](https://github.com/karpathy/autoresearch)，本次读取当前 README | 固定实验时长、val_bpb、保留或丢弃改动；默认 agent 改 `train.py`，人改 `program.md` | 参照有限范围的项目优化循环。固定硬件与预算下才有可比性；详细历史版本分析见 [autoresearch](exploration-mode/autoresearch.md) |
 | [GEPA](https://github.com/gepa-ai/gepa)，本次读取当前 README；关联论文 [2507.19457](https://arxiv.org/abs/2507.19457) | 从执行反馈提出文本参数变体，经评估与 Pareto 选择优化 prompt、代码或配置 | 是已有可测目标时的优化工具参照；本库当前不引入此搜索流程，也不移用 README 的收益数字作效果承诺 |
 | [Sakana：Darwin Gödel Machine](https://sakana.ai/dgm/)，2025-05-30 | 修改 agent 自身代码、用下游编码任务评估、保存候选谱系供继续探索 | 为自改进提供研究例子。特定 benchmark 上的结果不证明通用 RSI 已成熟，也不构成本库增加自改进系统的理由 |
 | [LangGraph：Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)，本次读取当前文档 | checkpointer 保存线程状态，store 保存跨线程信息 | 为恢复与长期状态提供参照；持久化、唤醒和任务调度是不同责任，不能仅凭状态落盘就推断已能无人值守恢复 |
@@ -34,7 +34,7 @@ agent-loop 为工作项目提供规划、执行、验证、评审和记忆机制
 | 跨上下文继续工作 | active task、交接、plan revision、memory | 继续维护明确的真相源和有界上下文；交接文件与完整宿主会话恢复有不同边界 |
 | 判断任务是否完成 | 项目提供 locked verifier，配置 reviewer 时再核对证据解释 | 验证实际结果，研究中的负结果也可以完成任务；判据是否测到 Goal 由项目设计与评审负责 |
 | 复用经验 | facts / episodes / lessons 与检索注入 | 先服务后续项目决策；经验积累本身不证明 harness 已自动改进 |
-| 观察长任务 | runner budget、心跳、日志与终态 | 进程存在、日志增长、任务有价值是不同问题，见 [心跳](heartbeat.md) |
+| 观察长任务 | runner budget、心跳、日志与终态 | 进程存在、日志增长、任务有价值是不同问题，见 [心跳](harness/heartbeat.md) |
 | 了解外界变化 | 尚无通用持续 radar 组件 | 可在 harness 外独立建设；信息通过正常研究与计划流程被采用 |
 
 ## 验证的归属
@@ -91,6 +91,7 @@ Radar 的价值是持续发现值得关注的变化，并说明来源和适用�
 
 autoresearch 的默认循环主要属于第一类；本库 memory 支持第二类；DGM 研究第三类，GEPA
 则提供可用于多类目标的优化方法。它们的成本与前提不同，不能因为都能“反思”就视作同一种能力。
+后续出现的同类工作持续记在 [Research / RSI 工作追踪](research-rsi-track.md)。
 
 当前继续用已有 memory、案例记录与人工维护来演进 rules / skills。反复出现的教训可以提示
 维护者检查规则，但不在这里新增自动候选搜索、评估晋升或发布流程。项目中的收益与局限留在

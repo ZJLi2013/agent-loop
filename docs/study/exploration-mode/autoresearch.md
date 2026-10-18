@@ -2,7 +2,7 @@
 
 > 读的是 [karpathy/autoresearch](https://github.com/karpathy/autoresearch) @ `228791f`（2026-03）。
 > 只看控制结构，不看 train.py 的训练细节。
-> 专题导航见 [Study 索引](README.md)。2026-10-12 按当前本库架构修正对照，外部细节仍按上述版本理解。
+> 专题导航见 [Study 索引](../README.md)。2026-10-12 按当前本库架构修正对照，外部细节仍按上述版本理解。
 
 ## 结论
 
@@ -67,4 +67,4 @@ rewind 回更早的点，但要求「very very sparingly (if ever)」，所以�
 - **用 git 当 checkpoint / rollback**，不自造状态机。
 - **否定结果的记录必须活过回滚**：放在被版本控制之外，或放在不会被 reset 的文件里。
 - **区分实验对象与工作方法**：默认 agent 迭代 `train.py`，人维护 `program.md`。后者可类比本库
-  rules / skills，但不意味着原项目已自动优化自己的工作方法；范围判断见 [业界实践](industry-practices.md)。
+  rules / skills，但不意味着原项目已自动优化自己的工作方法；范围判断见 [业界实践](../industry-practices.md)。

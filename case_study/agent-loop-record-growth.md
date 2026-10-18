@@ -86,4 +86,4 @@ t22–t26 的逐项验收已从活跃表移到 `.agent-loop/archive/tasks.md`。
 `task.md` 仍出现 t22–t26 的短指针，这是索引，不是完整验收记录。
 
 通用生命周期与开源实践见
-[`study/experiment-record-lifecycle.md`](../study/experiment-record-lifecycle.md)。
+[`study/experiment-record-lifecycle.md`](../docs/study/memory/experiment-record-lifecycle.md)。

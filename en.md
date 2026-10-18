@@ -98,7 +98,7 @@ Aider, mini-swe-agent, OpenHands, and LangGraph. This compares use cases, not be
 | Install and complete the example | [Quickstart](docs/quickstart.md) |
 | Use it in a working project | [Usage](docs/usage.md) |
 | Understand the architecture | [Design](design.md) (Chinese) · [Policies](skills/README.md) |
-| Read research and field experience | [Study map](study/README.md) (Chinese) · [Case studies](case_study/README.md) |
+| Read research and field experience | [Study map](docs/study/README.md) (Chinese) · [Case studies](case_study/README.md) |
 | Find releases and release procedures | [Changelog](CHANGELOG.md) · [v0.1.0 notes](docs/releases/v0.1.0.md) · [Release guide](docs/releasing.md) |
 | Report a problem or contribute | [Issues](https://github.com/ZJLi2013/agent-loop/issues) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) |
 

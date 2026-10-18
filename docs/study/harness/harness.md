@@ -1,6 +1,6 @@
 # 最小 Harness
 
-> [Study 索引](README.md) · 已落地机制的专题说明；当前完整控制流（含 reviewer）以 [design.md](../design.md) 为准。
+> [Study 索引](../README.md) · 已落地机制的专题说明；当前完整控制流（含 reviewer）以 [design.md](../../../design.md) 为准。
 
 ## Goal
 
@@ -64,8 +64,8 @@ CLI 通过 `agent-loop-harness` 调用；每个工作项目的运行状态放在
 - proposed plan 自动暂停、运行中 pause、revision / review / task `rN` 一致后 resume。
 - Goal Review 的 action / time / failure 触发，以及 continue / replan / stop 与 preCompact adapter。
 
-[`protocol.py`](../harness/protocol.py) 定义状态机；storage / runner / journal / plan 各持一个职责，
-[`core.py`](../harness/core.py) 只做 orchestration 与兼容 façade。[`adapters/core.py`](../adapters/core.py)
+[`protocol.py`](../../../harness/protocol.py) 定义状态机；storage / runner / journal / plan 各持一个职责，
+[`core.py`](../../../harness/core.py) 只做 orchestration 与兼容 façade。[`adapters/core.py`](../../../adapters/core.py)
 把共享动作接到内部 hook protocol，Cursor codec 再翻译成 `stop.followup_message`。完整强制边界仍需
 宿主 hook 或外部 driver 拥有 agent 生命周期。
 

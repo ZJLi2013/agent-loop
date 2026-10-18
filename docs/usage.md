@@ -128,12 +128,12 @@ Use `replan` or `stop` when the evidence warrants it. `continue` does not bypass
 
 Copy the four Markdown templates from `skills/agent-memory/templates/` in the agent-loop checkout into
 `<working-project>/.agent-loop/memory/`. Each project owns its facts, episodes, lessons, and bounded index.
-The Cursor adapter injects retrieval context when the active task is read. See [Memory](../study/memory.md)
+The Cursor adapter injects retrieval context when the active task is read. See [Memory](study/memory/memory.md)
 for rationale and [Policies](../skills/README.md) for owners.
 
 Closed tasks and old handoffs move to `.agent-loop/archive/`. Runtime evidence lives in `.harness/`, with
 bounded logs and artifacts. Preserve project evidence that must outlive runtime retention in project-owned
-storage. Heartbeat policy observes detached jobs; see [Heartbeat](../study/heartbeat.md).
+storage. Heartbeat policy observes detached jobs; see [Heartbeat](study/harness/heartbeat.md).
 
 ## Optional phone checkpoints
 

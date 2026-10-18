@@ -1,6 +1,6 @@
 # Case studies
 
-[Project](../en.md) · [Study map](../study/README.md)
+[Project](../en.md) · [Study map](../docs/study/README.md)
 
 These Chinese-language notes record specific runs and maintenance incidents. They explain design choices;
 they are not controlled benchmarks or guarantees of performance on other projects.

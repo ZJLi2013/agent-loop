@@ -1,6 +1,6 @@
 # Multi-agent loop 调研
 
-> [Study 索引](README.md) · 角色与评审边界专题；跨主题参照见 [业界实践](industry-practices.md)。
+> [Study 索引](../README.md) · 角色与评审边界专题；跨主题参照见 [业界实践](../industry-practices.md)。
 
 > 2026-09 读的是各项目的公开文档与 README，只看角色划分与调度方式；标「未实测」的没有跑过。
 
@@ -10,7 +10,7 @@
 提交后审准入，在 task 边界决定下一步。「什么时候叫谁」由 Harness 的确定性边界决定，不另设
 LLM 调度 agent。
 
-依据来自 [RoboJEV × Nox-4B case](../case_study/robojev-nox.md)：11 个 task 边界里，决策几乎每次都被
+依据来自 [RoboJEV × Nox-4B case](../../../case_study/robojev-nox.md)：11 个 task 边界里，决策几乎每次都被
 改写，执行一次都没有。需要判断的只有边界这一个时刻，所以 LLM 调度器只会多出一个会漂移的判断点。
 
 ## 现有实现
