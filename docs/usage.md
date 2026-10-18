@@ -74,11 +74,23 @@ dsh plugin --profile <p> add @deepseek-ai/dsh-hooks-codex@<dsh-version> @deepsee
         configPath: <absolute-path>/hooks.json
 ```
 
-在项目根目录启动 dsh：stop hook 只管会话工作目录所在的那个项目。桥接不发压缩事件，所以 Goal Review 只靠动作数、
-时间与失败触发；它也不传工具调用的文件路径，所以 memory 索引只在会话开始时注入一次。
-
 Desktop 的插件只能在退出 Desktop 时增删。欢迎页上的 Sign in 和 Add API Key 都只针对 DeepSeek 官方服务；
 使用自己的 provider 时，点 Add API Key，输入框留空，再点 Set up later。
+
+<a id="dsh-limitations"></a>
+#### 已知限制
+
+dsh 适配器是新加的，实际项目里跑得还少，下面的清单会随使用补充。
+
+- **只管会话工作目录所在的项目。** 在项目根目录启动 dsh；Cursor 会绑定会话里读过 `task.md` 的每个项目，dsh 不会。
+- **hooks 只挂在配置过的 profile 上。** 没挂 `hooks-codex` 的 profile（例如只给 reviewer 用的 `headless`）不受
+  completion gate 约束。
+- **没有压缩事件。** Goal Review 只靠动作数、时间与失败触发。
+- **memory 索引只在会话开始时注入一次。** 桥接不传工具调用的文件路径，读 `task.md` 时不会再注入。
+- **`AGENTS.md` 是生成的副本。** rules 改动后要重跑 `sync-to-dsh.ps1`；skills 是链接，跟着仓库变。
+- **hooks 依赖仓库原位。** `hooks.json` 用的是仓库的绝对路径，仓库移动或切到不含 `adapters/dsh/` 的分支后 hooks 失败。
+- **只在 Windows 上验证过。** 安装脚本是 PowerShell；其他平台的 rules / skills 需手动放到 `$DSH_HOME`。
+- **Desktop GUI 里的 gate 未做端到端验证。** 端到端验证在 dsh headless 上完成；Desktop 用的是同一个桥接与配置方式。
 
 <a id="dsh-models"></a>
 ### 在 dsh 里配置自己的模型
