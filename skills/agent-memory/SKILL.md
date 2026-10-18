@@ -132,4 +132,4 @@ INDEX 带 anchor，RETRIEVE 是**定向读取**而不是搜索，所以不需要
 本库量级下精确查找就够，而把 key-value 塞进语义检索会取回相邻的那一条——
 问 node-a 的路径，返回 node-b 的。
 
-调研依据与未做的部分见 [`study/memory.md`](../../study/memory.md)。
+调研依据与未做的部分见 [`study/memory.md`](../../docs/study/memory/memory.md)。

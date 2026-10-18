@@ -1,6 +1,6 @@
 # 渐进计划与人工纠偏
 
-> [Study 索引](README.md) · 已落地规划机制的设计记录；下列 revision 是历史记录，不是工作项目的审批状态。
+> [Study 索引](../README.md) · 已落地规划机制的设计记录；下列 revision 是历史记录，不是工作项目的审批状态。
 
 Plan Revision: 2
 Plan Review: approved

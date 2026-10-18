@@ -1,6 +1,6 @@
 # Agent Memory 设计
 
-> [Study 索引](README.md) · 检索与经验写回专题；外部信息发现与自改进的范围见 [业界实践](industry-practices.md)。
+> [Study 索引](../README.md) · 检索与经验写回专题；外部信息发现与自改进的范围见 [业界实践](../industry-practices.md)。
 
 > 调研于 2026-09，v1 已落地。这里只留关键设计与它们的理由，逐条证据见文末参考。
 

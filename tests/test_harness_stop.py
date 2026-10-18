@@ -11,6 +11,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+from adapters import followup as followup_markers
 from adapters.cursor import session_scope
 from harness import run
 from harness.core import initialize
@@ -48,6 +49,8 @@ class HarnessStopHookTest(unittest.TestCase):
             }
             with patch.object(
                 session_scope, "_SCOPES", root / "session-cache"
+            ), patch.object(
+                followup_markers, "_MARKERS", root / "followups"
             ), patch(
                 "harness.core._remaining_wall", side_effect=[1800.0, 1790.0]
             ):
@@ -141,6 +144,8 @@ class HarnessStopHookTest(unittest.TestCase):
             state_path.write_text(json.dumps(state), encoding="utf-8")
             with patch.object(
                 session_scope, "_SCOPES", workspace / "session-cache"
+            ), patch.object(
+                followup_markers, "_MARKERS", workspace / "followups"
             ), redirect_stdout(io.StringIO()):
                 for task in tasks:
                     session_scope.bind(
@@ -165,12 +170,13 @@ class HarnessStopHookTest(unittest.TestCase):
         cases = (
             ({"AGENT_LOOP_SESSION_ID": "own", "CURSOR_CONVERSATION_ID": "c"}, "own"),
             ({"CURSOR_CONVERSATION_ID": "c"}, "c"),
+            ({"DSH_SESSION_ID": "d"}, "d"),
             ({}, None),
         )
         base = {
             key: value
             for key, value in os.environ.items()
-            if key not in {"AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID"}
+            if key not in run.SESSION_ENV
         }
         for env, owner in cases:
             with self.subTest(env=env), tempfile.TemporaryDirectory() as directory:

@@ -1,6 +1,6 @@
 # Related projects and when to use them
 
-[中文入口](../README.md) · [English entry](../en.md) · [Research context](../study/industry-practices.md)
+[中文入口](../README.md) · [English entry](../en.md) · [Research context](study/industry-practices.md)
 
 Reviewed on **2026-10-12** using the first-party sources linked below. This is a comparison of purpose and
 control boundaries, not an exhaustive feature inventory or performance benchmark. These projects operate

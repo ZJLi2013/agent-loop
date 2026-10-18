@@ -1,68 +1,172 @@
-# Use agent-loop in a working project
+# 在工作项目中使用 agent-loop
 
 [Quickstart](quickstart.md) · [中文入口](../README.md) · [English entry](../en.md)
 
-## Install and choose a mode
+## 安装并选择模式
 
-Install the CLI from a repository checkout with `python -m pip install .`. For Cursor enforced mode use
-`python -m pip install -e .` instead: the installer links the hooks to the checkout, and an editable install
-keeps the CLI on the same code after a branch switch or pull. Keep your working project separate from the
-agent-loop checkout.
+在 agent-loop 仓库里用 `python -m pip install .` 安装 CLI。Cursor enforced 模式改用 `python -m pip install -e .`：
+安装器把 hooks 链接到仓库，可编辑安装能让 CLI 在切分支或 pull 之后仍与 hooks 用同一份代码。工作项目与
+agent-loop 仓库分开放。
 
-| Mode | What you get |
+| 模式 | 得到什么 |
 |---|---|
-| Portable | CLI commands and policies used by your host; the host controls its own lifecycle |
-| Cursor enforced | Windows installation below adds memory, stop, and preCompact hooks |
+| Portable | CLI 命令与策略由宿主调用，生命周期由宿主自己管 |
+| Cursor enforced | 下面的 Windows 安装器加上 memory、stop、preCompact hooks |
+| dsh enforced | DeepSeek Harness 经 `hooks-codex` 桥接加上 stop 与 session-start hooks |
 
-For Windows + Cursor, run from the agent-loop checkout:
+宿主与模型相互独立：模式决定宿主，宿主自己的 provider 配置决定模型。dsh worker 可以跑 DeepSeek、GPT 或任何
+OpenAI / Anthropic 兼容的模型，agent-loop 这边不用改任何东西。
+
+Windows + Cursor 下，在 agent-loop 仓库里运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-The installer links the checkout into `%USERPROFILE%\.cursor`, including the rules directory, individual
-skills, harness, and hooks. Existing ordinary directories with the same names are moved to timestamped
-backups. Review those backups if you have custom rules/hooks. Restart Cursor after installation and make
-sure the Python interpreter visible to Cursor is 3.11+; activation of a venv in a terminal does not necessarily
-change Cursor's environment. Keep the checkout in place and use a trusted version. See [Security](../SECURITY.md).
+安装器把仓库链接进 `%USERPROFILE%\.cursor`，包括 rules 目录、各个 skill、harness 与 hooks。同名的普通目录会被移到
+带时间戳的备份；有自定义 rules / hooks 时检查这些备份。装完重启 Cursor，并确认 Cursor 看得到的 Python 是 3.11+：
+在终端里激活 venv 不一定改变 Cursor 的环境。仓库保持原位，并使用可信版本，见 [Security](../SECURITY.md)。
 
-The automated Windows job checks installer wiring in an isolated profile. It does not launch Cursor or prove
-compatibility with every Cursor release. Before publishing, also run the real-host smoke in [Releasing](releasing.md).
+Windows 自动化任务在隔离 profile 里检查安装器接线，不启动 Cursor，也不保证兼容每个 Cursor 版本。发布前还要跑
+[Releasing](releasing.md) 里的真实宿主冒烟。
 
-## Create a reviewed plan
+<a id="dsh-enforced-mode"></a>
+### dsh enforced 模式
 
-In your working project, write a plan document describing the Goal, scope, current conclusion, next decision,
-and acceptance criteria. The filename is flexible. Include:
+dsh 需要 Node.js 24.2+；DeepSeek Harness Desktop 自带 dsh、Node 与 pnpm。命令行默认的 profile 是 `headless`，
+`dsh web` 是 `web`，Desktop 是 `desktop`。
+
+先把 rules 与 skills 分发到 dsh 的 home（`DSH_HOME`，dsh 默认是 `~/.dsh`），在 agent-loop 仓库里运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/sync-to-dsh.ps1 -DshHome $HOME\.dsh
+```
+
+dsh 不读 `.mdc`，脚本把 always-apply 的 rules 去掉 frontmatter 后拼成 `$DSH_HOME/AGENTS.md`，所有 profile 的会话
+都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
+已有的手写 `AGENTS.md` 或同名普通 skill 目录会先移到带时间戳的备份。
+
+hooks 还没有安装器，需手动把桥接接到 dsh profile `<p>` 上。
+
+`dsh plugin` 依赖 pnpm，所以 pnpm 要在 `PATH` 上。`dsh-hook-protocol` 是桥接的 peer 依赖，不会自动安装。两个包都用
+你所运行的 dsh 的版本号：
+
+```powershell
+dsh plugin --profile <p> add @deepseek-ai/dsh-hooks-codex@<dsh-version> @deepseek-ai/dsh-hook-protocol@<dsh-version>
+```
+
+在项目之外写一份 `hooks.json`。路径用绝对路径，因为 hooks 在会话的工作目录里运行（Windows 上经 pwsh）：
+
+```json
+{"hooks": {
+  "SessionStart": [{"hooks": [{"type": "command", "command": "python <checkout>/adapters/dsh/hooks/memory-lookup.py", "timeout": 30}]}],
+  "Stop": [{"hooks": [{"type": "command", "command": "python <checkout>/adapters/dsh/hooks/harness-stop.py", "timeout": 30}]}]
+}}
+```
+
+在 `$DSH_HOME/profiles/<p>/cordis.patch.yml` 里挂载桥接（`DSH_HOME` 默认是 `~/.dsh`）：
+
+```yaml
+- insert:
+    - id: hooks-codex
+      name: '@deepseek-ai/dsh-hooks-codex'
+      config:
+        configPath: <absolute-path>/hooks.json
+```
+
+Desktop 的插件只能在退出 Desktop 时增删。欢迎页上的 Sign in 和 Add API Key 都只针对 DeepSeek 官方服务；
+使用自己的 provider 时，点 Add API Key，输入框留空，再点 Set up later。
+
+<a id="dsh-limitations"></a>
+#### 已知限制
+
+dsh 适配器是新加的，实际项目里跑得还少，下面的清单会随使用补充。
+
+- **只管会话工作目录所在的项目。** 在项目根目录启动 dsh；Cursor 会绑定会话里读过 `task.md` 的每个项目，dsh 不会。
+- **hooks 只挂在配置过的 profile 上。** 没挂 `hooks-codex` 的 profile（例如只给 reviewer 用的 `headless`）不受
+  completion gate 约束。
+- **没有压缩事件。** Goal Review 只靠动作数、时间与失败触发。
+- **memory 索引只在会话开始时注入一次。** 桥接不传工具调用的文件路径，读 `task.md` 时不会再注入。
+- **`AGENTS.md` 是生成的副本。** rules 改动后要重跑 `sync-to-dsh.ps1`；skills 是链接，跟着仓库变。
+- **hooks 依赖仓库原位。** `hooks.json` 用的是仓库的绝对路径，仓库移动或切到不含 `adapters/dsh/` 的分支后 hooks 失败。
+- **只在 Windows 上验证过。** 安装脚本是 PowerShell；其他平台的 rules / skills 需手动放到 `$DSH_HOME`。
+- **Desktop GUI 里的 gate 未做端到端验证。** 端到端验证在 dsh headless 上完成；Desktop 用的是同一个桥接与配置方式。
+
+<a id="dsh-models"></a>
+### 在 dsh 里配置自己的模型
+
+**worker 用哪个模型，完全由 dsh 的默认模型决定；agent-loop 只认宿主，不认模型。** 按 provider 类型选一条路：
+
+| 你的模型来自 | 怎么配 |
+|---|---|
+| DeepSeek 官方 API | Desktop 欢迎页的 Add API Key，或模型页 DeepSeek 卡片里填 key |
+| dsh 内置的第三方 provider（`openai`、`anthropic`、Kimi 的 `moonshotai`、GLM 的 `zai` 等） | 模型页 → 添加模型提供商 → 第三方模型提供商，选 provider 后填 key |
+| 中转站、公司网关、自建 vLLM / SGLang 等 OpenAI 或 Anthropic 兼容端点 | 模型页 → 添加模型提供商 → 自定义模型 API；或直接写 `cordis.patch.yml` |
+
+模型页在 Desktop 和 `dsh web` 的设置里。自定义模型 API 要填 Provider ID（之后不能改）、基础 URL、协议和 key，
+「获取可用模型」会向端点的 `GET /models` 查询模型列表。key 存进 `$DSH_HOME/.credentials.yaml`，配置文件里只留引用。
+
+不用 GUI 时，同样的内容写进 `cordis.patch.yml`。写在 `$DSH_HOME/cordis.patch.yml` 对所有 profile 生效，
+写在 `$DSH_HOME/profiles/<p>/cordis.patch.yml` 只对该 profile 生效：
+
+```yaml
+- id: llm-pi-ai
+  config:
+    providers:
+      my-endpoint:
+        api: openai-completions          # 或 openai-responses / anthropic-messages
+        baseURL: https://<endpoint>/v1
+        apiKeyEnv: MY_ENDPOINT_KEY        # 先查 dsh 凭据库，再查同名环境变量
+        models:
+          - id: <model-id>
+- id: agent-default-model
+  config: { provider: my-endpoint, model: <model-id> }
+```
+
+几条容易踩的坑：
+
+- **协议必须是端点实际提供的那一种。** 一个端点同时提供两种协议时，建两个 provider。部分 GPT 模型只有在
+  `openai-responses` 上才同时接受工具调用与推理等级。
+- **OpenAI 兼容端点后面的 DeepSeek V4 系列默认会思考。** 要让推理等级的 `off` 生效，给模型加上
+  `compat: { thinkingFormat: deepseek }` 和 `reasoningEfforts: { off: , high: high }`。
+- **key 和地址都对，端点却拒绝每个请求：** 在 provider 上加 `compat: { supportsDeveloperRole: false, maxTokensField: max_tokens }`。
+- **端点要求自定义请求头**（例如网关自己的订阅头）：模型页编辑不了请求头，在 provider 上写 `headers: { <Header>: '<value>' }`。
+  这样值会明文落在文件里，这个文件就不能进任何仓库。
+- **Desktop 只继承用户级与系统级环境变量**，`apiKeyEnv` 引用的变量要设在那一级，或者直接在模型页填 key。
+
+改完下一次请求即生效，不用重启。完整字段见 dsh 的
+[配置模型指南](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/guide/providers.zh.md)。
+reviewer 换另一个模型时，见下文「可选的独立 reviewer」里的 overlay 写法。
+
+## 创建并评审计划
+
+在工作项目里写一份 plan document，说明 Goal、范围、当前结论、下一个决策与验收判据，文件名不限。包含：
 
 ```text
 Plan Revision: 1
 Plan Review: proposed
 ```
 
-Create `.agent-loop/task.md` with the current proposed task bound to `r1`. The
-[example task](../examples/minimal-project/task.md) shows the table format, but starts as `doing` for its
-pre-approved demonstration; new project tasks should start as `📝 proposed`.
+创建 `.agent-loop/task.md`，把当前提议的 task 绑定到 `r1`。[示例 task](../examples/minimal-project/task.md) 展示了表格格式，
+但它为了预批准演示从 `doing` 开始；新项目的 task 应从 `📝 proposed` 开始。
 
-Review the plan, then set `Plan Review: approved` and activate one task as `🔬 doing`.
-When a reviewer is configured, first obtain its advisory plan review as described below.
+评审计划，然后把它设为 `Plan Review: approved`，并把一个 task 激活为 `🔬 doing`。配置了 reviewer 时，先按下文取得它的
+plan review 建议。
 
-From the working project root, initialize a verifier appropriate for that project's Goal:
+在工作项目根目录，初始化一个适合该项目 Goal 的 verifier：
 
 ```sh
 agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
 ```
 
-Replace the command with the project's actual tests or experiment checks. Initialize locks the verifier
-command and budget. Run work through `agent-loop-harness exec -- <command>`, then
-`agent-loop-harness verify`. Other host tool calls remain outside the runner's hard-control boundary.
-Defaults include a Goal Review after three runner actions, 60 minutes, or failure; refresh also occurs at
-relevant host events. `init --help` lists budget and attention settings.
+把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令与预算。工作经 `agent-loop-harness exec -- <command>` 执行，
+然后运行 `agent-loop-harness verify`。宿主的其他工具调用不在 runner 的硬控制边界之内。默认在 runner 执行 3 个动作、
+60 分钟或失败后触发 Goal Review，相关宿主事件也会触发刷新。`init --help` 列出预算与注意力相关的设置。
 
-## Optional independent reviewer
+## 可选的独立 reviewer
 
-Create `.agent-loop/reviewer.json` **before** plan review and task initialization. It declares an executable
-command, with a timeout, that reads the generated `.harness/review/prompt.md` and follows its output contract.
-Use a reviewer CLI/model available in your environment. The conceptual configuration is:
+在 plan review 和 task 初始化**之前**创建 `.agent-loop/reviewer.json`。它声明一条带超时的可执行命令，读取生成的
+`.harness/review/prompt.md` 并遵守其中的输出约定。用你环境里可用的 reviewer CLI / 模型。概念上的配置是：
 
 ```json
 {
@@ -71,9 +175,8 @@ Use a reviewer CLI/model available in your environment. The conceptual configura
 }
 ```
 
-Replace both placeholders with a real argv array; this is not a runnable command. The command must run
-noninteractively, read the generated prompt, and write its requested report/decision. A configuration example
-for a Windows worker using an existing reviewer CLI in WSL is:
+两个占位符都要换成真实的 argv 数组，上面这条不能直接运行。命令必须非交互运行、读取生成的 prompt，并写出它要求的
+报告 / 决策。Windows worker 使用 WSL 里已有 reviewer CLI 的配置示例：
 
 ```json
 {
@@ -83,98 +186,114 @@ for a Windows worker using an existing reviewer CLI in WSL is:
 }
 ```
 
-This example requires that CLI to be installed and authenticated in WSL, and that the project is accessible
-there. Use the command supported by your installed tool/version; the harness does not bundle it. Credentials
-and model choice remain the responsibility of that tool. Reviewer configuration is local runtime and should
-not be committed. The generated contract and role boundaries are described in [design.md](../design.md).
-When configuring review, link the project design/plan from the active task, using a path relative to
-`.agent-loop/task.md` (the example task already does this).
+dsh 也可以做 reviewer 宿主，并用与 worker 不同的模型。headless 应用在参数为 `-` 时从 stdin 读任务；reviewer 模型放在
+单独的 overlay 里，worker 的 profile 不用动：
+
+```json
+{
+  "argv": ["cmd", "/c", "dsh --profile headless --patch <absolute-path>/reviewer.patch.yml - < .harness\\review\\prompt.md"],
+  "timeout_seconds": 1800
+}
+```
+
+overlay 只需覆盖默认模型；provider 已在 `cordis.patch.yml` 里声明时，只写最后一段即可：
+
+```yaml
+- id: llm-pi-ai
+  config:
+    providers:
+      my-endpoint-responses:
+        api: openai-responses
+        baseURL: https://<endpoint>/v1
+        apiKeyEnv: MY_ENDPOINT_KEY
+        models:
+          - id: <reviewer-model>
+            reasoningEfforts: { high: high }
+- id: agent-default-model
+  config: { provider: my-endpoint-responses, model: <reviewer-model>, reasoningEffort: high }
+```
+
+这些示例要求 CLI 已安装并完成认证（Codex 示例要求在 WSL 中且能访问项目）。按你安装的工具 / 版本支持的命令写，
+harness 不捆绑这些工具。凭据与模型选择由该工具负责。reviewer 配置是本地运行时配置，不应提交。生成的约定与角色边界见
+[design.md](../design.md)。配置评审时，从 active task 链接项目的设计 / 计划，路径相对 `.agent-loop/task.md`（示例 task
+已经这样做了）。
 
 ```sh
 agent-loop-harness plan-review --plan-doc plan.md
 ```
 
-Read the report, approve or revise the plan, activate the task, and initialize as above. The plan reviewer
-advises but cannot approve the plan. When every open task of a revision already passed an earlier plan review,
-the human can approve a revision without another review: `agent-loop-harness plan-review --plan-doc plan.md
---waive --reason "<the human's words>"`, then mark it `approved`. After 3 revise verdicts in a row or 3
-revisions without an experiment, `plan-review` refuses to run the reviewer again until the human chooses: review
-again with `--continue --reason "<the human's words>"`, approve with notes (`--waive`), approve the last reviewed
-revision unchanged, or stop. After a verified task, the configured reviewer runs automatically,
-interprets the evidence, and selects `continue`, `ask_human`, or `stop`. Proposed successor tasks need explicit
-activation under the applicable approval policy. A project may add `.agent-loop/review-checklist.md` for
-domain-specific checks; sample inputs and actual outputs help the reviewer judge whether the work measured the Goal.
+读报告，批准或修改计划，激活 task，再按上文初始化。plan reviewer 只给建议，不能批准计划。某个 revision 的每个 open task
+都已通过更早的 plan review 时，human 可以不再评审直接批准：`agent-loop-harness plan-review --plan-doc plan.md
+--waive --reason "<human 的原话>"`，然后标记为 `approved`。连续 3 次 revise 结论，或连续 3 个 revision 没有实验时，
+`plan-review` 拒绝再次运行 reviewer，直到 human 选择：用 `--continue --reason "<human 的原话>"` 再评审一次、带注记批准
+（`--waive`）、原样批准上一个已评审的 revision，或停止。task 验证通过后，配置的 reviewer 自动运行，解读证据并选择
+`continue`、`ask_human` 或 `stop`。提议的后继 task 需要按适用的批准策略显式激活。项目可以加
+`.agent-loop/review-checklist.md` 写领域检查项；样例输入与实际输出能帮助 reviewer 判断这项工作是否度量了 Goal。
 
-## Corrections and Goal Review
+## 纠偏与 Goal Review
 
-To change the Goal or scope while work is active:
+工作进行中要改 Goal 或范围时：
 
 ```sh
 agent-loop-harness pause --require-revision --reason "Goal changed"
 ```
 
-Update the plan with a new revision and proposed review status, reconcile the task's revision and scope,
-obtain plan review if configured, approve, then `agent-loop-harness resume`.
+把计划更新为新 revision 并设为 proposed，同步 task 的 revision 与范围，配置了 reviewer 时取得 plan review，批准后运行
+`agent-loop-harness resume`。
 
-For a pending Goal Review, record the evidence and decision:
+有待处理的 Goal Review 时，记录证据与决定：
 
 ```sh
 agent-loop-harness goal-review --decision continue --evidence "The failed test identifies a repair within the approved Goal."
 ```
 
-Use `replan` or `stop` when the evidence warrants it. `continue` does not bypass a required plan revision.
+证据支持时用 `replan` 或 `stop`。`continue` 不会绕过必需的计划修订。
 
-## Memory and long-task observation
+## Memory 与长任务观察
 
-Copy the four Markdown templates from `skills/agent-memory/templates/` in the agent-loop checkout into
-`<working-project>/.agent-loop/memory/`. Each project owns its facts, episodes, lessons, and bounded index.
-The Cursor adapter injects retrieval context when the active task is read. See [Memory](../study/memory.md)
-for rationale and [Policies](../skills/README.md) for owners.
+把 agent-loop 仓库 `skills/agent-memory/templates/` 下的四个 Markdown 模板复制到
+`<working-project>/.agent-loop/memory/`。每个项目拥有自己的 facts、episodes、lessons 与有上限的索引。Cursor 适配器在读取
+active task 时注入检索上下文，dsh 适配器在会话开始时注入。设计理由见 [Memory](study/memory/memory.md)，各策略的 owner 见
+[Policies](../skills/README.md)。
 
-Closed tasks and old handoffs move to `.agent-loop/archive/`. Runtime evidence lives in `.harness/`, with
-bounded logs and artifacts. Preserve project evidence that must outlive runtime retention in project-owned
-storage. Heartbeat policy observes detached jobs; see [Heartbeat](../study/heartbeat.md).
+关闭的 task 与旧交接笔记移到 `.agent-loop/archive/`。运行时证据在 `.harness/`，日志与产物有上限。必须比运行时保留期更久的
+项目证据，放在项目自己的存储里。heartbeat 策略观察 detach 的作业，见 [Heartbeat](study/harness/heartbeat.md)。
 
-## Optional phone checkpoints
+## 可选的手机检查点
 
-The pager is a separate package. Follow [tools/pager](../tools/pager/README.md) for Outlook/Graph or
-[Feishu setup](../tools/pager/docs/feishu.md). Configure `.agent-loop/pager.json` in the working project.
-Plan approval, reviewer escalation, repeated review failure, and budget exhaustion can be paged to a human.
-The worker must remain running to wait for a reply; pager cannot restart an exited agent.
+pager 是独立的包。Outlook / Graph 见 [tools/pager](../tools/pager/README.md)，飞书见
+[Feishu setup](../tools/pager/docs/feishu.md)。在工作项目里配置 `.agent-loop/pager.json`。计划批准、reviewer 升级、
+反复评审失败与预算耗尽都可以推送给 human。worker 必须保持运行才能等到回复；pager 无法重启已退出的 agent。
 
-## Optional on-demand skills
+## 可选的按需 skill
 
-Skills outside the loop load only when named: type `/<skill-name>` in Cursor chat followed by the request,
-or name the skill in the message. The list is under *Explicit / cold policies* in [Policies](../skills/README.md).
-For example, to turn a closed research Goal into an arXiv-style paper and a short teaser:
+环外的 skill 只在被点名时加载：在 Cursor 对话里输入 `/<skill-name>` 再接请求，或在消息里提到该 skill。列表见
+[Policies](../skills/README.md) 的 *Explicit / cold policies*。例如把一个已关闭的研究 Goal 写成 arXiv 风格论文和短预告片：
 
 ```text
 /research-to-paper Write wm_forge's conclusions as an arXiv paper, then make a 10 s teaser.
 ```
 
-The sync script links these skills into Cursor only. Codex does not see them; point it at
-`skills/<skill-name>/SKILL.md` in the agent-loop checkout instead.
+sync 脚本只把这些 skill 链接进 Cursor。Codex 看不到它们，需要让它去读 agent-loop 仓库里的 `skills/<skill-name>/SKILL.md`。
 
-## Upgrade and uninstall
+## 升级与卸载
 
-Before changing the harness version, finish or pause active work, inspect the changelog, and preserve the
-working project's state and evidence. For v0.1, finish active tasks before switching versions when no explicit
-migration instructions exist; do not assume arbitrary runtime schemas can be resumed across releases.
+切换 harness 版本前，完成或暂停进行中的工作，查看 changelog，并保存工作项目的状态与证据。v0.1 在没有明确迁移说明时，
+先完成 active task 再切版本；不要假设任意运行时 schema 都能跨版本恢复。
 
-In the harness checkout, fetch tags, check out the selected version, reinstall with the same `pip install` command,
-and rerun the Cursor sync script after directory/skill changes. Restart Cursor. Its junctions reference the
-checkout directly, so changing branches also changes the code and policies used by the hooks.
+在 harness 仓库里拉取 tags，检出选定版本，用同样的 `pip install` 命令重装；目录或 skill 有变化时重跑 Cursor sync 脚本，
+然后重启 Cursor。它的 junction 直接指向仓库，所以切分支也会改变 hooks 使用的代码与策略。
 
-To uninstall Cursor integration, run from the same checkout:
+卸载 Cursor 集成，在同一个仓库里运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
 ```
 
-Backups remain for manual restoration. Restart Cursor to unload hooks. Separately uninstall the CLI:
+备份会保留，供手动恢复。重启 Cursor 以卸载 hooks。CLI 另外卸载：
 
 ```sh
 python -m pip uninstall agent-loop
 ```
 
-Project memory, plans, archives, and experiment evidence belong to the project and remain available.
+项目的 memory、计划、归档与实验证据属于项目，会继续保留。

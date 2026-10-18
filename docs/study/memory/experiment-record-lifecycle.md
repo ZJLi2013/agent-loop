@@ -1,6 +1,6 @@
 # 实验记录的生命周期
 
-> [Study 索引](README.md) · 记录收敛专题；当前 owner 与控制流以 [design.md](../design.md) 为准。
+> [Study 索引](../README.md) · 记录收敛专题；当前 owner 与控制流以 [design.md](../../../design.md) 为准。
 
 > t9 于 2026-10-01 落地：Policy 定义完整生命周期；配置 reviewer 时，Harness 在有效决策落盘前
 > 自动归档 closed task，并拒绝没有关闭当前 task 的 reviewer 决策。
@@ -125,7 +125,7 @@ sub-exp / runs / artifacts               ← 原始证据，不自动加载
 - 长期可检索结论归 `agent-memory`。
 
 agent-loop 自身的长期迭代暴露了这些缺口，见
-[`case_study/agent-loop-record-growth.md`](../case_study/agent-loop-record-growth.md)。
+[`case_study/agent-loop-record-growth.md`](../../../case_study/agent-loop-record-growth.md)。
 
 ## 落地边界
 

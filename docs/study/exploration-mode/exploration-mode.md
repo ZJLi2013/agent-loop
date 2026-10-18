@@ -1,7 +1,7 @@
 # 探索模式：agent 怎样推进开放研究问题（提案）
 
 > 2026-10-12 提案。外部机制来自下文列出的一手论文与文档，读取于同日；未运行这些系统。
-> 本文是研究方向，不是实现计划或新 gate；导航见 [Study 索引](README.md)，当前架构见 [design.md](../design.md)。
+> 本文是研究方向，不是实现计划或新 gate；导航见 [Study 索引](../README.md)，当前架构见 [design.md](../../../design.md)。
 
 ## 结论
 
@@ -11,7 +11,7 @@
 
 ## 问题：一个开放问题怎样被推成随机游走
 
-案例是 roboJev Stage 1.5（具身 option 层 typed decision 的价值验证，前序案例见 [plan 增长](../case_study/robojev-plan-growth.md)）：
+案例是 roboJev Stage 1.5（具身 option 层 typed decision 的价值验证，前序案例见 [plan 增长](../../../case_study/robojev-plan-growth.md)）：
 
 - **r37–r60 共 24 个 revision 经过独立 plan review**，跨 3 天；载体 A 上三个候选依次关闭，每一步都在回答"下一个最便宜的候选是什么"。
 - **载体本身直到 r53 才被质疑**：执行器读仿真真值、原生几乎不失败，任何选择价值都只能来自人为扰动——这是后续所有候选共享的前提，却从未作为一条分支与其他载体并列比较。
@@ -53,25 +53,10 @@
 
 ### 研究地图
 
-探索模式唯一的状态载体，是一份文档，不是调度器里的 DAG：
+探索模式唯一的状态载体，是一份文档，不是调度器里的 DAG。模板与填写规则见 [研究地图模板](research-map-template.md)
+（v0.2 TB1 依据 [决定表](research-automation.md) 修订）。
 
-```markdown
-# <根问题>
-
-## 根问题与价值
-<一句话；答案为是 / 否时分别会做什么>
-
-## 分支
-| id | 切入方式 | 为什么可能成立 | 进展信号（评估器 / 代理） | 上限估计 | 最便宜的决定性 probe | 证伪条件 | 预算 | 状态 |
-
-## 已剪掉
-| id | 剪枝理由 | evidence |
-
-## 时间盒记录
-| 周期 | 跑了哪些 probe | 地图改变了什么 | 下一周期 |
-```
-
-每个 probe 结束只回答一件事：**地图改变了什么**——剪掉、提升，或改变了某分支的上限估计。说不出改变就是零信息 probe。
+每个 probe 结束只回答一件事：**地图改变了什么**——剪掉、提升，或改变了某分支的进展信号。说不出改变就是零信息 probe。
 
 ### 一个探索周期
 
@@ -122,7 +107,7 @@
 - 复用：Harness runner（执行 probe 命令与日志）、心跳、memory、pager；
 - 不动：Harness 的 READY / VERIFYING / reviewer 准入流程；探索模式的 probe 不经过它。
 
-**拆成独立系统的信号**：需要多个 probe 真正并行编排（多 worker、多节点、自动排队），或需要 co-scientist 式的大规模假设生成与锦标赛排序。这会碰到 [Roadmap](../ROADMAP.md) 的两条边界——Non-goals 里的 "task or hypothesis DAGs" 与 Later 里的 "external driver"；研究地图本身只是文档，不构成 DAG 调度器，但并行编排会。届时需要 human 重新取舍。
+**拆成独立系统的信号**：需要多个 probe 真正并行编排（多 worker、多节点、自动排队），或需要 co-scientist 式的大规模假设生成与锦标赛排序。这会碰到 [Roadmap](../../../ROADMAP.md) 的两条边界——Non-goals 里的 "task or hypothesis DAGs" 与 Later 里的 "external driver"；研究地图本身只是文档，不构成 DAG 调度器，但并行编排会。届时需要 human 重新取舍。
 
 ## 怎样验证这个提案
 
@@ -134,7 +119,7 @@
 ## 不做
 
 - 不引入自动的大规模假设生成与 Elo 锦标赛；先靠 human 判断力排序。
-- 不引入针对 harness 自身的自改进或版本搜索（与 [业界实践](industry-practices.md) 的 RSI 边界一致）。
+- 不引入针对 harness 自身的自改进或版本搜索（与 [业界实践](../industry-practices.md) 的 RSI 边界一致）。
 - 不让探索模式替代 human 对根问题与价值的判断。
 
 ## 来源

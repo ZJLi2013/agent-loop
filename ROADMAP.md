@@ -8,7 +8,8 @@ The current loop is a confirmation mode: one `doing` task, plan revisions, a loc
 review keep engineering iterations from drifting. Run against an open research question, the same invariants
 turn the work into a walk from one cheapest candidate to the next, and review cost can exceed the experiment
 it gates. Exploration mode runs **in parallel with** the confirmation loop, as a peer mode with opposite
-invariants, not as a step inside it. Design proposal: [study/exploration-mode.md](study/exploration-mode.md).
+invariants, not as a step inside it. Design proposal: [exploration-mode.md](docs/study/exploration-mode/exploration-mode.md);
+survey and decision table: [research-automation.md](docs/study/exploration-mode/research-automation.md).
 
 Order of work:
 
@@ -17,16 +18,19 @@ Order of work:
    such as the Darwin Gödel Machine. Extract when they branch, how they rank and prune, when they build an
    evaluator first, and where the human decides. The result is the design basis for the mode in general, not
    a fix for one project.
-2. **Research map and exploration policy.** One page per root question: competing branches, progress signal
-   or upper-bound estimate, cheapest decisive probe, falsification condition, budget. A new skill owns the
-   policy; the `agent-loop` rule only routes between the two modes. Probes are time-boxed, may be rough, and
-   bypass plan review; probes that prune a branch still need a minimal validity check.
-3. **Cost-proportionate brake.** Warn, without blocking, when the same task is sent back for revision more
-   than N times or a Goal goes N revisions without new experiment evidence. Built from existing plan-review
-   records and `runs.jsonl`.
-4. **Promotion to confirmation mode.** A branch moves into the confirmation loop only with a task decision
-   contract (`pass`, `fail_to`, `budget`) whose `budget` justifies plan review and the Harness gates. In
-   exploration mode an expected negative result prunes a branch instead of entering generic DIAGNOSE.
+2. **Research map and exploration policy, separate from the confirmation loop.** One page per root question:
+   a progress signal validated before any search, competing branches, cheapest decisive probe, falsification
+   condition, budget ([template draft](docs/study/exploration-mode/research-map-template.md)). A new skill owns the policy. The
+   confirmation loop's plan, review, Harness gates and their behaviour do not change; the two modes share only
+   common pieces — budget declarations, evidence on disk, project memory, heartbeat, pager, and an advisory
+   reviewer. **Entry routing:** the agent proposes a mode for a new Goal against the promotion conditions, and
+   the human decides.
+3. **Cost-proportionate brake** (done, confirmation side). Warn, without blocking, when a plan is sent back for
+   revision 3 times in a row or 3 revisions pass without an experiment.
+4. **Promotion to confirmation mode.** A branch that meets the promotion conditions is handed over in the
+   existing plan format — a proposed Goal and first task with one unverified hypothesis, acceptance checkpoint,
+   failure route and budget — and enters the unchanged plan review and human approval. In exploration mode an
+   expected negative result prunes a branch instead of entering generic DIAGNOSE.
 
 Acceptance:
 
@@ -47,6 +51,7 @@ hypothesis generation or tournament ranking, and self-improvement of the Harness
 
 ## Next
 
+- add a task decision contract (`pass`, `fail_to`, `budget`) and block `READY` until all three are valid;
 - add a supported macOS/Linux sync path;
 - add installer dry-run and diagnostics;
 - publish minimal-project and policy/adapter examples;
