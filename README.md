@@ -5,9 +5,12 @@
 [![tests](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml/badge.svg)](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**让 coding agent 持续推进研究与工程项目：逐步规划、执行、验证，再根据证据决定下一步。**
+**给你正在用的 coding agent 加一层项目级控制环：逐步规划、执行、验证，再根据证据决定下一步。**
 
-agent-loop 为现有 agent 提供项目级控制环。适合多轮实验、需要验证的工程改造，以及需要跨上下文
+已在 **Cursor、Codex、DeepSeek Harness (dsh)** 上验证。
+
+agent-loop 本身不是 agent，也不调用模型：它跑在宿主 agent 里，由宿主加载它的 rules / skills、调用它的
+Harness CLI，并通过宿主的 hooks 守住「未验证不算完成」。适合多轮实验、需要验证的工程改造，以及需要跨上下文
 接续的长任务。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer
 核对证据、提出下一步，方向变化时交回 human。
 
@@ -16,6 +19,37 @@ Goal → Plan → Human Review → Execute → Verify → Review → next task /
                                   ↑                        │
                                   └──── approved next task ┘
 ```
+
+## 和宿主 agent 的关系
+
+```mermaid
+flowchart LR
+  H[human] -->|Goal / 批准| W
+  subgraph host["宿主 agent：Cursor / dsh / Codex …（模型由宿主配置）"]
+    W[worker 会话]
+    R[reviewer 会话]
+  end
+  P["policies<br/>rules / skills"] -. 加载 .-> W
+  W -->|exec / verify| K["Harness<br/>状态 · 锁定 verifier · 证据 · 预算"]
+  W -->|stop 时经 adapter hooks| G{completion gate}
+  G -->|未验证：继续| W
+  K --> G
+  K -->|验证后| R
+  R -->|报告 / 决策| K
+```
+
+- **policies（rules / skills）** 是写给宿主 agent 的工作方法，宿主照着做；
+- **Harness** 是宿主调用的 CLI，持有状态机与证据，不依赖任何宿主；
+- **adapter** 把宿主的 lifecycle hooks 接到 Harness：会话想结束而任务未验证时，宿主被要求继续。
+  没有 adapter 的宿主仍可用 policies 和 CLI（portable mode），只是没有这道强制门。
+
+agent-loop 只区分「角色 × 宿主」，模型是宿主自己的 provider 配置，换模型不改 agent-loop。
+
+| 宿主 | worker | reviewer |
+|---|---|---|
+| Cursor | ✅ enforced（stop / memory / preCompact hooks） | — |
+| dsh | ✅ enforced（经 `hooks-codex` 桥接，[已知限制](docs/usage.md#dsh-limitations)） | ✅ headless，可用与 worker 不同的模型 |
+| Codex CLI | portable（无强制门） | ✅ 默认 reviewer |
 
 当前版本定位为 **0.1.0 early release**；发布状态以 [GitHub Releases](https://github.com/ZJLi2013/agent-loop/releases)
 为准。配置与状态格式仍可能演进，变更记录在 [CHANGELOG](CHANGELOG.md)。
@@ -28,7 +62,7 @@ Goal → Plan → Human Review → Execute → Verify → Review → next task /
 - **跨轮接续**：项目 memory、当前交接和记录归档，让后续上下文找得到已有结论。
 - **长任务观察与人工检查点**：提供心跳 policy；可选 pager 将检查点送到手机。
 
-实验指标和测试由工作项目定义。agent-loop 不预设某个研究领域，也不要求固定模型搭配。
+实验指标和测试由工作项目定义。agent-loop 不预设某个研究领域，也不绑定宿主或模型。
 
 ## 先跑通一次
 
@@ -64,9 +98,10 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 重启 Cursor，并确保它能找到 `python`。hooks 会在宿主覆盖的 workspace 中执行本地代码；安装前
 阅读 [安全边界](SECURITY.md)。卸载使用 `scripts/uninstall-from-cursor.ps1`，备份需自行恢复。
 
-宿主与模型解耦：agent-loop 只区分「角色（worker / reviewer）× 宿主」，模型是宿主自己的 provider 配置。
-worker 也可以跑在 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 上，默认配置用
-DeepSeek-V4.1-Flash，换成别的模型只改 dsh 的 provider 配置，见[在 dsh 里配置自己的模型](docs/usage.md#dsh-models)。
+用 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 当 worker 时，用
+`scripts/sync-to-dsh.ps1` 分发 rules / skills，hooks 按[使用指南](docs/usage.md#dsh-enforced-mode)接线；模型在 dsh 里配，
+见[在 dsh 里配置自己的模型](docs/usage.md#dsh-models)。reviewer 默认通过 `.agent-loop/reviewer.json` 调用 Codex CLI，
+也可以换成 dsh headless。
 
 [使用指南](docs/usage.md) 包含新项目初始化、dsh 接线、reviewer、暂停纠偏、memory、pager 和升级步骤。
 

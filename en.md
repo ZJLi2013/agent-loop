@@ -5,9 +5,12 @@
 [![tests](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml/badge.svg)](https://github.com/ZJLi2013/agent-loop/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Keep coding agents moving through research and engineering projects: plan, execute, verify, and choose the next step from evidence.**
+**Add a project control loop to the coding agent you already use: plan, execute, verify, and choose the next step from evidence.**
 
-agent-loop adds a project control loop to an existing agent. Use it for iterative experiments, engineering
+Verified on **Cursor, Codex, and DeepSeek Harness (dsh)**.
+
+agent-loop is not an agent and calls no model. It runs inside a host agent: the host loads its rules and skills,
+calls its Harness CLI, and, through the host's hooks, cannot finish a task that is not verified. Use it for iterative experiments, engineering
 changes with explicit acceptance criteria, and long tasks that need continuity across context windows.
 You define the Goal and project criteria. A worker executes, an independent verifier checks the result,
 and an optional reviewer interprets the evidence and proposes the next step.
@@ -17,6 +20,38 @@ Goal → Plan → Human Review → Execute → Verify → Review → next task /
                                   ↑                        │
                                   └──── approved next task ┘
 ```
+
+## How it relates to the host agent
+
+```mermaid
+flowchart LR
+  H[human] -->|Goal / approval| W
+  subgraph host["Host agent: Cursor / dsh / Codex … (model set by the host)"]
+    W[worker session]
+    R[reviewer session]
+  end
+  P["policies<br/>rules / skills"] -. loaded by .-> W
+  W -->|exec / verify| K["Harness<br/>state · locked verifier · evidence · budget"]
+  W -->|on stop, via adapter hooks| G{completion gate}
+  G -->|not verified: continue| W
+  K --> G
+  K -->|after verify| R
+  R -->|report / decision| K
+```
+
+- **Policies (rules / skills)** are working methods written for the host agent, which follows them.
+- **Harness** is a CLI the host calls; it owns the state machine and evidence and depends on no host.
+- **Adapters** connect a host's lifecycle hooks to Harness: when a session tries to end with the task unverified,
+  the host is told to continue. A host without an adapter can still use the policies and CLI (portable mode),
+  without that enforced gate.
+
+agent-loop distinguishes only role × host. The model is the host's own provider config; changing it changes nothing in agent-loop.
+
+| Host | Worker | Reviewer |
+|---|---|---|
+| Cursor | ✅ enforced (stop / memory / preCompact hooks) | — |
+| dsh | ✅ enforced (through `hooks-codex`, [known limitations](docs/usage.md#dsh-limitations), Chinese) | ✅ headless, may use a different model from the worker |
+| Codex CLI | portable (no enforced gate) | ✅ default reviewer |
 
 The current version targets **0.1.0, an early release**. See [GitHub Releases](https://github.com/ZJLi2013/agent-loop/releases)
 for publication status. Configuration and state formats may evolve; changes are recorded in the [changelog](CHANGELOG.md).
@@ -29,7 +64,7 @@ for publication status. Configuration and state formats may evolve; changes are 
 - **Continuity:** project memory, handoffs, and archived records make prior conclusions available to later contexts.
 - **Long-task observation and human checkpoints:** heartbeat policies and an optional phone pager.
 
-Tests and experiment metrics belong to the working project. No specific research domain or model pairing is required.
+Tests and experiment metrics belong to the working project. No specific research domain, host, or model is required.
 
 ## Try it
 
@@ -67,9 +102,10 @@ names. Keep the checkout at its installed path, restart Cursor, and make sure Cu
 Hooks execute local Python code across workspaces covered by the host; read the [security boundary](SECURITY.md)
 before installation. Use `scripts/uninstall-from-cursor.ps1` to remove the integration; restore backups manually.
 
-Hosts and models are independent: agent-loop distinguishes only role (worker / reviewer) × host, and the model is
-the host's own provider config. The worker can also run on [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness);
-the default config uses DeepSeek-V4.1-Flash, and switching models changes only dsh's provider config; see [configuring your own models in dsh](docs/usage.md#dsh-models) (Chinese).
+With [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) as the worker, distribute rules and
+skills with `scripts/sync-to-dsh.ps1` and wire the hooks per the [usage guide](docs/usage.md#dsh-enforced-mode); models
+are configured in dsh, see [configuring your own models in dsh](docs/usage.md#dsh-models) (Chinese). The reviewer calls
+Codex CLI through `.agent-loop/reviewer.json` by default and can be switched to dsh headless.
 
 The [usage guide](docs/usage.md) covers project setup, dsh wiring, reviewer configuration, corrections, memory, pager, and upgrades.
 
