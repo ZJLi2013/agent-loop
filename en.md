@@ -15,10 +15,12 @@ changes with explicit acceptance criteria, and long tasks that need continuity a
 You define the Goal and project criteria. A worker executes, an independent verifier checks the result,
 and an optional reviewer interprets the evidence and proposes the next step.
 
-```text
-Goal → Plan → Human Review → Execute → Verify → Review → next task / human / stop
-                                  ↑                        │
-                                  └──── approved next task ┘
+```mermaid
+flowchart LR
+  Goal --> Plan --> HR[Human Review] --> Ex[Execute] --> V[Verify] --> Rv[Review]
+  Rv -->|approved next task| Ex
+  Rv --> Hu[human]
+  Rv --> S[stop]
 ```
 
 ## How it relates to the host agent

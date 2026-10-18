@@ -14,10 +14,12 @@ Harness CLI，并通过宿主的 hooks 守住「未验证不算完成」。适�
 接续的长任务。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer
 核对证据、提出下一步，方向变化时交回 human。
 
-```text
-Goal → Plan → Human Review → Execute → Verify → Review → next task / human / stop
-                                  ↑                        │
-                                  └──── approved next task ┘
+```mermaid
+flowchart LR
+  Goal --> Plan --> HR[Human Review] --> Ex[Execute] --> V[Verify] --> Rv[Review]
+  Rv -->|approved next task| Ex
+  Rv --> Hu[human]
+  Rv --> S[stop]
 ```
 
 ## 和宿主 agent 的关系
