@@ -37,7 +37,7 @@ from harness.plan_review import (  # noqa: E402
 from harness.review import run_review  # noqa: E402
 
 
-SESSION_ENV = ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID")
+SESSION_ENV = ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID", "DSH_SESSION_ID")
 
 
 def _command(value: list[str]) -> list[str]:

@@ -11,7 +11,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
 from adapters.core import handle  # noqa: E402
-from adapters.cursor.session_scope import claim_followup, roots, session_id  # noqa: E402
+from adapters.cursor.session_scope import roots, session_id  # noqa: E402
+from adapters.followup import claim_followup  # noqa: E402
 from adapters.protocol import HookAction, HookEvent, HookRequest  # noqa: E402
 
 
@@ -26,7 +27,11 @@ def followup_for(payload: dict[str, object]) -> str | None:
     )
     if response.action != HookAction.CONTINUE or not response.message:
         return None
-    return response.message if claim_followup(payload, response.message) else None
+    return (
+        response.message
+        if claim_followup(session_id(payload), response.message)
+        else None
+    )
 
 
 def main() -> None:
