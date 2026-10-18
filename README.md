@@ -64,7 +64,11 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 重启 Cursor，并确保它能找到 `python`。hooks 会在宿主覆盖的 workspace 中执行本地代码；安装前
 阅读 [安全边界](SECURITY.md)。卸载使用 `scripts/uninstall-from-cursor.ps1`，备份需自行恢复。
 
-[使用指南](docs/usage.md) 包含新项目初始化、reviewer、暂停纠偏、memory、pager 和升级步骤。
+宿主与模型解耦：agent-loop 只区分「角色（worker / reviewer）× 宿主」，模型是宿主自己的 provider 配置。
+worker 也可以跑在 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 上，默认配置用
+DeepSeek-V4.1-Flash，换成别的模型只改 dsh 的 provider 配置，见[在 dsh 里配置自己的模型](docs/usage.md#dsh-models)。
+
+[使用指南](docs/usage.md) 包含新项目初始化、dsh 接线、reviewer、暂停纠偏、memory、pager 和升级步骤。
 
 ## 支持范围与边界
 
@@ -72,6 +76,7 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 |---|---|
 | Harness CLI | Python 3.11+；CI 配置覆盖 Windows / Ubuntu，Python 3.11 / 3.13 |
 | Cursor enforced adapter | Windows + PowerShell 5.1 安装器；依赖宿主 lifecycle hooks |
+| dsh enforced adapter | 经 dsh 的 `hooks-codex` 桥接；rules / skills 用 `scripts/sync-to-dsh.ps1` 分发，hooks 手动接线，见[使用指南](docs/usage.md#dsh-enforced-mode) |
 | 其他宿主 | 可使用 portable CLI / policies；不承诺强制 completion gate |
 | macOS/Linux 宿主安装器 | 尚未提供；CLI 与宿主全局安装是两个层次 |
 | reviewer / pager | 可选命令与独立组件，需要额外配置 |

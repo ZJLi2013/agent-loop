@@ -208,10 +208,20 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 `HookResponse` 只使用 `ALLOW / CONTEXT / CONTINUE`。新增平台只实现两端 codec 和安装配置，
 不在共享 core 中增加平台分支。自己的 driver 可以直接发送内部 request，不需要 codec。
 
-CLI `init` 把会话 id（`AGENT_LOOP_SESSION_ID`，否则 `CURSOR_CONVERSATION_ID`）记为 task 的 `owner`。
+CLI `init` 把会话 id（依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID`）记为 task 的 `owner`。
 gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
 没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 `COMPACT` 遍历这些项目，
-不扫描 workspace 里的其它项目。
+不扫描 workspace 里的其它项目；dsh 会话只看 payload `cwd` 这一个项目，与 CLI 默认 `--root` 一致。
+同一会话同一条 followup 只发一次（`adapters/followup.py`），因为 dsh 桥接的 `stop_hook_active` 恒为 false。
+
+宿主与模型解耦：agent-loop 只区分「角色（worker / reviewer）× 宿主（Cursor、dsh、Codex CLI…）」，模型是宿主自己的
+provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强档模型当 reviewer；换模型不改 agent-loop。
+
+| 宿主 | worker | reviewer | 缺口 |
+|---|---|---|---|
+| Cursor | enforced（`adapters/cursor/`） | — | — |
+| dsh（经 `dsh-hooks-codex` 桥接） | enforced（`adapters/dsh/`） | `reviewer.json` 可指向 dsh headless | 无 `COMPACT`：Goal Review 靠 action / 时间 / 失败触发；memory 只在 `SessionStart` 注入 |
+| Codex CLI | portable | 当前默认 reviewer | — |
 
 | Adapter | 职责 |
 |---|---|
@@ -226,8 +236,11 @@ gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 fol
 | `harness/protocol.py` | state / event / transition；不依赖平台 |
 | `adapters/protocol.py` | 平台无关的 hook request / response |
 | `adapters/core.py` | 子项目发现、memory、Goal Review、completion gate 的事件处理 |
+| `adapters/followup.py` | 同一会话的重复 followup 去重 |
 | `adapters/cursor/hooks/` | Cursor payload / output codec |
+| `adapters/dsh/hooks/` | dsh `hooks-codex` 桥接的 payload / output codec（`Stop`、`SessionStart`） |
 | `scripts/sync-to-cursor.ps1` | 安装 user-level adapter |
+| `scripts/sync-to-dsh.ps1` | 把 always-apply rules 拼成 `$DSH_HOME/AGENTS.md`，skills 逐个链接到 `$DSH_HOME/skills/` |
 
 `harness/core.py` 只保留兼容 façade 与 orchestration，不再容纳平台 hook 或大段底层实现。
 
@@ -292,7 +305,9 @@ agent-loop/
 ├── adapters/
 │   ├── protocol.py           # platform-neutral hook boundary
 │   ├── core.py               # shared hook actions
-│   └── cursor/hooks/         # Cursor codec
+│   ├── followup.py           # per-session followup dedupe
+│   ├── cursor/hooks/         # Cursor codec
+│   └── dsh/hooks/            # dsh (hooks-codex bridge) codec
 └── docs/study/               # 按 feature 分目录的调研与设计依据，不承担当前架构定义
 ```
 

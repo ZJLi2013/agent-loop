@@ -67,7 +67,11 @@ names. Keep the checkout at its installed path, restart Cursor, and make sure Cu
 Hooks execute local Python code across workspaces covered by the host; read the [security boundary](SECURITY.md)
 before installation. Use `scripts/uninstall-from-cursor.ps1` to remove the integration; restore backups manually.
 
-The [usage guide](docs/usage.md) covers project setup, reviewer configuration, corrections, memory, pager, and upgrades.
+Hosts and models are independent: agent-loop distinguishes only role (worker / reviewer) × host, and the model is
+the host's own provider config. The worker can also run on [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness);
+the default config uses DeepSeek-V4.1-Flash, and switching models changes only dsh's provider config; see [configuring your own models in dsh](docs/usage.md#dsh-models) (Chinese).
+
+The [usage guide](docs/usage.md) covers project setup, dsh wiring, reviewer configuration, corrections, memory, pager, and upgrades.
 
 ## Support and boundaries
 
@@ -75,6 +79,7 @@ The [usage guide](docs/usage.md) covers project setup, reviewer configuration, c
 |---|---|
 | Harness CLI | Python 3.11+; CI configured for Windows / Ubuntu with Python 3.11 / 3.13 |
 | Cursor enforced adapter | Windows + PowerShell 5.1 installer; depends on host lifecycle hooks |
+| dsh enforced adapter | Through dsh's `hooks-codex` bridge; `scripts/sync-to-dsh.ps1` distributes rules and skills, hooks are wired by hand, see [setup](docs/usage.md#dsh-enforced-mode) |
 | Other hosts | Portable CLI / policies; no guaranteed completion gate |
 | macOS/Linux host installer | Not provided yet; CLI support and global host installation are separate |
 | Reviewer / pager | Optional configured commands and components, with additional setup |
