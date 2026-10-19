@@ -6,6 +6,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- On-demand `code-to-class-diagram` skill: a Mermaid UML class diagram of a class and its direct collaborators,
+  with inheritance, composition, injection and construct-then-register each read from one kind of source line.
 - On-demand `research-to-paper` skill: an arXiv-style paper and an optional 5–15 s teaser from a closed research
 Goal, with every number traced to the experiment records. Usage documents how to invoke on-demand skills.
 - dsh (DeepSeek Harness) enforced adapter: through dsh's `hooks-codex` bridge, a dsh worker is held by the

@@ -28,6 +28,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 - `remote-exec`：远端节点、detach、传输、存储与环境自修。
 - `code-review`：本地 diff / PR review 标准。
 - `code-to-kernel-diagram`：模块到 kernel 数据流。
+- `code-to-class-diagram`：类与直接协作者的 Mermaid UML 类图（继承、组合、注入、对外 API）。
 - `upstream-contribute`：上游 PR / Issue 判断与正文。
 - `research-to-blog`：调研到对外文章。
 - `research-to-paper`：实验到 arXiv 稿，可选 5–15 s 短片（onetake）。
