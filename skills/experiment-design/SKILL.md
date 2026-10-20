@@ -149,9 +149,12 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
 
 1. 文档只保留关键事实、会改变选择的分析、结论与 evidence 链接；
 2. 删除设计阶段的过渡内容、被结果覆盖的假设、重复读数、旧 Next Step 与临时 TODO；
-3. 当前 task 创建的一次性脚本与中间文件删除（原始输出与日志保留）；仍会复用的脚本移到正式目录，
-   改成稳定入口并纳入测试；
-4. 再读最终 diff：删掉一段内容不会改变未来判断或下一条命令，就不恢复。
+3. 当前 task 创建的一次性脚本删除；仍会复用的脚本移到正式目录，改成稳定入口并纳入测试；
+4. 实验 run 输出（日志、事件流、逐步状态与观测）不放在实验文档目录：结论、verifier 与 reviewer
+   要读的数据写成文档里每个 run 一行的表，run 目录留在远端或仓库外 / 被 gitignore 的 scratch 目录，
+   文档只写它的路径与复现入口（脚本、commit、参数）。实验文档目录的未跟踪文件进 Harness 指纹，
+   留在那里的 run 输出在 verifier 之后删除会让证据 stale。结论标明不计入的 run 直接删除；
+5. 再读最终 diff：删掉一段内容不会改变未来判断或下一条命令，就不恢复。
 
 不知道归属的文件不删；先留下一行边界并按 `when-to-stop` 处理。最常残留的是平均着墨的分级标题、
 「原先以为 X、实测是 Y」的衔接句，以及为了自包含而复述到 sub-exp 的结论。
@@ -168,10 +171,10 @@ plan document 的 Experiment Log 每轮维护一行摘要：
 `| Exp | 假设 | 状态 | 关键结果 | 结论 / evidence |`。
 
 状态只用 `active / promoted / superseded by Exp-X / rejected / archived`。单轮结束时更新这一行；
-task CLOSE 时由 `work-planning` 把多轮合并为一个 task 结论并移出活跃表。原始 run、artifact 与
-sub-exp 保持不可变，archive 只保存指针，不复制输出。
+task CLOSE 时由 `work-planning` 把多轮合并为一个 task 结论并移出活跃表。sub-exp 保持不可变，
+archive 只保存指针，不复制输出；run 目录在 task CLOSE 时删除，由文档里的逐 run 表与复现入口替代。
 
-`rejected` 只用于结果会阻止未来重试的否定发现；环境错误、被后续实验覆盖的读数分别归原始 run
-与 `superseded`，不能都堆进长期排除项。
+`rejected` 只用于结果会阻止未来重试的否定发现；环境错误与被后续实验覆盖的读数（`superseded`）
+不进长期排除项。
 
 

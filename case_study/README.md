@@ -15,5 +15,6 @@ they are not controlled benchmarks or guarantees of performance on other project
 | [Review loop](robotrsi-vla-review-loop.md) | Why one plan-review gate for every task cost more than it found on cheap CPU probes (open) |
 | [Session scope](cursor-session-scope-binding.md) | How first-read session binding pointed the completion gate at the wrong project, surfaced another session's lock as a gate failure, and let one session pause another session's task (open) |
 | [Stale runner lock](robotrsi-stale-runner-lock.md) | Why an aborted runner left a stale lock, a phase stuck in running, an empty journal, and an orphaned remote job (open) |
+| [Run artifact retention](harness-vla-run-artifact-retention.md) | Why a rule-compliant CLOSE self-audit left 98 MB of run output beside the experiment doc: "keep raw output" has no criterion, location, or retention period |
 
 Current behavior is defined in [design.md](../design.md), rather than reconstructed from historical cases.

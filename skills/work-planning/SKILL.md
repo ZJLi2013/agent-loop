@@ -102,10 +102,12 @@ verifier 通过后：
 2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，
    移到 linked archive，活跃表只留一个 task 级指针；
 3. 通知 `task-state` 归档 closed task 与旧交接快照，通知 `agent-memory` 只保留未来仍会改变选择的
-   结论、`disproved / rejected` 与证据指针。
+   结论、`disproved / rejected` 与证据指针；
+4. reviewer 决定落盘后（未配置 reviewer 时 verifier 通过后）删除该 task 的 run 目录；
+   位置与逐 run 表的要求归 `experiment-design`。
 
 Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界与
-archive index。原始 run / artifact 与 sub-exp 不删，但不再默认加载。具体格式分别归
+archive index。sub-exp 不删，但不再默认加载。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
 
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。

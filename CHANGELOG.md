@@ -19,6 +19,9 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Changed
 
+- Experiment run output no longer stays beside the experiment document. CLOSE writes a per-run table of what the
+  conclusion, verifier and reviewer read into the document, keeps run directories outside it, deletes runs the
+  conclusion excludes, and deletes the task's run directories at task CLOSE. Sub-experiment documents stay immutable.
 - The runner writes raw command output under the run directory instead of the system temp directory, which an
   agent sandbox (dsh on Windows) may not let the command's identity write.
 - Study notes moved to `docs/study/<feature>/`; `docs/usage.md` is now in Chinese.
