@@ -7,7 +7,8 @@
 
 ## 结论
 
-实验记录不应靠反复摘要来控制体量，而应分成三层：**活跃决策面、可检索索引、不可变原始证据**。
+实验记录不应靠反复摘要来控制体量，而应分成三层：**活跃决策面、可检索索引、不可变证据**。
+run 输出不在其中，处理见 `experiment-design` 的 CLOSE self-audit。
 task 关闭时把多轮实验提升为一个决策，旧记录转为 `promoted / superseded / archived`；只有仍会改变
 后续选择的结论留在活跃文档。行数上限只负责报警，不能代替生命周期。
 
@@ -71,7 +72,7 @@ active Experiment Log（只放未闭合决策）  ← 当前 task 使用
         │ task CLOSE
 archive index（一项 task 一个结论）       ← 定向检索
         │ evidence link
-sub-exp / runs / artifacts               ← 原始证据，不自动加载
+sub-exp                                  ← 不可变证据，不自动加载
 ```
 
 每条实验摘要使用以下状态之一：
@@ -90,7 +91,7 @@ sub-exp / runs / artifacts               ← 原始证据，不自动加载
 
 1. 写一句结论与最多三条关键 evidence；
 2. 删除设计阶段的过渡内容；
-3. 把原始输出链接到 run / artifact；
+3. 把逐 run 数据写成表，run 输出按 `experiment-design` 放在实验文档目录外；
 4. 更新一行 Experiment Log。
 
 ### Task CLOSE
