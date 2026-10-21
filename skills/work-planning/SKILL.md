@@ -107,7 +107,8 @@ verifier 通过后：
    位置与逐 run 表的要求归 `experiment-design`。
 
 Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界与
-archive index。sub-exp 不删，但不再默认加载。具体格式分别归
+archive index。sub-exp 不删，但不再默认加载。删除只被本 Goal 文档引用的一次性脚本，判据归
+`experiment-design`；暂停中的 Goal 的脚本等它关闭再处理。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
 
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。

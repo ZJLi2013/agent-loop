@@ -19,6 +19,9 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Changed
 
+- Experiment scripts stay only while a kept script, the next approved task, or another Goal consumes them; scripts
+  reused across Goals become stable entries with tests. One-off scripts are deleted once their parameters and input
+  construction rules are in the document, and Goal CLOSE deletes those referenced only by that Goal's documents.
 - Experiment run output no longer stays beside the experiment document. CLOSE writes a per-run table of what the
   conclusion, verifier and reviewer read into the document, keeps run directories outside it, deletes runs the
   conclusion excludes, and deletes the task's run directories at task CLOSE. Sub-experiment documents stay immutable.
