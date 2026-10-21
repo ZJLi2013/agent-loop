@@ -11,7 +11,7 @@
 
 ## 问题：一个开放问题怎样被推成随机游走
 
-案例是 roboJev Stage 1.5（具身 option 层 typed decision 的价值验证，前序案例见 [plan 增长](../../../case_study/robojev-plan-growth.md)）：
+案例是 roboJev Stage 1.5（具身 option 层 typed decision 的价值验证）：
 
 - **r37–r60 共 24 个 revision 经过独立 plan review**，跨 3 天；载体 A 上三个候选依次关闭，每一步都在回答"下一个最便宜的候选是什么"。
 - **载体本身直到 r53 才被质疑**：执行器读仿真真值、原生几乎不失败，任何选择价值都只能来自人为扰动——这是后续所有候选共享的前提，却从未作为一条分支与其他载体并列比较。
@@ -114,7 +114,7 @@
 1. **回放 roboJev Stage 1.5**：只用 Stage 1.5 开始前已有的信息，按探索模式写研究地图并跑一个周期的 probe 设计。成立条件：第一周期就把"GT oracle 收益上限扫描"或"复用已知会自然失败的环境"列为排前的 probe；对照实际 24 个 revision 的路径。
 2. **一个新的真实探索型 Goal**：记录周期数、剪枝数、提升到 agent-loop 的时机，以及 human 在每个时间盒末的决策是否改变了方向。
 
-两项都只是证据，不构成 gate；结果写回本文或 case study。
+两项都只是证据，不构成 gate；结果写回本文。
 
 ## 不做
 

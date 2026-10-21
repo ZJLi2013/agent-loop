@@ -60,6 +60,10 @@ Goal, with every number traced to the experiment records. Usage documents how to
 - Usage recommends an editable CLI install for Cursor enforced mode, so the CLI and the linked hooks run the
   same checkout. `sync-to-cursor.ps1` warns when the CLI is not installed from that checkout.
 
+### Removed
+
+- `case_study/`. Problems found while running agent-loop are reported as issues instead.
+
 ### Fixed
 
 - A busy state lock now waits a few seconds, then names its holder (pid, command, start time). When the holder

@@ -132,7 +132,7 @@ OpenHands 和 LangGraph，见 [相关项目与选择依据](docs/related-project
 | 安装并体验失败到通过 | [Quickstart](docs/quickstart.md) |
 | 在工作项目中使用 | [Usage](docs/usage.md) |
 | 理解架构与扩展边界 | [design.md](design.md) · [Policies](skills/README.md) |
-| 阅读调研与实际案例 | [Study 地图](docs/study/README.md) · [案例索引](case_study/README.md) |
+| 阅读调研与已知问题 | [Study 地图](docs/study/README.md) · [Issues](https://github.com/ZJLi2013/agent-loop/issues) |
 | 查看版本与发布流程 | [Changelog](CHANGELOG.md) · [v0.1.0 notes](docs/releases/v0.1.0.md) · [Release guide](docs/releasing.md) |
 | 报告问题或贡献 | [Issues](https://github.com/ZJLi2013/agent-loop/issues) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) |
 

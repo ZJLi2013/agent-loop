@@ -3,7 +3,7 @@
 agent-loop 是服务于其他研究与工程项目的 harness。这里的调研大多产生于某个 feature 的实现过程，
 所以按 feature 分目录：每个目录回答该 feature 为什么这样做、参照了谁、放弃了什么。
 当前架构以 [`design.md`](../../design.md) 为准，执行方法见 [`skills/README.md`](../../skills/README.md)，
-真实运行证据见 [`case_study/`](../../case_study/)。
+真实运行中发现的问题见 [issues](https://github.com/ZJLi2013/agent-loop/issues)。
 
 ## Feature 目录
 

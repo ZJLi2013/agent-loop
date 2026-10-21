@@ -125,8 +125,7 @@ sub-exp                                  ← 不可变证据，不自动加载
 - 活跃 task 与交接快照归 `task-state`；
 - 长期可检索结论归 `agent-memory`。
 
-agent-loop 自身的长期迭代暴露了这些缺口，见
-[`case_study/agent-loop-record-growth.md`](../../../case_study/agent-loop-record-growth.md)。
+agent-loop 自身的长期迭代暴露了这些缺口。
 
 ## 落地边界
 
