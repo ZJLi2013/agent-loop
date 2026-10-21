@@ -17,7 +17,8 @@ from harness.core import (
     run_command,
     verify,
 )
-from harness.records import close_task
+from harness.plan_review import record_task_review
+from harness.records import archive_closed_tasks, close_task
 from harness.review import run_review
 
 DECISION = ".harness/review/decision.json"
@@ -401,6 +402,110 @@ class HumanSuccessorTest(unittest.TestCase):
                 else:
                     with self.assertRaisesRegex(HarnessError, "unattended after"):
                         self.init_successor()
+
+MAINLINE = (
+    "## 主线\n\nOne line.\nMainline Review: {review}\n\n"
+    "| Goal | 问题 | 退出条件 | 状态 | plan |\n|---|---|---|---|---|\n{rows}\n\n"
+)
+DONE_A = "| A | a | a | ✅ done | [plan](../plan.md) |"
+DONE_SIDE = "| A | a | a | ✅ done | [plan](../side/plan.md) |"
+NEXT_B = "| B | b | b | ▶ next | [plan](../next/plan.md) |"
+TODO_C = "| C | c | c | ⬜ todo | |"
+HANDOFF_TASKS = (
+    "## Goal\n\n| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
+    "| P0 | {task} | r1 | next | check | 🔬 doing | 0 |\n"
+)
+
+
+class MainlineHandoffTest(unittest.TestCase):
+    setUp = ClosedPlanSectionTest.setUp
+    tearDown = ClosedPlanSectionTest.tearDown
+    init = ClosedPlanSectionTest.init
+    review_as = HumanSuccessorTest.review_as
+
+    def start(
+        self,
+        rows: list[str] | None,
+        *,
+        review: str = "approved",
+        task: str = "t2",
+        plan: str = "next/plan.md",
+    ) -> dict[str, object]:
+        for name in ("next", "side"):
+            (self.root / name).mkdir(exist_ok=True)
+            (self.root / name / "plan.md").write_text(
+                "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n", encoding="utf-8"
+            )
+        mainline = MAINLINE.format(review=review, rows="\n".join(rows)) if rows else ""
+        (self.root / ".agent-loop" / "task.md").write_text(
+            mainline + HANDOFF_TASKS.format(task=task), encoding="utf-8"
+        )
+        _, state = initialize(
+            self.root,
+            task_id=task,
+            plan_doc=plan,
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
+        )
+        return state
+
+    def test_stop_hands_off_to_the_next_aligned_goal(self) -> None:
+        self.review_as("stop")
+        self.assertEqual(self.start([DONE_A, NEXT_B, TODO_C])["task_id"], "t2")
+
+    def test_unapproved_mainline_stays_stopped(self) -> None:
+        self.review_as("stop")
+        with self.assertRaisesRegex(HarnessError, "unattended after"):
+            self.start([DONE_A, NEXT_B], review="proposed")
+
+    def test_skipped_goal_stays_stopped(self) -> None:
+        self.review_as("stop")
+        with self.assertRaisesRegex(HarnessError, "unattended after"):
+            self.start([DONE_A, TODO_C, NEXT_B])
+
+    def test_plan_outside_next_goal_stays_stopped(self) -> None:
+        self.review_as("stop")
+        with self.assertRaisesRegex(HarnessError, "unattended after"):
+            self.start([DONE_A, NEXT_B], plan="side/plan.md")
+
+    def test_handoff_still_needs_answered_plan_review(self) -> None:
+        self.review_as("stop")
+        must = {
+            "level": "must", "claim": "wrong input", "consequence": "wasted run",
+            "evidence": "plan:1", "change": "fix input", "human": False,
+        }
+        record_task_review(
+            self.root, "t2", findings=[must], dropped=0, summary="", source="plan_review", run_id=None
+        )
+        with self.assertRaisesRegex(HarnessError, "must items"):
+            self.start([DONE_A, NEXT_B])
+
+    def test_without_mainline_stop_stays_stopped(self) -> None:
+        self.review_as("stop")
+        with self.assertRaisesRegex(HarnessError, "unattended after"):
+            self.start(None)
+
+    def test_within_goal_continue_keeps_the_named_task(self) -> None:
+        self.review_as("continue", "t2")
+        with self.assertRaisesRegex(HarnessError, "unattended after"):
+            self.start([DONE_A, NEXT_B], task="t3", plan="plan.md")
+
+    def test_side_goal_close_does_not_hand_off(self) -> None:
+        self.review_as("stop")
+        with self.assertRaisesRegex(HarnessError, "unattended after"):
+            self.start([DONE_SIDE, NEXT_B])
+
+    def test_archiving_keeps_mainline_rows(self) -> None:
+        task_md = self.root / ".agent-loop" / "task.md"
+        task_md.write_text(
+            MAINLINE.format(review="approved", rows=DONE_A)
+            + "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
+            + "| P0 | t1 | r1 | first | check | ✅ done | 0 |\n",
+            encoding="utf-8",
+        )
+        archive_closed_tasks(self.root)
+        text = task_md.read_text(encoding="utf-8")
+        self.assertIn(DONE_A, text)
+        self.assertNotIn("| t1 |", text)
 
 CLOSE_PLAN = (
     "# Plan\n\nPlan Revision: 1\nPlan Review: approved\n\n"

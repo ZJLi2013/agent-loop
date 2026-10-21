@@ -38,6 +38,27 @@ Closed: [archive/tasks.md](archive/tasks.md)
 
 **一行需要换行才读得完，就是细节没下沉。** `task.md` 每轮都被完整读一遍。
 
+### 主线
+
+一个项目有多个前后相继的 Goal 时，`## Goal` 之上加 `## 主线`：一句话主线，加有序的 Goal 列表。
+
+```markdown
+## 主线
+
+RPent 的成绩靠什么。
+Mainline Review: approved
+
+| Goal | 问题 | 退出条件 | 状态 | plan |
+|---|---|---|---|---|
+| M1 | 成绩来源 | 逐任务 / global memory 的贡献各有结论 | ✅ done | [plan](plans/m1/plan.md) |
+| M2 | 成功信号消融 | 去掉成功信号后成绩变化有结论 | ▶ next | [plan](plans/m2/plan.md) |
+| M3 | 新任务泛化 | 未见任务上的成绩有结论 | ⬜ todo | |
+```
+
+状态只有 `✅ done`、`▶ next`、`⬜ todo`；至多一行 `▶ next`，且它是第一行非 `✅ done`。
+只写 Goal 级的问题与退出条件，不写 task。`Mainline Review` 只在 Human Review Gate 写；
+交接、改表与支线的规则归 `work-planning`。没有这一节的项目只有一个 Goal。
+
 状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。
 `proposed` 表示还在 Human Review Gate，批准前不执行；`dropped` 要在行尾链接说明为什么放弃——
 被否决的候选是长期决定，删掉它下次还会有人重提。
@@ -130,7 +151,7 @@ Human 纠偏的 pause → revision → RECONCILE → resume 事务归 `work-plan
 
 ## 完成
 
-全部 task `✅` 或剩余失败被显式接受；每个 `✅` 都有检查点的实际输出作为证据；
+全部 task `✅` 或剩余失败被显式接受，且主线没有 `▶ next` 的 Goal；每个 `✅` 都有检查点的实际输出作为证据；
 结论已收口到 plan document（见 `work-planning`）；
 新 agent 只读这些文件就能接手，不需要翻聊天记录。
 

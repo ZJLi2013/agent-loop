@@ -35,7 +35,7 @@ from harness.plan import (
 from harness.page import load_pager, page_followup
 from harness.plan_review import plan_review_ready, run_plan_review
 from harness.protocol import Event, Phase, TransitionError, apply_event
-from harness.records import active_task_status
+from harness.records import active_task_status, mainline_handoff
 from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
 from harness.storage import (
@@ -142,7 +142,12 @@ def initialize(
                         f"task {old.get('task_id')} is awaiting reviewer decision"
                     )
                 attended = not plan_doc or plan_metadata(root, plan_doc)[1] == "approved"
-                if not attended and (
+                handoff = (
+                    not attended
+                    and prior_review["decision"] == "stop"
+                    and mainline_handoff(root, old_config.get("plan_doc"), plan_doc)
+                )
+                if not attended and not handoff and (
                     prior_review["decision"] == "stop"
                     or prior_review.get("next_task") != task_id
                 ):
