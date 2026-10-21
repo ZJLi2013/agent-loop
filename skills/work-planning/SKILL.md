@@ -56,6 +56,8 @@ Plan Review: proposed
    human 要求重审用 `--again`。reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
 6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
    `Plan Review: unreviewed`，但配置 reviewer 时仍须完成独立 plan review。
+7. 项目有多个 Goal 时，第一个 Goal 的 Gate 同时对齐 `task.md` 的主线一节（格式见 `task-state`），
+   human 批准后写 `Mainline Review: approved`。
 
 远期路线只作为 plan 中的候选。每项拿到 evidence 后再生成下一项，不一次写死整条路线。
 
@@ -105,6 +107,14 @@ verifier 通过后：
    结论、`disproved / rejected` 与证据指针；
 4. reviewer 决定落盘后（未配置 reviewer 时 verifier 通过后）删除该 task 的 run 目录；
    位置与逐 run 表的要求归 `experiment-design`。
+
+### 主线交接
+
+- reviewer 对主线 Goal 选 `stop` 时，把它在主线表的行改 `✅ done`、下一行改 `▶ next`，为 `▶ next` 的 Goal
+  写 plan、跑独立 plan review 再开工，不停在 DONE；`Mainline Review` 不是 `approved` 时交 human。
+- 增删 Goal 或改顺序是 `replan`：`Mainline Review` 改 `proposed`，交 human。
+- 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
+  开支线要 human 批准。
 
 Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界与
 archive index。sub-exp 不删，但不再默认加载。删除只被本 Goal 文档引用的一次性脚本，判据归
