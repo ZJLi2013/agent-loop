@@ -642,6 +642,15 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
         }:
             return page_followup(root, config, state)
 
+        phase = Phase(str(state["phase"]))
+        reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
+            "last_run_id"
+        )
+        if phase == Phase.VERIFIED and reviewed:
+            return review_followup(
+                root, config, state, state_path
+            ) or page_followup(root, config, state)
+
         plan_ready, plan_reason = plan_can_run(root, config, state)
         if not plan_ready:
             request_pause(
@@ -658,14 +667,8 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
                 "plan document and task.md, obtain review, then run resume."
             )
 
-        phase = Phase(str(state["phase"]))
         if phase == Phase.VERIFIED:
-            reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
-                "last_run_id"
-            )
-            if reviewed or state.get("verified_fingerprint") == workspace_fingerprint(
-                root
-            ):
+            if state.get("verified_fingerprint") == workspace_fingerprint(root):
                 return review_followup(
                     root, config, state, state_path
                 ) or page_followup(root, config, state)
