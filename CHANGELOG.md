@@ -10,7 +10,8 @@ All notable user-facing changes are documented here. This project follows Semant
   agent-loop wording, the agent files an issue here with a file and line, the expected and actual behaviour, and a
   reproduction built only from public agent-loop material. `check_report.py` blocks local paths, host names, the
   GPU models listed in `external-output-boundary`, credentials and transcripts, and requires an AI-use line; a
-  blocked or over-limit report is saved under `.agent-loop/reports/` instead.
+  blocked or over-limit report is saved under `.agent-loop/reports/` instead. It catches only defects with a visible
+  signal; `CONTRIBUTING.md` lists what it misses and when to open an issue yourself.
 - On-demand `code-to-uml-diagram` skill: a Mermaid class diagram of a class and its direct collaborators, with
   inheritance, composition, injection and construct-then-register each read from one kind of source line, plus
   one sequence diagram per key scenario whose participants come from the class diagram.
