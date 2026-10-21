@@ -81,6 +81,9 @@ Goal, with every number traced to the experiment records. Usage documents how to
 
 ### Fixed
 
+- Completion checks honor the review of a verified task before validating its plan, so deleting the plan
+  during cleanup does not block completion or the reviewer's next-task handoff.
+
 - A busy state lock now waits a few seconds, then names its holder (pid, command, start time). When the holder
   is gone, the error includes the command that removes the stale lock; Harness does not remove it itself. Lock
   files written before this change, which hold only a pid, read the same way.
