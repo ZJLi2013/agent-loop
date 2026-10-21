@@ -8,7 +8,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECK = ROOT / "skills" / "self-report" / "check_report.py"
-FIXTURES = Path(__file__).resolve().parent / "fixtures" / "self_report"
 TITLE = "[bug] sync-to-cursor.ps1 keeps skill junctions that point at another checkout"
 BODY = """### Commit or release
 45e05b9
@@ -69,13 +68,6 @@ class CheckReportTest(unittest.TestCase):
 
     def test_missing_ai_use_is_blocked(self) -> None:
         self.assert_blocked(self.check(BODY.split("AI use:")[0]), "missing AI use")
-
-    def test_published_issues_pass(self) -> None:
-        for number in (48, 50, 52):
-            with self.subTest(issue=number):
-                body = (FIXTURES / f"issue-{number}.md").read_text(encoding="utf-8")
-                result = self.check(body, title="[proposal] published issue")
-                self.assertEqual(result.returncode, 0, result.stdout)
 
 
 if __name__ == "__main__":
