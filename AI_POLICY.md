@@ -35,3 +35,16 @@ Do not submit:
 
 The same review standard applies whether or not AI was used.
 
+## Maintainer-configured automation
+
+The maintainer runs two automations whose output is posted before a human reviews it:
+
+- Agents following the `self-report` skill file issues labelled `from-agent`. The skill's check must pass before
+  posting, and the issue ends with an `AI use:` line.
+- The maintainer runs `.github/auto-fix/run.ps1` locally to hand an issue labelled `auto-fix` to a sandboxed Codex
+  agent following `.github/auto-fix/agent.md`. The resulting pull request carries the `auto-fix` label and its AI use
+  section states that an agent generated it and no human reviewed it before submission.
+
+This output is exempt from reviewing and editing before submission; every other rule above applies. The maintainer
+merges auto-fix pull requests and is responsible for the merged change.
+
