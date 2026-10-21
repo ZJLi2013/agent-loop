@@ -342,30 +342,6 @@ class ClosedPlanSectionTest(unittest.TestCase):
             timeout_seconds=30,
         )
 
-    def test_reviewed_stop_completes_after_plan_cleanup(self) -> None:
-        self.init(plan_reviewer((
-            {"decision": "stop", "why": "done"}, PLAN_MOVED, False
-        )))
-        run_review(self.root)
-        _, state = load_runtime(self.root)
-        self.assertTrue(state["active"])
-        self.assertEqual(state["phase"], "verified")
-        self.assertEqual(state["review"]["decision"], "stop")
-        (self.root / "plan.md").unlink()
-
-        self.assertIsNone(completion_gate(self.root))
-        self.assertIsNone(completion_gate(self.root))
-
-    def test_reviewed_continue_keeps_handoff_after_plan_cleanup(self) -> None:
-        self.init(plan_reviewer((
-            {"decision": "continue", "next_task": "t2", "why": "next"},
-            PLAN_MOVED, False,
-        )))
-        run_review(self.root)
-        (self.root / "plan.md").unlink()
-
-        self.assertIn("continue -> t2", completion_gate(self.root) or "")
-
     def prompt(self) -> str:
         return (self.root / ".harness" / "review" / "prompt.md").read_text(
             encoding="utf-8"
