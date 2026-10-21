@@ -27,6 +27,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 | 失败、重试、预算或停机判断 | `when-to-stop` |
 | 具体值、旧结论、否决项可能相关 | `agent-memory` |
 | detach 的远端任务，或单条命令预计超过 30 分钟 | `agent-heartbeat` |
+| Harness 命令报错或 guard 拒绝合法的一步、两条 agent-loop 规则指令相反、human 纠偏追到 agent-loop 措辞 | `self-report` |
 
 ## 硬不变量
 
