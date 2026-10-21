@@ -93,6 +93,12 @@ Open an issue yourself when:
 - a project's `.agent-loop/reports/` holds a draft;
 - the problem shows only in a private project. Describe it with a synthetic reproduction.
 
+Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
+hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
+regression test alone and passes with the fix. That shows the test reproduces the issue and the fix passes CI, not
+that the fix is right, so the maintainer reviews it before merging. An issue the agent cannot reproduce from a public
+checkout gets a comment and stays open for a human.
+
 ## Reporting security issues
 
 Do not open a public Issue for vulnerabilities. Follow [`SECURITY.md`](SECURITY.md).
