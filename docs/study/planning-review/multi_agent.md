@@ -10,7 +10,7 @@
 提交后审准入，在 task 边界决定下一步。「什么时候叫谁」由 Harness 的确定性边界决定，不另设
 LLM 调度 agent。
 
-依据来自 [RoboJEV × Nox-4B case](../../../case_study/robojev-nox.md)：11 个 task 边界里，决策几乎每次都被
+依据来自 RoboJEV × Nox-4B 的一次运行：11 个 task 边界里，决策几乎每次都被
 改写，执行一次都没有。需要判断的只有边界这一个时刻，所以 LLM 调度器只会多出一个会漂移的判断点。
 
 ## 现有实现
