@@ -4,8 +4,9 @@ Hands one open auto-fix issue to Codex and opens a pull request for its fix.
 
 .DESCRIPTION
 Codex runs in its workspace-write sandbox in a fresh worktree of origin/main and follows agent.md. This script pushes
-the regression test alone and requires CI to fail, then pushes the fix and requires CI to pass before marking the pull
-request ready. A stop keeps the worktree and the draft pull request for inspection.
+the regression test alone and requires CI to fail, then pushes the fix and requires CI to pass. It then reverts the
+test, so only the fix is merged, and marks the pull request ready once CI passes again. A stop keeps the worktree and
+the draft pull request for inspection.
 
 Extra Codex arguments, such as a profile, come from $env:AUTO_FIX_CODEX_ARGS.
 #>
@@ -90,8 +91,9 @@ Invoke-Checked python $checker --title $title $body
 Invoke-Checked git -C $wt add -- tests
 Invoke-Checked git -C $wt commit -q -m "Add a regression test for #$Issue"
 Invoke-Checked git -C $wt push -q -u origin $branch
+$testSha = (Invoke-Checked git -C $wt rev-parse HEAD).Trim()
 $pr = (Invoke-Checked gh pr create --repo $repo --draft --base main --head $branch --label auto-fix --title $title --body-file $body | Select-Object -Last 1).Trim()
-if (Test-Checks $pr (Invoke-Checked git -C $wt rev-parse HEAD).Trim()) {
+if (Test-Checks $pr $testSha) {
     Invoke-Checked gh pr comment $pr --body "The regression test passed on the unfixed code, so it does not reproduce #$Issue."
     Stop-Run "CI passed on the test-only commit; see $pr"
 }
@@ -104,6 +106,16 @@ if (-not (Test-Checks $pr (Invoke-Checked git -C $wt rev-parse HEAD).Trim())) {
     $failed = Get-FailedChecks $pr
     Invoke-Checked gh pr comment $pr --body "CI fails with the fix applied: $failed."
     Stop-Run "CI failed with the fix ($failed); see $pr"
+}
+
+# The regression test is evidence for this pull request only; keeping every one would grow the suite.
+Invoke-Checked git -C $wt revert --no-commit $testSha
+Invoke-Checked git -C $wt commit -q -m "Drop the #$Issue regression test after CI confirmed the fix"
+Invoke-Checked git -C $wt push -q
+if (-not (Test-Checks $pr (Invoke-Checked git -C $wt rev-parse HEAD).Trim())) {
+    $failed = Get-FailedChecks $pr
+    Invoke-Checked gh pr comment $pr --body "CI fails once the regression test is dropped: $failed."
+    Stop-Run "CI failed without the regression test ($failed); see $pr"
 }
 Invoke-Checked gh pr ready $pr
 Write-Host "auto-fix: $pr is ready for review"

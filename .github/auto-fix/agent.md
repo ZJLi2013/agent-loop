@@ -15,10 +15,10 @@ but not use the network, `git push`, `gh`, or Windows programs.
    `.auto-fix/body.md` following `.github/pull_request_template.md`:
    - `Closes #<number>` on the last line;
    - Evidence names the regression test and what it asserts; CI will show it failing on the test-only commit and
-     passing after the fix;
+     passing after the fix, and `run.ps1` then removes the test, so it stays in the pull request's history only;
    - AI use: `Tool/model:` Codex, started by the maintainer's local auto-fix command; `Extent:` test and fix generated
      from the issue, not reviewed by a human before submission; `Human verification:` none yet.
 
    Keep local paths, host names and transcripts out of both files.
 5. Do not commit. `run.ps1` commits your `tests/` changes first and the rest second, so the test must fail without
-   the fix.
+   the fix. It reverts the `tests/` commit after CI passes, so the fix must not depend on your test changes.
