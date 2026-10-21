@@ -137,6 +137,8 @@ OpenHands 和 LangGraph，见 [相关项目与选择依据](docs/related-project
 | 报告问题或贡献 | [Issues](https://github.com/ZJLi2013/agent-loop/issues) · [Contributing](CONTRIBUTING.md) · [Roadmap](ROADMAP.md) |
 
 欢迎提供安装失败、宿主版本兼容、错误完成判断、重复劳动和 review 开销的最小复现。
+agent 只自动上报报错、拒绝这类有可见信号的缺陷；照规则执行却结果不对的问题要human自己提，见
+[什么时候human提 issue](CONTRIBUTING.md#reporting-problems)。
 AI 辅助贡献需遵循 [AI_POLICY.md](AI_POLICY.md)。漏洞请走 [私密报告渠道](SECURITY.md)，不要发公开 Issue。
 
 Apache-2.0，见 [LICENSE](LICENSE)。

@@ -68,6 +68,31 @@ or add text-matching tests where an executable transition/guard test is possible
 
 Commit subjects are imperative statements of the resulting state. Keep unrelated changes in separate commits.
 
+## Reporting problems
+
+Agents file only part of agent-loop's defects themselves, and no `from-agent` issue does not mean no defect.
+The `self-report` skill starts from a visible signal: a Harness command errors or refuses a legitimate step, two
+agent-loop rules give opposite instructions, or a human correction traces back to agent-loop wording. Issues it
+files carry the `from-agent` label.
+
+It does not catch:
+
+- rules followed as written that produce plausible but poor results, such as scripts piling up, records that keep
+  growing, or review rounds that cost more than the experiment. Each step looks compliant, and the agent has nothing
+  to compare it against;
+- defects the agent worked around to finish its task instead of stopping on them;
+- defects that need a private project to reproduce. Reports are built only from public agent-loop material; the
+  rest stay as drafts in the project's `.agent-loop/reports/`.
+
+Open an issue yourself when:
+
+- a result looks wrong even though no command failed: too many files, a plan that keeps growing, a review loop, a
+  task that passed but missed its point;
+- you corrected an agent and the correction would apply in other projects. Your statement of what you expected is
+  the evidence the agent lacks;
+- a project's `.agent-loop/reports/` holds a draft;
+- the problem shows only in a private project. Describe it with a synthetic reproduction.
+
 ## Reporting security issues
 
 Do not open a public Issue for vulnerabilities. Follow [`SECURITY.md`](SECURITY.md).

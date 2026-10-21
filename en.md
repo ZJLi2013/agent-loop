@@ -146,6 +146,8 @@ Aider, mini-swe-agent, OpenHands, and LangGraph. This compares use cases, not be
 
 Useful reports include installation failures, host compatibility, incorrect completion decisions, repeated
 work, and review overhead. Include a minimal reproduction and the relevant versions.
+Agents report only defects with a visible signal, such as an error or a refusal; problems where the rules were
+followed and the result is still wrong need your report. See [when to open an issue yourself](CONTRIBUTING.md#reporting-problems).
 AI-assisted contributions follow [AI_POLICY.md](AI_POLICY.md). Report vulnerabilities through the
 [private channel](SECURITY.md), rather than a public issue.
 
