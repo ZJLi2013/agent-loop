@@ -45,6 +45,11 @@ Get-ChildItem $skillsDest -Force |
 
 Get-ChildItem "$repo\skills" -Directory | ForEach-Object {
     $t = Join-Path $skillsDest $_.Name
+    $existing = Get-Item $t -Force -ErrorAction SilentlyContinue
+    if ($null -ne $existing -and $existing.LinkType -eq 'Junction' -and
+        ($existing.Target -join '') -ne $_.FullName) {
+        cmd /c "rmdir `"$t`"" | Out-Null
+    }
     if (-not (Test-Path $t)) {
         cmd /c "mklink /J `"$t`" `"$($_.FullName)`"" | Out-Null
         Write-Host "Linked skill: $($_.Name)" -ForegroundColor Green
