@@ -40,8 +40,8 @@ gh issue list --repo ZJLi2013/agent-loop --state all --search "<关键词>"
 
 ## 4. 起草
 
-- bug 按 `.github/ISSUE_TEMPLATE/bug.yml` 的字段写成 `###` 小节（Commit or release、Layer、Reproduction、
-  Expected boundary、Actual result and evidence），提案按 `feature.yml`。
+- bug 按 `.github/ISSUE_TEMPLATE/bug.yml` 的字段写成 `###` 小节（Safety check、Commit or release、Environment、
+  Layer、Reproduction、Expected boundary、Actual result and evidence），提案按 `feature.yml`。
 - 标题 `[bug] …` / `[proposal] …`，陈述缺陷本身。
 - 末尾一行 `AI use:`，写工具、模型，以及发布前无人审阅。语态归 `write-for-humans`。
 
