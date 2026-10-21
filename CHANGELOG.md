@@ -13,8 +13,9 @@ All notable user-facing changes are documented here. This project follows Semant
   Archiving no longer moves the table's `✅ done` rows out of `task.md`.
 - `.github/auto-fix/run.ps1` hands one open `auto-fix` issue to Codex in its sandbox, following
   `.github/auto-fix/agent.md`, and marks the resulting pull request ready only if CI fails on the regression test
-  alone and passes with the fix; the maintainer merges it. `AI_POLICY.md` exempts this output and `from-agent` issues from review before
-  submission and requires them to say so.
+  alone and passes with the fix. It then reverts the test, so only the fix is merged; the maintainer merges it.
+  `AI_POLICY.md` exempts this output and `from-agent` issues from review before submission and requires them to say
+  so.
 - `self-report` skill: when a Harness command fails or refuses, two rules conflict, or a correction traces to
   agent-loop wording, the agent files an issue here with a file and line, the expected and actual behaviour, and a
   reproduction built only from public agent-loop material. `check_report.py` blocks local paths, host names, the

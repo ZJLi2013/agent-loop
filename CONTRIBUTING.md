@@ -95,7 +95,8 @@ Open an issue yourself when:
 
 Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
 hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
-regression test alone and passes with the fix. The script does not read why the first commit failed: a test that
+regression test alone and passes with the fix. It then reverts the test, so the suite does not grow with every fix;
+the test stays in the pull request's history. The script does not read why the first commit failed: a test that
 crashes or an unrelated failure also turns it red. Before merging, the maintainer checks that the first commit's
 failing job is the new test's assertion and reviews the fix itself. An issue the agent cannot reproduce from a public
 checkout gets a comment and stays open for a human.
