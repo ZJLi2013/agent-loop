@@ -30,8 +30,10 @@ def _task_id(line: str) -> str | None:
 
 def _closed(line: str) -> bool:
     cells = _cells(line)
+    # Mainline rows have five cells and stay in task.md after their Goal is done.
     return bool(
         cells
+        and len(cells) >= 6
         and any(
             cell.startswith(marker)
             for cell in cells
@@ -86,6 +88,42 @@ def task_row(root: Path, task_id: str) -> list[str] | None:
 def active_task_status(root: Path, task_id: str) -> str | None:
     cells = task_row(root, task_id)
     return cells[5] if cells else None
+
+
+_MAINLINE = re.compile(r"^## 主线[ \t]*$(.*?)(?=^## |\Z)", re.M | re.S)
+_MAINLINE_STATUSES = ("✅ done", "▶ next", "⬜ todo")
+
+
+def mainline_handoff(root: Path, previous_plan: str | None, plan_doc: str) -> bool:
+    path = task_file(root)
+    if not previous_plan or not path.exists():
+        return False
+    section = _MAINLINE.search(path.read_text(encoding="utf-8"))
+    if not section or not re.search(r"^Mainline Review:\s*approved\s*$", section.group(1), re.M):
+        return False
+    rows = [
+        cells
+        for line in section.group(1).splitlines()
+        if (cells := _cells(line)) and len(cells) == 5 and cells[3] in _MAINLINE_STATUSES
+    ]
+    statuses = [cells[3] for cells in rows]
+    if statuses.count("▶ next") != 1:
+        return False
+    index = statuses.index("▶ next")
+    if index == 0 or any(status != "✅ done" for status in statuses[:index]):
+        return False
+
+    def plan_of(cells: list[str]) -> Path | None:
+        link = _TARGET.search(cells[4])
+        parts = _local(link.group(2)) if link else None
+        return (path.parent / parts[0]).resolve() if parts and parts[0] else None
+
+    previous, following = plan_of(rows[index - 1]), plan_of(rows[index])
+    return (
+        previous == (root / previous_plan).resolve()
+        and following == (root / plan_doc).resolve()
+        and previous != following
+    )
 
 
 _TARGET = re.compile(r"(\]\()([^)\s]+)(\))")

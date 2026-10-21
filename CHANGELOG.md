@@ -6,6 +6,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- `task.md` can hold a `## 主线` section: one line for the mainline and an ordered table of Goals marked
+  `✅ done`, `▶ next` or `⬜ todo` (format in `task-state`). When the reviewer stops a mainline Goal, the agent marks
+  it done and starts the `▶ next` Goal with its own plan and plan review, also when unattended, provided the human
+  approved the table (`Mainline Review: approved`). Adding, dropping or reordering Goals goes back to the human.
+  Archiving no longer moves the table's `✅ done` rows out of `task.md`.
 - `.github/auto-fix/run.ps1` hands one open `auto-fix` issue to Codex in its sandbox, following
   `.github/auto-fix/agent.md`, and marks the resulting pull request ready only if CI fails on the regression test
   alone and passes with the fix; the maintainer merges it. `AI_POLICY.md` exempts this output and `from-agent` issues from review before

@@ -161,7 +161,9 @@ reviewer 看样例判断它是否在测 Goal 要测的东西；task reviewer 把
 
 task 验证通过后，下一步由 reviewer 提议，worker 不给自己的下一步拍板。init 只要求 task 是 human 批准的
 `🔬 doing`，不要求等于 reviewer 的提议。无人值守（`Plan Review: unreviewed`）时只能 init reviewer 指名的 task：
-`continue` 的 `next_task`，或 `ask_human` 附带的不受该问题影响的 `next_task`；`stop` 后不能 init。
+`continue` 的 `next_task`，或 `ask_human` 附带的不受该问题影响的 `next_task`；`stop` 后不能 init，
+唯一例外是主线交接：`task.md` 的主线一节为 `Mainline Review: approved`，上一个 task 的 plan 是紧挨 `▶ next`
+前的 `✅ done` 行，本次 init 的 plan 是 `▶ next` 行的 plan。plan review 与 `🔬 doing` 检查照旧。
 两类调度都由确定性边界触发，不用 LLM 判断是否需要 review：
 
 | 时刻 | 调用 |
