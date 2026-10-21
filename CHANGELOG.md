@@ -6,6 +6,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Labelling an issue `auto-fix` starts the maintainer's Cursor cloud Automation through
+  `.github/workflows/auto-fix-dispatch.yml`; the agent follows `.github/auto-fix/agent.md` to reproduce the defect as
+  a failing test, fix it and open a pull request, which the maintainer merges. `AI_POLICY.md` exempts this output and
+  `from-agent` issues from review before submission and requires them to say so.
 - `self-report` skill: when a Harness command fails or refuses, two rules conflict, or a correction traces to
   agent-loop wording, the agent files an issue here with a file and line, the expected and actual behaviour, and a
   reproduction built only from public agent-loop material. `check_report.py` blocks local paths, host names, the
