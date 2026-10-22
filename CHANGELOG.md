@@ -59,6 +59,10 @@ invoke on-demand skills.
   checks run before posting. When the upstream ships a review skill, the PR opens as a draft, the agent runs that
   skill from the upstream default branch, fixes the findings that hold up, answers the ones that do not in the PR
   body with evidence, and then tells the user to mark it ready.
+- Upstream PRs are followed up by `upstream-contribute` instead of `autopilot`. The agent finds open upstream PRs
+  with a conflict, a failing required check, or a latest comment not by the user, triages them, commits fixes to
+  `followup/<branch>` on the fork, and drafts replies; pushing to the PR branch and posting replies wait for the
+  user.
 - Experiment scripts stay only while a kept script, the next approved task, or another Goal consumes them; scripts
   reused across Goals become stable entries with tests. One-off scripts are deleted once their parameters and input
   construction rules are in the document, and Goal CLOSE deletes those referenced only by that Goal's documents.
