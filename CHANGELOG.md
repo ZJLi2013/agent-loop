@@ -17,8 +17,9 @@ All notable user-facing changes are documented here. This project follows Semant
   acceptance evidence for the new Goal unless the plan states why the question is unchanged.
 - Planning and experiments follow the cost of being wrong: reversible changes such as prompts and thresholds ship
   and are judged on production signal, offline validation is kept for hard-to-reverse decisions, and labels gathered
-  for a different question count as a failed proxy. A human's implementation proposal is a candidate checked
-  against the Goal; the agent points out conflicts and the human decides. Designs start with a search of rejected
+  for a different question count as a failed proxy. A human's implementation proposal is adopted by default and
+  checked against the Goal like the agent's own; on a conflict, including after the Goal changes, the agent points
+  it out and the human decides whether to change or keep it. Designs start with a search of rejected
   approaches, pipelines run a thin end-to-end slice first, backtests keep the tested samples out of context, and
   dependent tool calls are issued in sequence.
 - `task.md` can hold a `## 主线` section: one line for the mainline and an ordered table of Goals marked
