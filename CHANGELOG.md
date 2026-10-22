@@ -127,6 +127,7 @@ invoke on-demand skills.
   session. State written before this change has no owner and is handled as before.
 - A Cursor conversation is bound to every project whose task list it reads, not only the first one, so the
   completion gate follows work that moves to another project in the same workspace.
+- `gen-ppt` connectors drawn with `arrow()` render with an arrowhead.
 
 ## [0.1.0] - 2026-10-12
 

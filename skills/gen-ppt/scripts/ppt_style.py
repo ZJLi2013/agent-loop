@@ -6,6 +6,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_LINE_DASH_STYLE
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE, MSO_CONNECTOR
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
 NAVY = RGBColor(16, 42, 67)
@@ -143,9 +144,11 @@ def arrow(
     )
     connector.line.color.rgb = color
     connector.line.width = Pt(width)
-    connector.line.end_arrowhead = True
     if dashed:
         connector.line.dash_style = MSO_LINE_DASH_STYLE.DASH
+    # python-pptx has no arrowhead API; a:tailEnd must follow the fill and dash children of a:ln.
+    line = connector.line._get_or_add_ln()
+    line.append(line.makeelement(qn("a:tailEnd"), {"type": "triangle"}))
     return connector
 
 
