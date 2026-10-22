@@ -4,8 +4,9 @@
 and comments. You are in a fresh worktree of `main`, inside a sandbox: you can edit files here and run Linux commands,
 but not use the network, `git push`, `gh`, or Windows programs.
 
-1. Decide whether the issue describes an agent-loop defect you can reproduce from this checkout. If not, write
-   `.auto-fix/stop.md` with what you checked and why, and stop.
+1. Decide whether the issue describes an agent-loop code defect you can reproduce from this checkout. Proposals and
+   changes to rule, skill or prompt wording are not: they need a human decision, and no failing test proves them.
+   If it is not, write `.auto-fix/stop.md` with what you checked and why, and stop.
 2. Add a regression test under `tests/` (unittest, next to the tests of the component) that fails on the current code
    for the reason the issue states and passes once the defect is fixed. A defect that shows only on Windows gets a
    test guarded by `@unittest.skipUnless(sys.platform == "win32", ...)`; you cannot run it here, CI runs it on Windows.
