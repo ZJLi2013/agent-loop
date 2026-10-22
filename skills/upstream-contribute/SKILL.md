@@ -1,7 +1,8 @@
 ---
 name: upstream-contribute
 description: >-
-  判断一个修复该提 PR、提 Issue 还是不提，并生成 body 草稿。目标 repo 有 PR 模板就用它的。
+  判断一个修复该提 PR、提 Issue 还是不提，并生成 body 草稿。目标 repo 有 PR 模板就用它的，
+  有 review skill 就先在 draft PR 上自审再 ready。
   Use when contributing a fix back to someone else's repo.
 disable-model-invocation: true
 ---
@@ -44,6 +45,8 @@ git -C <local_fork_path> remote -v
 ## Step 3: 生成 body — 等待用户审查
 
 **先读目标 repo 的 `.github/PULL_REQUEST_TEMPLATE.md` 与 `CONTRIBUTING.md`，有就用它们的。**
+上游的 agent skill 目录（`.agents/skills/`、`.claude/skills/`、`.github/skills/`，或 `AGENTS.md` /
+`CONTRIBUTING.md` 点名的位置）里有写 PR 的 skill 时，按它写 body、跑它带的检查。
 下面是没有模板时的默认骨架。判据只有一条：**reviewer 两分钟内能看懂全部改动。**
 
 ### PR body
@@ -111,7 +114,22 @@ git -C <local_fork_path> remote -v
 生成完整 markdown body 后：
 1. 输出 PR/Issue **title** 和 **body**
 2. 给出创建链接：`https://github.com/<upstream-owner>/<repo>/compare/<base>...<you>:<branch>`
-3. 用户复制到浏览器创建
+3. 用户复制到浏览器创建；上游有 review skill 时选 **Create draft pull request**，进入 Step 4
+
+## Step 4: 上游有 review skill 时 — draft → 自审 → ready
+
+**维护者会用上游自己的 review skill 审 PR，就先在 draft 上跑一遍**，让它的清单在 ready 之前命中，
+而不是每条 finding 都花掉维护者一轮往返。
+
+1. 在 Step 3 的同一批目录里找 review skill。读上游默认分支上的版本（`git show origin/<default>:<path>`），
+   本地 checkout 可能落后或带着别人没有的 skill。没有 review skill 就跳过本步，流程不变。
+2. 按它要求的输入运行：要 PR URL 的对 draft PR 跑；接受本地 diff 的可以在建 draft 之前跑。
+3. 每条 finding 先验证再处置。成立的在 fork 分支上修并推到 draft；不成立的写进 PR body（模板有备注节就放那里，
+   没有就加 `Design notes` 小节），每条附证据：代码位置、被破坏的约束或链接。维护者的 review 多半报出同样的误判，
+   body 里已有回答就省掉一轮。
+4. 修完重跑一次，没有新的成立项时告诉用户可以 mark ready。
+
+建 draft 与建 PR 一样是对外动作：先等用户确认，`external-output-boundary` 对 draft 同样适用。
 
 ## 多 repo 拆分
 
