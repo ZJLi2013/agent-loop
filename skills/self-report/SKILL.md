@@ -58,8 +58,11 @@ python <本 skill 目录>/check_report.py --title "<标题>" body.md
 ```bash
 gh issue list --repo ZJLi2013/agent-loop --label from-agent --state all --search "created:>=<YYYY-MM-DD>" --json number
 gh issue create --repo ZJLi2013/agent-loop --title "<标题>" --body-file body.md \
-  --label from-agent --label auto-fix --label <bug|proposal> --label <kernel|policy|adapter>
+  --label from-agent --label <bug|proposal> --label <kernel|policy|adapter>
 ```
+
+只有 `bug` 且层为 `kernel` / `adapter` 时再加 `--label auto-fix`。proposal 和 policy 措辞要 human 取舍，
+也写不出能证明修复的失败测试，留给 human 改。
 
 评论同样先过检查，再 `gh issue comment <N> --repo ZJLi2013/agent-loop --body-file comment.md`。
 正文一律用 `--body-file`：PowerShell 把多行字符串作参数传给 `gh` 时会丢掉换行。

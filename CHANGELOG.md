@@ -14,6 +14,8 @@ All notable user-facing changes are documented here. This project follows Semant
 - `.github/auto-fix/run.ps1` hands one open `auto-fix` issue to Codex in its sandbox, following
   `.github/auto-fix/agent.md`, and marks the resulting pull request ready only if CI fails on the regression test
   alone and passes with the fix. It then reverts the test, so only the fix is merged; the maintainer merges it.
+  `self-report` adds the `auto-fix` label only to Kernel and Adapter bugs, and the agent stops on proposals and
+  Policy wording.
   `AI_POLICY.md` exempts this output and `from-agent` issues from review before submission and requires them to say
   so.
 - `self-report` skill: when a Harness command fails or refuses, two rules conflict, or a correction traces to

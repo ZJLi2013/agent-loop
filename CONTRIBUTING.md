@@ -93,7 +93,8 @@ Open an issue yourself when:
 - a project's `.agent-loop/reports/` holds a draft;
 - the problem shows only in a private project. Describe it with a synthetic reproduction.
 
-Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
+Only Kernel and Adapter bugs carry the `auto-fix` label; proposals and Policy wording need a human decision and
+have no failing test that proves the change. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
 hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
 regression test alone and passes with the fix. It then reverts the test, so the suite does not grow with every fix;
 the test stays in the pull request's history. The script does not read why the first commit failed: a test that
