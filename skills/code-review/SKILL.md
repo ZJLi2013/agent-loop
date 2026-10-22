@@ -62,8 +62,7 @@ disable-model-invocation: true
 | 自动扫 bug / 回归，要的是发现而不是评审文字 | Cursor 内置 `review-bugbot` subagent |
 | 注入、认证、密钥泄漏这类安全面 | Cursor 内置 `review-security` subagent |
 | 改动太大，先拆成可审的小 PR | Cursor 内置 `split-to-prs` |
-| 自己仓库的 PR 建好之后跟 review comments 与 CI | Cursor 内置 `autopilot` |
-| 上游 PR ready 之后的跟进 | `upstream-contribute` Step 5 |
+| PR 建好之后跟 review comments 与 CI | Cursor 内置 `autopilot` |
 | 该不该往上游提、body 怎么写 | `upstream-contribute` |
 
 **本 skill 的独有价值是第 1 段与第 4 段**——判断这个改动该不该存在，以及它是不是没被理解就贴上来的。纯找 bug 交给上面那两个 subagent 更快。
