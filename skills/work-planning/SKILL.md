@@ -43,8 +43,10 @@ Plan Review: proposed
 ## PLAN → REVIEW → READY
 
 1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。产出给人读或给下游用时，Goal 写明读者
-   并附一份手写的最终产出样例；输入、schema 与筛选标准从样例倒推。
-2. 一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
+   并附一份手写的最终产出样例；输入、schema 与筛选标准从样例倒推。human 给的 Goal 与硬约束照办；human 对
+   系统提出的实现方案记作候选，和其他候选一样对照 Goal，冲突时先指出、由 human 拍板。对当前动作的直接指令照办。
+2. 写设计前按机制名搜一次 memory 的 `rejected`。多段管线先让每段的最简版本端到端跑通，再加深其中一段。
+   一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
    交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
    渲染样例；改它们等于改设计。删除或放宽一道门时，写明它防的风险由哪道检查接替。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
@@ -85,8 +87,8 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 1. `pause --require-revision --reason "<纠偏>"`；
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
 3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
-   标注集）在 plan 里逐项标 keep / revise / drop，human 提出的那几项由 human 定；为旧问题采的标注不算新 Goal
-   的验收证据，除非 plan 写明问题没变。新 task 绑定新 `rN`；
+   标注集）在 plan 里逐项标 keep / revise / drop，human 提出的按第 1 步处理；旧标注能否作证据见
+   `experiment-design` 的验收门。新 task 绑定新 `rN`；
 4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
    而 human 决定开新 task 时，human 把它批为 `🔬 doing` 后直接 `init`，不用 `disable`。
 
