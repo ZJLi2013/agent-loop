@@ -6,6 +6,8 @@ alwaysApply: true
 # Agent Loop
 
 **任何需要跨回合状态的工作都走这个环；一问一答、单文件小改、纯查询直接做。**
+豁免按项目判：项目没有 plan Goal、它的规则 / schema / pipeline 已经按豁免改过一次时，再改这类东西前
+先经 `work-planning` 写 Goal 并过 Human Review Gate。
 状态与合法转移以 [`harness/protocol.py`](../harness/protocol.py) 为准：
 
 ```text

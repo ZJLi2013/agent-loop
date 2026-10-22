@@ -9,6 +9,9 @@ All notable user-facing changes are documented here. This project follows Semant
 - `task.md` holds the whole backlog: besides the next 1–2 tasks, an optional `## Candidates` table (priority,
   title, entry condition) and a `## Triggered` list ("when <event>: <action>"). The plan document keeps only the
   Goal, boundaries, current conclusion and its evidence.
+- The small-change exemption is judged per project: once a project without a plan Goal has had its rules, schema
+  or pipeline changed under the exemption, the next such change starts with a Goal and the Human Review Gate. A Goal
+  whose output has a reader names that reader and includes one hand-written sample of the final output.
 - `task.md` can hold a `## 主线` section: one line for the mainline and an ordered table of Goals marked
   `✅ done`, `▶ next` or `⬜ todo` (format in `task-state`). When the reviewer stops a mainline Goal, the agent marks
   it done and starts the `▶ next` Goal with its own plan and plan review, also when unattended, provided the human
