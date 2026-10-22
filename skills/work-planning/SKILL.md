@@ -42,8 +42,12 @@ Plan Review: proposed
 
 ## PLAN → REVIEW → READY
 
-1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。
-2. 一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
+1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。产出给人读或给下游用时，Goal 写明读者
+   并附一份手写的最终产出样例；输入、schema 与筛选标准从样例倒推。human 提出的实现方案默认采用，
+   但和 agent 自己的方案一样要对照 Goal；与 Goal 冲突时（包括 Goal 变了之后）先指出冲突，由 human 决定改还是留，
+   不自行替换，也不默默照做。
+2. 写设计前按机制名搜一次 memory 的 `rejected`。多段管线先让每段的最简版本端到端跑通，再加深其中一段。
+   一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
    交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
    渲染样例；改它们等于改设计。删除或放宽一道门时，写明它防的风险由哪道检查接替。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
@@ -59,7 +63,8 @@ Plan Review: proposed
 7. 项目有多个 Goal 时，第一个 Goal 的 Gate 同时对齐 `task.md` 的主线一节（格式见 `task-state`），
    human 批准后写 `Mainline Review: approved`。
 
-远期路线只作为 plan 中的候选。每项拿到 evidence 后再生成下一项，不一次写死整条路线。
+远期路线只作为 `task.md` 的候选与触发项（格式见 `task-state`）；plan 只放 Goal、边界、当前结论与证据，
+不放执行项。每项拿到 evidence 后再生成下一项，不一次写死整条路线。
 
 ## Goal Review
 
@@ -73,7 +78,7 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 - `continue`：更新 plan 的当前结论 / 下一步决策，调用 `goal-review --decision continue`；
 - `replan`：调用 `goal-review --decision replan`，`Plan Revision` +1、review 改 proposed，
-  再走 Human Review Gate；
+  按 Human correction 第 3 步处理旧 task 与旧设计，再走 Human Review Gate；
 - `stop`：记录边界，调用 `goal-review --decision stop`。
 
 ## Human correction
@@ -82,7 +87,9 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 1. `pause --require-revision --reason "<纠偏>"`；
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
-3. 旧 task 逐项保留、blocked 或 dropped；新 task 绑定新 `rN`；
+3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
+   标注集）在 plan 里逐项标 keep / revise / drop，human 提出的按第 1 步处理；旧标注能否作证据见
+   `experiment-design` 的验收门。新 task 绑定新 `rN`；
 4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
    而 human 决定开新 task 时，human 把它批为 `🔬 doing` 后直接 `init`，不用 `disable`。
 

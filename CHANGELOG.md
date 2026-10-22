@@ -6,6 +6,22 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- `task.md` holds the whole backlog: besides the next 1–2 tasks, an optional `## Candidates` table (priority,
+  title, entry condition) and a `## Triggered` list ("when <event>: <action>"). The plan document keeps only the
+  Goal, boundaries, current conclusion and its evidence.
+- The small-change exemption is judged per project: once a project without a plan Goal has had its rules, schema
+  or pipeline changed under the exemption, the next such change starts with a Goal and the Human Review Gate. A Goal
+  whose output has a reader names that reader and includes one hand-written sample of the final output.
+- A Goal change or `replan` also marks each design and evaluation set derived from the old Goal keep, revise or
+  drop in the plan; the human decides on the ones the human proposed. Labels gathered for the old question are not
+  acceptance evidence for the new Goal unless the plan states why the question is unchanged.
+- Planning and experiments follow the cost of being wrong: reversible changes such as prompts and thresholds ship
+  and are judged on production signal, offline validation is kept for hard-to-reverse decisions, and labels gathered
+  for a different question count as a failed proxy. A human's implementation proposal is adopted by default and
+  checked against the Goal like the agent's own; on a conflict, including after the Goal changes, the agent points
+  it out and the human decides whether to change or keep it. Designs start with a search of rejected
+  approaches, pipelines run a thin end-to-end slice first, backtests keep the tested samples out of context, and
+  dependent tool calls are issued in sequence.
 - `task.md` can hold a `## 主线` section: one line for the mainline and an ordered table of Goals marked
   `✅ done`, `▶ next` or `⬜ todo` (format in `task-state`). When the reviewer stops a mainline Goal, the agent marks
   it done and starts the `▶ next` Goal with its own plan and plan review, also when unattended, provided the human

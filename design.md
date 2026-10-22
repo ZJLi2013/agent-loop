@@ -253,7 +253,8 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 
 | 内容 | 唯一真相源 |
 |---|---|
-| Goal、当前结论、决策、active task、`rN` | plan document + `.agent-loop/task.md` |
+| Goal、边界、当前结论、决策及其证据 | plan document |
+| active task、`rN`、候选与触发项 | `.agent-loop/task.md` |
 | closed task 与旧交接点 | `.agent-loop/archive/`（只按需读取） |
 | runtime phase、budget、当前 run | `.harness/state.json` |
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
