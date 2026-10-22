@@ -33,10 +33,24 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 
 <!-- 每个 task 一行。范围、方案、分析一律写在它链接的设计/实验文档里。 -->
 
+## Candidates
+
+| P | 候选 | 进入条件 |
+|---|---|---|
+| P1 | 量 Y 在大 batch 下的延迟 | t4 变绿后 |
+
+## Triggered
+
+- 第一个 revolute 资产到位时：把 Z 扩到 revolute
+
 Closed: [archive/tasks.md](archive/tasks.md)
 ```
 
 **一行需要换行才读得完，就是细节没下沉。** `task.md` 每轮都被完整读一遍。
+
+还没开工的候选写进 `## Candidates`，等某个事件才做的后续项写进 `## Triggered`（「<事件>时：<动作>」），
+两节都可省。候选不带设计、状态与 id；写成链接设计文档的 task、过 plan review 后才进活跃表，同时删掉候选行。
+候选表少于 6 列，Harness 不把它当 task 读。
 
 ### 主线
 
@@ -91,8 +105,8 @@ Mainline Review: approved
    归不进任何一类的失败，说明这个 task 拆得不对，回 `work-planning` 重拆。
 
 再做一步长检查：**一个 task 最多跨越一个未验证假设。** 如果通过要同时赌两件事，或失败后
-无法判断哪条假设错了，就把 inspection / probe 拆成前一项。只把最近 1–2 个增量项写进表，
-远期路线留在 plan document；每项变绿后再生成下一项。
+无法判断哪条假设错了，就把 inspection / probe 拆成前一项。只把最近 1–2 个增量项写进活跃表，
+其余写成候选；每项变绿后再生成下一项。
 
 写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。**
 

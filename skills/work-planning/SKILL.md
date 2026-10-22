@@ -59,7 +59,8 @@ Plan Review: proposed
 7. 项目有多个 Goal 时，第一个 Goal 的 Gate 同时对齐 `task.md` 的主线一节（格式见 `task-state`），
    human 批准后写 `Mainline Review: approved`。
 
-远期路线只作为 plan 中的候选。每项拿到 evidence 后再生成下一项，不一次写死整条路线。
+远期路线只作为 `task.md` 的候选与触发项（格式见 `task-state`）；plan 只放 Goal、边界、当前结论与证据，
+不放执行项。每项拿到 evidence 后再生成下一项，不一次写死整条路线。
 
 ## Goal Review
 
