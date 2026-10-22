@@ -2,15 +2,14 @@
 name: upstream-contribute
 description: >-
   判断一个修复该提 PR、提 Issue 还是不提，并生成 body 草稿。目标 repo 有 PR 模板就用它的，
-  有 review skill 就先在 draft PR 上自审再 ready；ready 之后的跟进只起草，push 与回复等用户确认。
-  Use when contributing a fix back to someone else's repo, or following up on an upstream PR.
+  有 review skill 就先在 draft PR 上自审再 ready。
+  Use when contributing a fix back to someone else's repo.
 disable-model-invocation: true
 ---
 
 # Upstream Contribute — 本地修复 → GitHub PR / Issue
 
-评估在他人仓库里做出的修复值不值得提，并生成草稿。提交流程**不依赖 gh CLI**，生成 markdown body 供用户在浏览器中创建；
-ready 之后的跟进（Step 5）要用 `gh` 读 PR 状态。
+评估在他人仓库里做出的修复值不值得提，并生成草稿。**不依赖 gh CLI**，生成 markdown body 供用户在浏览器中创建。
 
 **开写 body 之前先过 `external-output-boundary`**（always-applied rule）：AI 披露段、GPU 型号脱敏表、
 私料清理清单都在那里，本 skill 不重述。下面只管「提不提」和「body 长什么样」。
@@ -132,22 +131,6 @@ git -C <local_fork_path> remote -v
 
 建 draft 与建 PR 一样是对外动作：先等用户确认，`external-output-boundary` 对 draft 同样适用。
 
-## Step 5: ready 之后 — 跟进冲突、review 与 CI
-
-**发现、判断、修复与验证可以全自动；push 到 PR 分支、发评论、resolve thread 先给用户过目。** 回复以用户的名义发出，
-`external-output-boundary` 的审阅要求对评论同样成立；目标项目的 AI 政策明确允许 agent 直接回复时从它。
-
-1. 找要跟进的 PR：`gh search prs --author=@me --state=open -- -user:<you>` 列出上游 open PR，逐个读
-   `gh pr view <url> --json mergeable,statusCheckRollup,reviews,comments` 与行内评论
-   （`gh api repos/<owner>/<repo>/pulls/<n>/comments`）。有冲突、required check 失败，或最后一条评论 / review /
-   行内评论不是用户的，才要跟进。
-2. 按冲突 → 未解决评论 → CI 的顺序处置。评论按 Step 4 第 3 条判断：成立的修，不成立的起草附证据的回复；
-   涉及安全、许可、超出 PR 范围或要用户拿主意的标「问人」。CI 只修本 PR 改动引起的失败。
-3. 修复提交到 fork 上不挂 PR 的 `followup/<branch>`（从 PR 分支的远端最新状态拉出），跑能证明修复的最窄检查。
-   PR 分支不动，维护者看不到未经用户确认的改动。
-4. 每个 PR 交一段报告：链接、每条 finding 的处置与回复草稿、`followup/<branch>` 的 commit 与检查结果、
-   用户确认后要执行的命令（把 PR 分支快进到 `followup/<branch>`、发出回复）。
-
 ## 多 repo 拆分
 
 当改动跨多个 repo 时：
@@ -161,4 +144,5 @@ git -C <local_fork_path> remote -v
 
 - **external-output-boundary**（rule）：披露 / 脱敏 / 去私料，提交前必过
 - **experiment-design**：PR/Issue 素材来源
-- **split-to-prs**（Cursor 内置）：大改动拆成小 PR。上游 PR 的跟进走 Step 5，不用 `autopilot`：它会自己回复并 resolve thread
+- **split-to-prs** / **autopilot**（Cursor 内置）：大改动拆成小 PR；PR 建好后跟进 review 与 CI。
+  上游 PR 的修复与验证可以自动，push、回复、resolve thread 先给用户过目；`autopilot` 默认会自己回复并 resolve
