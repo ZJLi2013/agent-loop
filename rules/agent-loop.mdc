@@ -42,7 +42,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 - 改动必须让当前检查点从不通过变成通过；否则先按 `task-state` 改状态，不能顺手做。
 - `🚧 blocked` 链长 ≥ 2 停下重拆；失败先按 `when-to-stop` 自修到上限。
 - human 只问进展时读状态与 evidence 回答；纠正 Goal / scope / 优先级时先 Harness pause，
-  再由 `work-planning` 更新 Goal、RECONCILE tasks、review、resume。
+  再由 `work-planning` 更新 Goal、RECONCILE task 与旧设计、review、resume。
 - `task.md` 没有 active task、且主线（格式见 `task-state`）没有 `▶ next` 的 Goal 即 DONE：closed 行归档后报告并停。
   review、提上游、写博客等不会自动发生。
 

@@ -75,7 +75,7 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 - `continue`：更新 plan 的当前结论 / 下一步决策，调用 `goal-review --decision continue`；
 - `replan`：调用 `goal-review --decision replan`，`Plan Revision` +1、review 改 proposed，
-  再走 Human Review Gate；
+  按 Human correction 第 3 步处理旧 task 与旧设计，再走 Human Review Gate；
 - `stop`：记录边界，调用 `goal-review --decision stop`。
 
 ## Human correction
@@ -84,7 +84,9 @@ Harness 因 action count、elapsed time、长命令结束、失败、evidence st
 
 1. `pause --require-revision --reason "<纠偏>"`；
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
-3. 旧 task 逐项保留、blocked 或 dropped；新 task 绑定新 `rN`；
+3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
+   标注集）在 plan 里逐项标 keep / revise / drop，human 提出的那几项由 human 定；为旧问题采的标注不算新 Goal
+   的验收证据，除非 plan 写明问题没变。新 task 绑定新 `rN`；
 4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
    而 human 决定开新 task 时，human 把它批为 `🔬 doing` 后直接 `init`，不用 `disable`。
 

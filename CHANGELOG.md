@@ -12,6 +12,9 @@ All notable user-facing changes are documented here. This project follows Semant
 - The small-change exemption is judged per project: once a project without a plan Goal has had its rules, schema
   or pipeline changed under the exemption, the next such change starts with a Goal and the Human Review Gate. A Goal
   whose output has a reader names that reader and includes one hand-written sample of the final output.
+- A Goal change or `replan` also marks each design and evaluation set derived from the old Goal keep, revise or
+  drop in the plan; the human decides on the ones the human proposed. Labels gathered for the old question are not
+  acceptance evidence for the new Goal unless the plan states why the question is unchanged.
 - `task.md` can hold a `## 主线` section: one line for the mainline and an ordered table of Goals marked
   `✅ done`, `▶ next` or `⬜ todo` (format in `task-state`). When the reviewer stops a mainline Goal, the agent marks
   it done and starts the `▶ next` Goal with its own plan and plan review, also when unattended, provided the human
