@@ -43,8 +43,10 @@ All notable user-facing changes are documented here. This project follows Semant
 - On-demand `code-to-uml-diagram` skill: a Mermaid class diagram of a class and its direct collaborators, with
   inheritance, composition, injection and construct-then-register each read from one kind of source line, plus
   one sequence diagram per key scenario whose participants come from the class diagram.
-- On-demand `research-to-paper` skill: an arXiv-style paper and an optional 5–15 s teaser from a closed research
-Goal, with every number traced to the experiment records. Usage documents how to invoke on-demand skills.
+- On-demand `research-to-paper` skill: an arXiv-style paper and an optional 10–15 s teaser from a closed research
+Goal, with every number traced to the experiment records. The agent builds teasers with onetake, whose usage notes
+the skill records; a human-recorded UI walkthrough uses a screen recorder such as Recordly. Usage documents how to
+invoke on-demand skills.
 - dsh (DeepSeek Harness) enforced adapter: through dsh's `hooks-codex` bridge, a dsh worker is held by the
   completion gate until the task is verified, and the memory index is injected at session start.
   `scripts/sync-to-dsh.ps1` renders the always-apply rules into `$DSH_HOME/AGENTS.md` and links the skills into
