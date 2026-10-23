@@ -17,8 +17,8 @@ from harness.storage import (
     utc_now,
 )
 
-DEFAULT_AFTER_ACTIONS = 3
-DEFAULT_AFTER_SECONDS = 3600.0
+DEFAULT_AFTER_ACTIONS = 0
+DEFAULT_AFTER_SECONDS = 0.0
 
 
 def settings(config: dict[str, Any]) -> dict[str, Any]:
@@ -26,28 +26,27 @@ def settings(config: dict[str, Any]) -> dict[str, Any]:
     return {
         "after_actions": int(value.get("after_actions", DEFAULT_AFTER_ACTIONS)),
         "after_seconds": float(value.get("after_seconds", DEFAULT_AFTER_SECONDS)),
-        "on_failure": bool(value.get("on_failure", True)),
     }
 
 
 def goal_review_reason(
     config: dict[str, Any],
     state: dict[str, Any],
-    result: dict[str, Any],
 ) -> str | None:
+    if state.get("phase") not in {Phase.READY.value, Phase.FAILED.value}:
+        return None
     policy = settings(config)
-    if policy["on_failure"] and result["outcome"] in {
-        "fail",
-        "timeout",
-        "error",
-        "reject",
-    }:
-        return f"goal_review_due: {result['outcome']}"
-    if int(state.get("actions_since_goal_review", 0)) >= policy["after_actions"]:
+    if (
+        policy["after_actions"] > 0
+        and int(state.get("actions_since_goal_review", 0))
+        >= policy["after_actions"]
+    ):
         return (
             "goal_review_due: "
             f"{state['actions_since_goal_review']} actions since review"
         )
+    if policy["after_seconds"] <= 0:
+        return None
     last = state.get("last_goal_review_at") or state.get("created_at")
     try:
         elapsed = (

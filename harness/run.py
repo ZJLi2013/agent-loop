@@ -79,12 +79,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_MAX_JOURNAL_ENTRIES,
     )
-    init.add_argument("--goal-review-actions", type=int, default=3)
-    init.add_argument("--goal-review-minutes", type=float, default=60.0)
     init.add_argument(
-        "--no-goal-review-on-failure",
-        action="store_false",
-        dest="goal_review_on_failure",
+        "--goal-review-actions",
+        type=int,
+        default=0,
+        help="pause for Goal Review after N actions; 0 disables it (default)",
+    )
+    init.add_argument(
+        "--goal-review-minutes",
+        type=float,
+        default=0.0,
+        help="pause for Goal Review after N minutes; 0 disables it (default)",
     )
     init.add_argument("--expect-regex")
     init.add_argument("--forbid-regex")
@@ -166,7 +171,6 @@ def main(argv: list[str] | None = None) -> int:
                 max_journal_entries=args.max_journal_entries,
                 goal_review_after_actions=args.goal_review_actions,
                 goal_review_after_seconds=args.goal_review_minutes * 60,
-                goal_review_on_failure=args.goal_review_on_failure,
                 expect_regex=args.expect_regex,
                 forbid_regex=args.forbid_regex,
                 owner=_session_id(),
