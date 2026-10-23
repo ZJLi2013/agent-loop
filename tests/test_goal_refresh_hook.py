@@ -47,17 +47,33 @@ class GoalRefreshHookTest(unittest.TestCase):
                 session_scope, "_SCOPES", root / "session-cache"
             ):
                 session_scope.bind(payload)
-                count = HOOK.request_for(
-                    {
-                        "conversation_id": "active",
-                        "workspace_roots": [str(root)],
-                    }
+                output = json.loads(
+                    HOOK.output_for(
+                        json.dumps(
+                            {
+                                "conversation_id": "active",
+                                "workspace_roots": [str(root)],
+                                "context_window_size": 300_000,
+                            }
+                        )
+                    )
                 )
                 request = pause_request(root)
 
-        self.assertEqual(count, 1)
         self.assertEqual(request["kind"], "goal_review")
         self.assertIn("context compacted", request["reason"])
+        self.assertIn("paused the Harness runner", output["user_message"])
+        self.assertIn("larger-context model", output["user_message"])
+
+    def test_large_context_only_reports_pause(self) -> None:
+        payload = json.dumps(
+            {"context_window_size": HOOK.LARGE_CONTEXT_WINDOW}
+        )
+        with patch.object(HOOK, "request_for", return_value=1):
+            output = json.loads(HOOK.output_for(payload))
+
+        self.assertIn("paused the Harness runner", output["user_message"])
+        self.assertNotIn("larger-context model", output["user_message"])
 
     def test_compact_leaves_other_sessions_task_alone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -83,12 +99,20 @@ class GoalRefreshHookTest(unittest.TestCase):
                 session_scope, "_SCOPES", root / "session-cache"
             ):
                 session_scope.bind(payload)
-                count = HOOK.request_for(
-                    {"conversation_id": "B", "workspace_roots": [str(root)]}
+                output = json.loads(
+                    HOOK.output_for(
+                        json.dumps(
+                            {
+                                "conversation_id": "B",
+                                "workspace_roots": [str(root)],
+                                "context_window_size": 300_000,
+                            }
+                        )
+                    )
                 )
                 request = pause_request(root)
 
-        self.assertEqual(count, 0)
+        self.assertEqual(output, {})
         self.assertIsNone(request)
 
 
