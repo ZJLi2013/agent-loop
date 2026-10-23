@@ -10,6 +10,7 @@ ARCHIVE_DIR = "archive"
 TASK_ARCHIVE = "tasks.md"
 CLOSED_MARKERS = ("✅ done", "❌ dropped")
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
+_FENCE = re.compile(r"^ {0,3}(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
 
 
 def _cells(line: str) -> list[str] | None:
@@ -169,21 +170,64 @@ def _retarget(text: str, base: Path, plan: Path, archive: Path, moved: set[str])
     return _rewrite(text, change)
 
 
+def _structural_lines(lines: list[str]) -> list[bool]:
+    structural = []
+    marker: str | None = None
+    minimum = 0
+    for line in lines:
+        if marker is not None:
+            structural.append(False)
+            stripped = line.lstrip(" ")
+            indent = len(line) - len(stripped)
+            candidate = stripped.rstrip(" \t")
+            if (
+                indent <= 3
+                and len(candidate) >= minimum
+                and set(candidate) == {marker}
+            ):
+                marker = None
+            continue
+
+        match = _FENCE.match(line)
+        if match and not (
+            match.group("marker").startswith("`")
+            and "`" in match.group("info")
+        ):
+            structural.append(False)
+            marker = match.group("marker")[0]
+            minimum = len(match.group("marker"))
+        else:
+            structural.append(True)
+    return structural
+
+
 def _task_sections(lines: list[str], task_id: str) -> list[tuple[int, int]]:
     spans = []
+    structural = _structural_lines(lines)
     for index, line in enumerate(lines):
+        if not structural[index]:
+            continue
         match = _HEADING.match(line)
         if not match or re.split(r"[\s:：]", match.group(2).strip(), maxsplit=1)[0] != task_id:
             continue
-        start = index - 1 if index and _ANCHOR_LINE.match(lines[index - 1]) else index
+        start = (
+            index - 1
+            if index
+            and structural[index - 1]
+            and _ANCHOR_LINE.match(lines[index - 1])
+            else index
+        )
         end = next(
             (
                 later
                 for later in range(index + 1, len(lines))
-                if _ANCHOR_LINE.match(lines[later])
-                or (
-                    (heading := _HEADING.match(lines[later]))
-                    and len(heading.group(1)) <= len(match.group(1))
+                if structural[later]
+                and (
+                    _ANCHOR_LINE.match(lines[later])
+                    or (
+                        (heading := _HEADING.match(lines[later]))
+                        and len(heading.group(1)) <= len(match.group(1))
+                    )
                 )
             ),
             len(lines),
