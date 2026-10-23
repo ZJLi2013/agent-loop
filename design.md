@@ -127,11 +127,13 @@ CLOSE self-audit 是 `experiment-design` 的 Policy 步骤，不增加状态：w
 
 ### Goal attention refresh
 
-Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profile 在这些事件后要求 refresh：
+Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profile 不按时间、动作数或失败暂停；
+项目确实需要固定 attention refresh 时，可显式配置：
 
-- 距上次 review 已完成 3 次 runner action；
-- 距上次 review 超过 60 分钟；
-- 长命令结束、verify fail、evidence stale。
+- 距上次 review 已完成 N 次 runner action；
+- 距上次 review 超过 N 分钟。
+
+失败归 `when-to-stop` 的诊断、自修与停机分流；evidence stale 保持 `FAILED` 并直接要求重新运行 locked verifier。
 
 下一动作开始前，Policy 必须落盘四项：当前 Goal、新 evidence、下一动作为何推进 Goal、
 `continue / replan / stop`。`continue` 更新 review 计数并 resume；`replan` 进入现有 revision /

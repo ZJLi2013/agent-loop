@@ -81,7 +81,6 @@ def initialize(
     max_journal_entries: int = DEFAULT_MAX_JOURNAL_ENTRIES,
     goal_review_after_actions: int = DEFAULT_AFTER_ACTIONS,
     goal_review_after_seconds: float = DEFAULT_AFTER_SECONDS,
-    goal_review_on_failure: bool = True,
     expect_regex: str | None = None,
     forbid_regex: str | None = None,
     owner: str | None = None,
@@ -106,10 +105,10 @@ def initialize(
         max_output_bytes,
         max_artifacts,
         max_journal_entries,
-        goal_review_after_actions,
-        goal_review_after_seconds,
     ) <= 0:
         raise HarnessError("timeouts, budgets, and limits must be positive")
+    if goal_review_after_actions < 0 or goal_review_after_seconds < 0:
+        raise HarnessError("Goal Review action and time thresholds cannot be negative")
 
     root = root.resolve()
     base = harness_dir(root)
@@ -208,7 +207,6 @@ def initialize(
         "goal_review": {
             "after_actions": int(goal_review_after_actions),
             "after_seconds": float(goal_review_after_seconds),
-            "on_failure": bool(goal_review_on_failure),
         },
         "reviewer": reviewer,
         "pager": load_pager(root),
@@ -356,21 +354,19 @@ def run_command(
             raise HarnessError(
                 f"reviewer chose {review['decision']}; execution remains blocked"
             )
-        attention_reason = goal_review_reason(
-            config, state, {"outcome": "pass"}
-        )
-        if attention_reason:
-            schedule_goal_review(root, attention_reason)
-            _transition(state, Event.PAUSE_REQUESTED)
-            state["updated_at"] = utc_now()
-            atomic_write_json(harness_dir(root) / STATE_FILE, state)
-            raise HarnessError(f"runner is paused: {attention_reason}")
         if _budget_exhausted(config, state):
             if state.get("phase") != Phase.STOPPED.value:
                 _transition(state, Event.BUDGET_EXHAUSTED)
                 state["updated_at"] = utc_now()
                 atomic_write_json(harness_dir(root) / STATE_FILE, state)
             raise HarnessError("execution budget exhausted")
+        attention_reason = goal_review_reason(config, state)
+        if attention_reason:
+            schedule_goal_review(root, attention_reason)
+            _transition(state, Event.PAUSE_REQUESTED)
+            state["updated_at"] = utc_now()
+            atomic_write_json(harness_dir(root) / STATE_FILE, state)
+            raise HarnessError(f"runner is paused: {attention_reason}")
 
         requested = (
             float(timeout_seconds)
@@ -474,7 +470,7 @@ def run_command(
                 state.get("phase") != Phase.STOPPED.value
                 and not reviewer_boundary
             ):
-                attention_reason = goal_review_reason(config, state, result)
+                attention_reason = goal_review_reason(config, state)
                 if attention_reason:
                     schedule_goal_review(root, attention_reason)
                     _transition(state, Event.PAUSE_REQUESTED)
@@ -643,6 +639,8 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             return page_followup(root, config, state)
 
         phase = Phase(str(state["phase"]))
+        runner = Path(__file__).with_name("run.py")
+        verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
         reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
             "last_run_id"
         )
@@ -673,28 +671,13 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
                     root, config, state, state_path
                 ) or page_followup(root, config, state)
             _transition(state, Event.EVIDENCE_STALE)
-            schedule_goal_review(root, "goal_review_due: evidence stale")
-            _transition(state, Event.PAUSE_REQUESTED)
             state["verified_fingerprint"] = None
             state["last_outcome"] = "stale"
             state["updated_at"] = utc_now()
             atomic_write_json(state_path, state)
             return (
                 f"Harness verification for {state['task_id']} is stale because the "
-                "workspace changed. Complete Goal Review before rerunning verifier."
-            )
-
-        attention_reason = goal_review_reason(
-            config, state, {"outcome": "pass"}
-        )
-        if attention_reason:
-            schedule_goal_review(root, attention_reason)
-            _transition(state, Event.PAUSE_REQUESTED)
-            state["updated_at"] = utc_now()
-            atomic_write_json(state_path, state)
-            return (
-                f"Harness paused {state['task_id']} for Goal Review: "
-                f"{attention_reason}. Use work-planning before continuing."
+                f"workspace changed. Run the locked verifier again: {verify_command}"
             )
 
         if phase == Phase.STOPPED:
@@ -709,12 +692,21 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
                 "and the first command for returning to the main path, then stop."
             )
 
+        attention_reason = goal_review_reason(config, state)
+        if attention_reason:
+            schedule_goal_review(root, attention_reason)
+            _transition(state, Event.PAUSE_REQUESTED)
+            state["updated_at"] = utc_now()
+            atomic_write_json(state_path, state)
+            return (
+                f"Harness paused {state['task_id']} for Goal Review: "
+                f"{attention_reason}. Use work-planning before continuing."
+            )
+
         remaining_attempts = int(config["budget"]["max_attempts"]) - int(
             state["verify_attempts"]
         )
         remaining_wall = max(0.0, _remaining_wall(config, state))
-        runner = Path(__file__).with_name("run.py")
-        verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
         if phase in {Phase.RUNNING, Phase.VERIFYING}:
             return _in_progress(state)
         return (

@@ -68,8 +68,8 @@ Plan Review: proposed
 
 ## Goal Review
 
-Harness 因 action count、elapsed time、长命令结束、失败或 evidence stale
-触发 `goal_review_due` 时，先回答并落盘：
+项目显式配置 action count 或 elapsed time attention、并触发 `goal_review_due` 时，先回答并落盘。
+失败归 `when-to-stop`，evidence stale 直接重新验证，都不先做 Goal Review：
 
 1. 当前 Goal 是什么；
 2. 新 evidence 改变了什么；
