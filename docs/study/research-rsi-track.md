@@ -88,7 +88,7 @@ AI Scientist-v2 到 Agent Laboratory 五行的机制细节见 [决定表](explor
 | `fullTextRetrieved` 门槛 | 外部调研标注读取层级 | 采用为文档约定（本文「读取」列），零代码 |
 | reviewer 只读、不决定成败 | task reviewer 决定 `continue / ask_human / stop` | 不采用，边界决策正是本库 reviewer 的职责，见 [worker / reviewer](planning-review/multi_agent.md) |
 | 同参调用 10 / 20 次 | 研究地图「同类重复动作超过 3 次即停」；`when-to-stop` 要求重试换做法 | Policy 层已有；runner 层不加计数，没有复现过的失败 |
-| `run_contract` 不被摘要 | plan Goal 与 `task.md` 常驻；preCompact 触发 Goal Review | 已有 |
+| `run_contract` 不被摘要 | plan Goal 与 `task.md` 常驻；首次小窗口 preCompact 只提示换 1M context | 已有 |
 | skill 提议 → 授权 → 新版本 | lessons `[x3]` 由人晋升进 rules | 同一边界；版本与冲突由 git 承担 |
 | Idea Tree 的模型打分 | 决定表「不用 LLM 打分当实时信号」 | 一致 |
 

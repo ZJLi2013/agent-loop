@@ -27,7 +27,7 @@ SPEC.loader.exec_module(HOOK)
 
 
 class GoalRefreshHookTest(unittest.TestCase):
-    def test_pre_compact_requests_goal_review(self) -> None:
+    def test_first_small_context_compaction_notifies_without_pausing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             initialize(
@@ -47,19 +47,50 @@ class GoalRefreshHookTest(unittest.TestCase):
                 session_scope, "_SCOPES", root / "session-cache"
             ):
                 session_scope.bind(payload)
-                count = HOOK.request_for(
-                    {
-                        "conversation_id": "active",
-                        "workspace_roots": [str(root)],
-                    }
+                output = json.loads(
+                    HOOK.output_for(
+                        json.dumps(
+                            {
+                                "conversation_id": "active",
+                                "workspace_roots": [str(root)],
+                                "context_window_size": 300_000,
+                                "is_first_compaction": True,
+                            }
+                        )
+                    )
                 )
                 request = pause_request(root)
 
-        self.assertEqual(count, 1)
-        self.assertEqual(request["kind"], "goal_review")
-        self.assertIn("context compacted", request["reason"])
+        self.assertIsNone(request)
+        self.assertIn("Context compacted at 300,000 tokens", output["user_message"])
+        self.assertIn("cannot switch", output["user_message"])
+        self.assertIn("1M-context model", output["user_message"])
 
-    def test_compact_leaves_other_sessions_task_alone(self) -> None:
+    def test_large_context_does_not_notify_user(self) -> None:
+        payload = json.dumps(
+            {
+                "context_window_size": HOOK.LARGE_CONTEXT_WINDOW,
+                "is_first_compaction": True,
+            }
+        )
+        with patch.object(HOOK, "has_active_harness", return_value=True):
+            output = json.loads(HOOK.output_for(payload))
+
+        self.assertEqual(output, {})
+
+    def test_later_compaction_does_not_notify_user(self) -> None:
+        payload = json.dumps(
+            {
+                "context_window_size": 300_000,
+                "is_first_compaction": False,
+            }
+        )
+        with patch.object(HOOK, "has_active_harness", return_value=True):
+            output = json.loads(HOOK.output_for(payload))
+
+        self.assertEqual(output, {})
+
+    def test_compact_leaves_other_sessions_alone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             initialize(
@@ -83,12 +114,21 @@ class GoalRefreshHookTest(unittest.TestCase):
                 session_scope, "_SCOPES", root / "session-cache"
             ):
                 session_scope.bind(payload)
-                count = HOOK.request_for(
-                    {"conversation_id": "B", "workspace_roots": [str(root)]}
+                output = json.loads(
+                    HOOK.output_for(
+                        json.dumps(
+                            {
+                                "conversation_id": "B",
+                                "workspace_roots": [str(root)],
+                                "context_window_size": 300_000,
+                                "is_first_compaction": True,
+                            }
+                        )
+                    )
                 )
                 request = pause_request(root)
 
-        self.assertEqual(count, 0)
+        self.assertEqual(output, {})
         self.assertIsNone(request)
 
 
