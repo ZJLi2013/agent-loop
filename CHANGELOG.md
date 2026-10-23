@@ -55,6 +55,9 @@ invoke on-demand skills.
 
 ### Changed
 
+- A change made only to test a hypothesis stays in the experiment kit (flag, monkeypatch or scratch entry point)
+  without a PR until the result is positive; a positive result reaches product code as its own task and PR, and the
+  plan reviewer flags checkpoints that require merging the code under test.
 - Goal attention no longer pauses on failures or stale evidence, and action/time pauses are opt-in. Stale evidence
   keeps the task failed and points directly to the locked verifier.
 - Cursor's first `preCompact` hook event tells the user when a context window below one million tokens compacts
