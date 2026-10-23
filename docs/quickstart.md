@@ -35,7 +35,8 @@ agent-loop-harness verify
 ```
 
 The first `verify` intentionally exits **1**. `average([1, 2])` returns `1` instead of `1.5`.
-The JSON result reports `outcome: fail`; failure also requests a Goal Review before another action.
+The JSON result reports `outcome: fail`. The task stays failed and ready for diagnosis and repair; failure does
+not add a separate Goal Review pause.
 The `-B` flag avoids bytecode files becoming incidental workspace changes in this small example.
 
 ```sh
@@ -46,13 +47,9 @@ Inspect `.harness/runs.jsonl` and `.harness/artifacts/<run_id>/stderr.log`. The 
 because Python's unittest runner writes there. The runtime directory also contains config, state, and the
 verification result; project code and criteria remain in the ordinary project files.
 
-## 3. Record the decision, repair, and verify
+## 3. Repair and verify
 
 The failure supports a small repair without changing the Goal:
-
-```sh
-agent-loop-harness goal-review --decision continue --evidence "Fractional mean test failed; replace integer division and keep the Goal."
-```
 
 Open `average.py`. Change `return sum(values) // len(values)` to `return sum(values) / len(values)`.
 Keep the empty-input check and the tests unchanged. Then:
@@ -89,5 +86,5 @@ python scripts/smoke-install.py
 ```
 
 This builds an sdist and wheel in a temporary directory, installs the wheel into a fresh environment, checks
-imports outside the checkout, runs failure → Goal Review → repair → success → stale evidence → reverification,
-and uninstalls the package. Build dependencies may use the network. It does not call a model or install host hooks.
+imports outside the checkout, runs failure → repair → success → stale evidence → reverification, and uninstalls
+the package. Build dependencies may use the network. It does not call a model or install host hooks.

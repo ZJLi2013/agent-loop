@@ -83,8 +83,8 @@ agent-loop-harness verify
 ```
 
 The first verification **should fail with exit code 1**: the example incorrectly uses integer division for
-an average. Follow the [quickstart](docs/quickstart.md) to inspect the evidence, complete Goal Review,
-fix the implementation, and verify again. No API key, model, Cursor installation, or global hooks are needed.
+an average. Follow the [quickstart](docs/quickstart.md) to inspect the evidence, fix the implementation,
+and verify again. No API key, model, Cursor installation, or global hooks are needed.
 
 These commands use the default branch. Once the release is published, run `git checkout v0.1.0` before
 installing to pin that version. Full host setup is distributed through Git checkout; the Python package

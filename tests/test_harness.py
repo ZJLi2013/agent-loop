@@ -18,6 +18,7 @@ from harness.core import (
     harness_dir,
     initialize,
     load_runtime,
+    pause_request,
     run_command,
     verify,
     workspace_fingerprint,
@@ -178,9 +179,15 @@ class HarnessTest(unittest.TestCase):
         self.assertIsNone(completion_gate(self.root))
 
         (self.root / "changed.py").write_text("changed = True\n")
-        self.assertIn("is stale", completion_gate(self.root) or "")
+        message = completion_gate(self.root) or ""
+        self.assertIn("is stale", message)
+        self.assertIn("verify", message)
         _, state = load_runtime(self.root)
-        self.assertEqual(state["phase"], "paused")
+        self.assertEqual(state["phase"], "failed")
+        self.assertIsNone(pause_request(self.root))
+
+        verify(self.root)
+        self.assertIsNone(completion_gate(self.root))
 
     def test_completion_gate_requests_one_stop_report(self) -> None:
         self.init("raise SystemExit(1)", max_attempts=1)
@@ -196,8 +203,9 @@ class HarnessTest(unittest.TestCase):
 
         self.assertEqual(result["outcome"], "reject")
         self.assertFalse(result["verification_passed"])
-        self.assertEqual(state["phase"], "paused")
+        self.assertEqual(state["phase"], "failed")
         self.assertEqual(state["last_outcome"], "reject")
+        self.assertIsNone(pause_request(self.root))
 
 
 class WorkspaceFingerprintTest(unittest.TestCase):

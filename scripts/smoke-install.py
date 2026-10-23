@@ -33,6 +33,8 @@ def main() -> None:
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     env.pop("PYTHONHOME", None)
+    for name in ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID", "DSH_SESSION_ID"):
+        env.pop(name, None)
     env["PYTHONUTF8"] = "1"
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     with tempfile.TemporaryDirectory(prefix="agent-loop-install-") as directory:
@@ -89,8 +91,6 @@ def main() -> None:
         failed = command("verify", expected=1)
         if failed["result"]["outcome"] != "fail":
             raise RuntimeError("The deliberately broken example did not fail verification")
-        command("goal-review", "--decision", "continue", "--evidence",
-                "Fractional mean test failed; replace integer division and keep the Goal.")
         code = project / "average.py"
         code.write_text(code.read_text().replace(" // ", " / "), encoding="utf-8")
         passed = command("verify")
@@ -109,10 +109,8 @@ def main() -> None:
                        "from pathlib import Path; from harness.core import completion_gate; "
                        "print(completion_gate(Path.cwd()))"], project, env)
         state = command("status")["state"]
-        if state["last_outcome"] != "stale" or state["phase"] != "paused":
+        if state["last_outcome"] != "stale" or state["phase"] != "failed":
             raise RuntimeError(f"Changed workspace was not rejected: {message}")
-        command("goal-review", "--decision", "continue", "--evidence",
-                "Only a comment changed; rerun the same tests before completion.")
         command("verify")
         run([str(python), "-m", "pip", "check"], root, env)
         run([str(python), "-m", "pip", "uninstall", "-y", "agent-loop"], root, env)
