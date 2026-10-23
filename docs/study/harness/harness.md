@@ -48,7 +48,7 @@ CLI 通过 `agent-loop-harness` 调用；每个工作项目的运行状态放在
 - retry 由 agent 诊断后产生不同动作；Harness 只计数并拒绝超预算，不原样自动重跑。
 - task 锁定 plan document 的 `Plan Revision`；review、task `rN` 与 Harness state 不一致时拒绝运行。
 - pause request 不等 state lock，可中断长命令；human correction 要求 revision 递增后才能 resume。
-- action count、elapsed time、失败、evidence stale 与 preCompact 共用 pause gate 触发 Goal Review。
+- action count、elapsed time、失败与 evidence stale 共用 pause gate 触发 Goal Review。
 - stdout/stderr 先脱敏再持久化，单流和 artifact 数量都有硬上限；memory 只引用 run id，不复制日志。
 - checkpoint 使用 git，不在 `.harness/checkpoints/` 复制工作树。
 
@@ -62,7 +62,7 @@ CLI 通过 `agent-loop-harness` 调用；每个工作项目的运行状态放在
 - config 锁定、输出契约拒绝 exit-0 假通过；
 - 未验证续跑、验证后改码失效、预算耗尽只要求一次 Auto-Stop Report。
 - proposed plan 自动暂停、运行中 pause、revision / review / task `rN` 一致后 resume。
-- Goal Review 的 action / time / failure 触发，以及 continue / replan / stop 与 preCompact adapter。
+- Goal Review 的 action / time / failure 触发及 continue / replan / stop；preCompact adapter 只做一次性提示。
 
 [`protocol.py`](../../../harness/protocol.py) 定义状态机；storage / runner / journal / plan 各持一个职责，
 [`core.py`](../../../harness/core.py) 只做 orchestration 与兼容 façade。[`adapters/core.py`](../../../adapters/core.py)

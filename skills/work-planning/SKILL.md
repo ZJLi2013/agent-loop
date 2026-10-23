@@ -68,7 +68,7 @@ Plan Review: proposed
 
 ## Goal Review
 
-Harness 因 action count、elapsed time、长命令结束、失败、evidence stale 或 context compact
+Harness 因 action count、elapsed time、长命令结束、失败或 evidence stale
 触发 `goal_review_due` 时，先回答并落盘：
 
 1. 当前 Goal 是什么；

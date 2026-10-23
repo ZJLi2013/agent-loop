@@ -27,7 +27,7 @@ SPEC.loader.exec_module(HOOK)
 
 
 class GoalRefreshHookTest(unittest.TestCase):
-    def test_pre_compact_requests_goal_review(self) -> None:
+    def test_first_small_context_compaction_notifies_without_pausing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             initialize(
@@ -61,9 +61,8 @@ class GoalRefreshHookTest(unittest.TestCase):
                 )
                 request = pause_request(root)
 
-        self.assertEqual(request["kind"], "goal_review")
-        self.assertIn("context compacted", request["reason"])
-        self.assertIn("automatic Goal Review", output["user_message"])
+        self.assertIsNone(request)
+        self.assertIn("Context compacted at 300,000 tokens", output["user_message"])
         self.assertIn("cannot switch", output["user_message"])
         self.assertIn("1M-context model", output["user_message"])
 
@@ -74,7 +73,7 @@ class GoalRefreshHookTest(unittest.TestCase):
                 "is_first_compaction": True,
             }
         )
-        with patch.object(HOOK, "request_for", return_value=1):
+        with patch.object(HOOK, "has_active_harness", return_value=True):
             output = json.loads(HOOK.output_for(payload))
 
         self.assertEqual(output, {})
@@ -86,12 +85,12 @@ class GoalRefreshHookTest(unittest.TestCase):
                 "is_first_compaction": False,
             }
         )
-        with patch.object(HOOK, "request_for", return_value=1):
+        with patch.object(HOOK, "has_active_harness", return_value=True):
             output = json.loads(HOOK.output_for(payload))
 
         self.assertEqual(output, {})
 
-    def test_compact_leaves_other_sessions_task_alone(self) -> None:
+    def test_compact_leaves_other_sessions_alone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             initialize(

@@ -131,8 +131,7 @@ Goal Review 是 PAUSED 的一种 reason，不新增 Kernel state。默认 profil
 
 - 距上次 review 已完成 3 次 runner action；
 - 距上次 review 超过 60 分钟；
-- 长命令结束、verify fail、evidence stale；
-- adapter `COMPACT` 事件。
+- 长命令结束、verify fail、evidence stale。
 
 下一动作开始前，Policy 必须落盘四项：当前 Goal、新 evidence、下一动作为何推进 Goal、
 `continue / replan / stop`。`continue` 更新 review 计数并 resume；`replan` 进入现有 revision /
@@ -140,7 +139,7 @@ review / RECONCILE；`stop` 进入 Auto-Stop。单条命令执行期间没有模
 反思发生在安全轮询点或命令结束后。命令与 reviewer 运行期间不持状态锁：`running` / `verifying` 加 run id 与 runner pid、
 `review_running`、`plan-review/running.json` 表示占用，status、pause 与 gate 照常可用，第二次运行被拒；锁只包住状态的读写。抢锁失败时等几秒，再报出持有者的 pid、命令与启动时间；持有者已不在时给出删锁命令，
 Harness 不自动回收。占用标记的进程已不在时，exec / verify / gate 把那次运行记为 `aborted`（argv 与启动时间取自
-`artifacts/<run_id>/start.json`），提示先查输出再重跑，下一次照常执行；reviewer 的标记直接清掉。已验证的 task 不触发 timer 与 `COMPACT`：它的下一步属于 reviewer 或 human。
+`artifacts/<run_id>/start.json`），提示先查输出再重跑，下一次照常执行；reviewer 的标记直接清掉。已验证的 task 不触发 timer：它的下一步属于 reviewer 或 human。
 
 ### Independent review boundaries
 
@@ -206,13 +205,14 @@ human 纠偏 = `pause --require-revision`，worker 按 `work-planning` 改 plan 
 native event → platform codec → HookRequest → adapter core → HookResponse → platform codec
 ```
 
-`HookRequest` 只使用 `TOOL_USED / COMPACT / STOP` 与 workspace、tool、status、session；
+`HookRequest` 只使用 `TOOL_USED / COMPACT / STOP` 与 workspace、tool、status、session；`COMPACT`
+保留为无副作用的兼容事件，Cursor preCompact 提示由平台 codec 直接处理。
 `HookResponse` 只使用 `ALLOW / CONTEXT / CONTINUE`。新增平台只实现两端 codec 和安装配置，
 不在共享 core 中增加平台分支。自己的 driver 可以直接发送内部 request，不需要 codec。
 
 CLI `init` 把会话 id（依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID`）记为 task 的 `owner`。
-gate 与 `COMPACT` 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
-没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 `COMPACT` 遍历这些项目，
+gate 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
+没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 preCompact 只检查这些项目，
 不扫描 workspace 里的其它项目；dsh 会话只看 payload `cwd` 这一个项目，与 CLI 默认 `--root` 一致。
 同一会话同一条 followup 只发一次（`adapters/followup.py`），因为 dsh 桥接的 `stop_hook_active` 恒为 false。
 
@@ -222,7 +222,7 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | 宿主 | worker | reviewer | 缺口 |
 |---|---|---|---|
 | Cursor | enforced（`adapters/cursor/`） | — | — |
-| dsh（经 `dsh-hooks-codex` 桥接） | enforced（`adapters/dsh/`） | `reviewer.json` 可指向 dsh headless | 无 `COMPACT`：Goal Review 靠 action / 时间 / 失败触发；memory 只在 `SessionStart` 注入 |
+| dsh（经 `dsh-hooks-codex` 桥接） | enforced（`adapters/dsh/`） | `reviewer.json` 可指向 dsh headless | memory 只在 `SessionStart` 注入 |
 | Codex CLI | portable | 当前默认 reviewer | — |
 
 | Adapter | 职责 |

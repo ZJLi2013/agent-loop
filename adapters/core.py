@@ -7,7 +7,6 @@ from typing import Any
 
 from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
 from harness.core import HarnessError, completion_gate, owned_by_other
-from harness.plan import request_pause
 from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file
 from harness.protocol import Phase
 from harness.storage import STATE_FILE, harness_dir, read_json
@@ -137,26 +136,19 @@ def memory_context(task_path: Path) -> str | None:
     return "\n\n".join(parts)
 
 
-def request_goal_review(
+def has_active_harness(
     roots: tuple[Path, ...], session_id: str | None = None
-) -> int:
-    count = 0
+) -> bool:
     for root in roots:
         try:
             state = read_json(harness_dir(root) / STATE_FILE)
-            if state.get("phase") == Phase.VERIFIED.value or owned_by_other(
+            if state.get("phase") != Phase.VERIFIED.value and not owned_by_other(
                 state, session_id
             ):
-                continue
-            request_pause(
-                root,
-                reason="goal_review_due: context compacted",
-                kind="goal_review",
-            )
-            count += 1
+                return True
         except HarnessError:
             pass
-    return count
+    return False
 
 
 def handle(request: HookRequest) -> HookResponse:
@@ -167,10 +159,6 @@ def handle(request: HookRequest) -> HookResponse:
         context = memory_context(task_path) if task_path else None
         if context:
             return HookResponse(HookAction.CONTEXT, context)
-        return HookResponse()
-
-    if request.event == HookEvent.COMPACT:
-        request_goal_review(request.workspace_roots, request.session_id)
         return HookResponse()
 
     if request.event == HookEvent.STOP and request.status == "completed":
