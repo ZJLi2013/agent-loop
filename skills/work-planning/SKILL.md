@@ -27,8 +27,10 @@ Plan Review: proposed
 ## 当前结论
 <现在为真的判断；设计中就明确写未验证>
 
-## 下一步决策
-<最近动作及为什么>
+## 脉络
+| # | 问题 | 结果 / evidence | 所以 |
+|---|---|---|---|
+<每个关闭的 task、每次 Plan Revision 一行；「所以」写改变的下一条命令，或旧 Goal → 新 Goal 及原因>
 
 ## 系统 / Pipeline
 （确实存在系统路径时才写）
@@ -36,6 +38,10 @@ Plan Review: proposed
 ## Experiment Log
 <单次实验的假设、判据、结果与证据>
 ```
+
+「脉络」是 task 之间、Plan Revision 之间因果的唯一归属，下一步动作就是最后一行的「所以」。
+谁做决定谁当场写：task 边界由 reviewer 写（未配置时由 worker），Goal Review 与 human 纠偏由执行 RECONCILE 的
+agent 写 human 的决定。只追加，写错追加更正行；CLOSE、replan 与 Goal 冻结都不归档、不改写它。
 
 单个实验直接追加到 Experiment Log。只有同一 Goal 下出现多个独立实验、详细日志遮蔽稳定头部、
 或需要并行维护时，才拆 linked `sub-exp/<id>.md`；结论与链接始终回填 plan document。
@@ -76,8 +82,8 @@ Plan Review: proposed
 3. 下一动作为什么推进 Goal；
 4. `continue / replan / stop`。
 
-- `continue`：更新 plan 的当前结论 / 下一步决策，调用 `goal-review --decision continue`；
-- `replan`：调用 `goal-review --decision replan`，`Plan Revision` +1、review 改 proposed，
+- `continue`：更新 plan 的当前结论，调用 `goal-review --decision continue`；
+- `replan`：调用 `goal-review --decision replan`，`Plan Revision` +1、review 改 proposed、脉络追加一行，
   按 Human correction 第 3 步处理旧 task 与旧设计，再走 Human Review Gate；
 - `stop`：记录边界，调用 `goal-review --decision stop`。
 
@@ -86,7 +92,7 @@ Plan Review: proposed
 只问进展时读 task、journal 与 evidence 回答，不自动改 revision。形成 Goal / scope / 优先级修改后：
 
 1. `pause --require-revision --reason "<纠偏>"`；
-2. 更新 plan Goal / 边界，revision +1、review 改 proposed；
+2. 更新 plan Goal / 边界，revision +1、review 改 proposed，脉络追加一行旧 Goal → 新 Goal 及原因；
 3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
    标注集）在 plan 里逐项标 keep / revise / drop，human 提出的按第 1 步处理；旧标注能否作证据见
    `experiment-design` 的验收门。新 task 绑定新 `rN`；
@@ -103,13 +109,13 @@ CLOSE 分两段：
 
 1. **locked verifier 前**：worker 按 `experiment-design` 的 CLOSE self-audit 回读本 task 完整 diff，
    精炼文档并处理临时脚本。
-2. **verifier 通过后**：收口结论、归档已闭合记录；配置 reviewer 时下一步决策仍归 reviewer。
+2. **verifier 通过后**：收口结论、归档已闭合记录；配置 reviewer 时脉络行归 reviewer。
 
 verifier 通过后：
 
-1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」与下一步决策；
+1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」，在脉络追加该 task 一行；
 2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，
-   移到 linked archive，活跃表只留一个 task 级指针；
+   移到 linked archive，由脉络那一行链接；
 3. 通知 `task-state` 归档 closed task 与旧交接快照，通知 `agent-memory` 只保留未来仍会改变选择的
    结论、`disproved / rejected` 与证据指针；
 4. reviewer 决定落盘后（未配置 reviewer 时 verifier 通过后）删除该 task 的 run 目录；
@@ -123,14 +129,14 @@ verifier 通过后：
 - 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
   开支线要 human 批准。
 
-Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界与
+Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界、脉络与
 archive index。sub-exp 不删，但不再默认加载。删除只被本 Goal 文档引用的一次性脚本，判据归
 `experiment-design`；暂停中的 Goal 的脚本等它关闭再处理。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
 
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。
 
-项目配置了 reviewer 时，「更新下一步决策」归 reviewer：锁定 verifier 通过后 Harness 自动运行
+项目配置了 reviewer 时，写脉络行归 reviewer：锁定 verifier 通过后 Harness 自动运行
 `harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。
 标 done、把关闭 task 的标题段移到 plan 同目录的 `<plan>-archive.md`、改写指向它们的链接由 Harness 在
 reviewer 决定落盘后完成，reviewer 与 worker 都不手工搬。

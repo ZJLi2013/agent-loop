@@ -107,7 +107,7 @@ sub-exp 的假设、判据与证据。一个知识点只能有一个 owner；其
 Plan Revision / Plan Review
 Goal
 当前结论
-下一步决策
+脉络（每个关闭的 task、每次 Plan Revision 一行，只追加）
 系统 / Pipeline（确实存在才写）
 Experiment Log
 ```
@@ -116,8 +116,8 @@ Experiment Log
 或需要并行维护时，才拆 linked `sub-exp/<id>.md`；plan document 始终保留结论与链接。
 Harness 参数叫 `plan_doc`，不关心文件名是 feature、exp 还是其它名字。
 
-task CLOSE 时，Experiment Log 的多轮记录合并为一个 task 结论；已收口内容进入 linked archive，
-不继续占用活跃表。Goal CLOSE / pivot 时冻结 plan 为 as-built。sub-exp 不删，但只按 evidence 指针读取；
+task CLOSE 时，Experiment Log 的多轮记录合并为脉络里的一行；已收口内容进入 linked archive，
+不继续占用活跃表。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。Goal CLOSE / pivot 时冻结 plan 为 as-built。sub-exp 不删，但只按 evidence 指针读取；
 run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit。closed task 与旧交接快照同样移出活跃
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 

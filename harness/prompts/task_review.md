@@ -22,8 +22,9 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 1. 核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。
    同时核对实际交给被测方的题目、数据、样本或请求（落盘的产物，不是摘要）与设计一致，且仍在测
    Goal 要测的东西；有上述检查表时逐条对照。
-2. 更新 plan 的当前结论与下一步决策。标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，
-   你不要做。
+2. 更新 plan 的当前结论，并在「脉络」追加 {task_id} 一行：问题、结果与 evidence、所以（改变的下一条命令）。
+   当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写进 `review` 字段。
+   标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，你不要做。
    下一个 task 已在列表里、且设计已审过时，不改写它，也不给它加交接或核验步骤；要新 task 时（取自
    `task.md` 的 Candidates 就删掉那一行），写好一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
    失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。新 task 的 `rev` 沿用当前 plan revision。
