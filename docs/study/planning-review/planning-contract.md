@@ -16,7 +16,7 @@ Plan Review: approved
 human 纠偏必须先更新 plan Goal，再原子地重排 `task.md`。`experiment-design` 只在 plan Goal
 存在且 task 获批后进入；一次性 diagnostic 的 plan 可以就是实验记录。Plan Revision 与运行时
 pause gate 已落地：pause 可中断 runner，plan review、task `rN` 与 runtime revision 一致后
-才能 resume。Goal、当前结论、下一步决策与 Experiment Log 统一在 plan document；action /
+才能 resume。Goal、当前结论、脉络与 Experiment Log 统一在 plan document；action /
 elapsed 只在项目显式配置时触发 Goal Review；failure / stale 走各自直接出口，详细实验按需拆 linked sub-exp。
 
 ## Pipeline
@@ -24,7 +24,7 @@ elapsed 只在项目显式配置时触发 Goal Review；failure / stale 走各�
 ```text
 Goal
   ↓
-plan document（Goal / 当前结论 / 下一步决策 / Experiment Log）
+plan document（Goal / 当前结论 / 脉络 / Experiment Log）
   ↓
 task.md：📝 proposed
   ↓

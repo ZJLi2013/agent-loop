@@ -66,7 +66,7 @@ superseded by ...` 表示决策状态。旧决定仍可追溯，但当前索引�
 ## 适合 agent-loop 的模型
 
 ```text
-当前结论 + 下一步决策                    ← 每轮可能加载
+当前结论 + 脉络                          ← 每轮可能加载
         │ promote / supersede
 active Experiment Log（只放未闭合决策）  ← 当前 task 使用
         │ task CLOSE
@@ -99,9 +99,9 @@ sub-exp                                  ← 不可变证据，不自动加载
 `work-planning` 负责跨轮 consolidation：
 
 1. 把该 task 的多个 experiment 合并成一个 task 结论；
-2. 更新「当前结论」与下一步决策；
+2. 更新「当前结论」，在脉络追加该 task 一行（结果与改变的下一条命令）；
 3. 将相关实验标记为 `promoted / superseded / archived`；
-4. 把详细行移出 active Experiment Log，只留一个 archive 指针；
+4. 把详细行移出 active Experiment Log，由脉络那一行链接 archive；
 5. 通知 `agent-memory` 写入仍会影响未来决策的结论或否决项。
 
 ### Goal CLOSE 或 pivot

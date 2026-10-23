@@ -55,6 +55,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- The plan document keeps one append-only `## 脉络` table, one row per closed task and per `Plan Revision`, saying
+  which next command or Goal change each step caused. Whoever makes the decision writes the row; CLOSE, replan and
+  Goal freeze keep it. It replaces the `下一步决策` section and the task pointer rows in the Experiment Log, and the
+  task reviewer puts its caveats in the `review` field instead of 「当前结论」.
 - A change made only to test a hypothesis stays in the experiment kit (flag, monkeypatch or scratch entry point)
   without a PR until the result is positive; a positive result reaches product code as its own task and PR, and the
   plan reviewer flags checkpoints that require merging the code under test.

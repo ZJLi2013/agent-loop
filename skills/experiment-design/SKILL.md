@@ -179,10 +179,10 @@ Next Step」写回；locked verifier 必须看到精炼后的最终 workspace。
 ### Phase 4 — Experiment Log 与归档
 
 plan document 的 Experiment Log 每轮维护一行摘要：
-`| Exp | 假设 | 状态 | 关键结果 | 结论 / evidence |`。
+`| Exp | 假设 | 状态 | 关键结果 | 所以 / evidence |`，「所以」写这轮改变的下一条命令，没改变写「零信息」。
 
 状态只用 `active / promoted / superseded by Exp-X / rejected / archived`。单轮结束时更新这一行；
-task CLOSE 时由 `work-planning` 把多轮合并为一个 task 结论并移出活跃表。sub-exp 保持不可变，
+task CLOSE 时由 `work-planning` 把多轮合并为脉络里的一行并移出活跃表。sub-exp 保持不可变，
 archive 只保存指针，不复制输出；run 目录在 task CLOSE 时删除，由文档里的逐 run 表与复现参数替代。
 
 `rejected` 只用于结果会阻止未来重试的否定发现；环境错误与被后续实验覆盖的读数（`superseded`）

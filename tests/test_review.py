@@ -277,7 +277,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("Suggest: state snapshot not saved", completion_gate(self.root) or "")
 
 CONTINUE = {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
-PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 下一步决策\nt2\n"
+PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 脉络\nt2\n"
 PLAN_WITH_T1 = (
     PLAN_HEAD
     + '\n<a id="t1-design"></a>\n### t1 本地设计\ninput\n### t1 boundary review\nok\n'
@@ -509,7 +509,7 @@ class MainlineHandoffTest(unittest.TestCase):
 
 CLOSE_PLAN = (
     "# Plan\n\nPlan Revision: 1\nPlan Review: approved\n\n"
-    "## 下一步决策\n见 [t1 设计](#t1-design)。\n\n"
+    "## 脉络\n| t1 | 甲 | [t1 设计](#t1-design) | 做 t2 |\n\n"
     '<a id="t1-design"></a>\n### t1 本地设计\n输入见 [t2 设计](#t2-design)。\n\n'
     '<a id="t2-design"></a>\n### t2 本地设计\nnext\n'
 )
@@ -557,7 +557,7 @@ class CloseTaskTest(unittest.TestCase):
         other = (self.runtime / "sub-exp" / "x.md").read_text(encoding="utf-8")
         self.assertIn("| t1 | r1 | 甲 | [设计](../plan-archive.md#t1-design)；通过 | ✅ done |", rows)
         self.assertNotIn("### t1 本地设计", plan)
-        self.assertIn("见 [t1 设计](plan-archive.md#t1-design)。", plan)
+        self.assertIn("## 脉络\n| t1 | 甲 | [t1 设计](plan-archive.md#t1-design) | 做 t2 |", plan)
         self.assertIn("t1 的设计、结果与 review 依据见 [归档](plan-archive.md#t1-design)。", plan)
         self.assertIn("输入见 [t2 设计](plan.md#t2-design)。", archive)
         self.assertIn("### t1 boundary review\n\nreviewed ok", archive)
