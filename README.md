@@ -79,7 +79,7 @@ agent-loop-harness verify
 ```
 
 第一次验证**预期失败，退出码为 1**：示例把平均值错误地做了整数除法。完整的
-[快速开始](docs/quickstart.md) 会带你检查证据、完成 Goal Review、修复代码并重新验证。
+[快速开始](docs/quickstart.md) 会带你检查证据、修复代码并重新验证。
 示例无需 API key、模型或 Cursor，也不会安装全局 hooks。
 
 这段命令跟随默认分支；已有 release 时，安装前可 `git checkout v0.1.0` 固定对应版本。

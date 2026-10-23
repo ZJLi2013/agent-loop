@@ -83,6 +83,7 @@ class HarnessStopHookTest(unittest.TestCase):
             root,
             task_id="t1",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
+            goal_review_after_seconds=1,
         )
         state_path = root / ".harness" / "state.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))

@@ -47,6 +47,31 @@ class AttentionRefreshTest(unittest.TestCase):
             kind="exec",
         )
 
+    def test_defaults_do_not_pause_for_actions_time_or_failure(self) -> None:
+        self.init()
+        state_path = self.root / ".harness" / "state.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["last_goal_review_at"] = "2000-01-01T00:00:00+00:00"
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+        for _ in range(3):
+            self.run_pass()
+        result = run_command(
+            self.root,
+            [sys.executable, "-S", "-c", "raise SystemExit(1)"],
+            kind="exec",
+        )
+        _, state = load_runtime(self.root)
+
+        self.assertEqual(result["outcome"], "fail")
+        self.assertEqual(state["phase"], "failed")
+        self.assertIsNone(pause_request(self.root))
+        self.assertNotIn("Goal Review", completion_gate(self.root) or "")
+
+    def test_negative_attention_threshold_is_rejected(self) -> None:
+        with self.assertRaisesRegex(HarnessError, "cannot be negative"):
+            self.init(goal_review_after_actions=-1)
+
     def test_action_count_pauses_until_goal_review_continues(self) -> None:
         self.init(goal_review_after_actions=2)
         self.run_pass()
@@ -66,6 +91,27 @@ class AttentionRefreshTest(unittest.TestCase):
         )
         self.assertEqual(state["phase"], "ready")
         self.assertEqual(state["actions_since_goal_review"], 0)
+        self.assertIsNone(pause_request(self.root))
+
+    def test_elapsed_time_can_be_enabled_explicitly(self) -> None:
+        self.init(goal_review_after_seconds=1)
+        state_path = self.root / ".harness" / "state.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["last_goal_review_at"] = "2000-01-01T00:00:00+00:00"
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+        self.assertIn("Goal Review", completion_gate(self.root) or "")
+        self.assertEqual(pause_request(self.root)["kind"], "goal_review")
+
+    def test_stopped_task_ignores_opt_in_attention(self) -> None:
+        self.init(goal_review_after_actions=1)
+        state_path = self.root / ".harness" / "state.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["phase"] = "stopped"
+        state["actions_since_goal_review"] = 1
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+        self.assertIn("Auto-Stop Report", completion_gate(self.root) or "")
         self.assertIsNone(pause_request(self.root))
 
     def test_replan_turns_goal_review_into_revision_gate(self) -> None:

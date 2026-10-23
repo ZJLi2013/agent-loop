@@ -85,7 +85,7 @@ dsh 适配器是新加的，实际项目里跑得还少，下面的清单会随�
 - **只管会话工作目录所在的项目。** 在项目根目录启动 dsh；Cursor 会绑定会话里读过 `task.md` 的每个项目，dsh 不会。
 - **hooks 只挂在配置过的 profile 上。** 没挂 `hooks-codex` 的 profile（例如只给 reviewer 用的 `headless`）不受
   completion gate 约束。
-- **没有压缩事件。** Goal Review 只靠动作数、时间与失败触发。
+- **没有压缩事件。** dsh 不会显示 Cursor 的首次小窗口压缩提示；Harness 行为不受影响。
 - **memory 索引只在会话开始时注入一次。** 桥接不传工具调用的文件路径，读 `task.md` 时不会再注入。
 - **`AGENTS.md` 是生成的副本。** rules 改动后要重跑 `sync-to-dsh.ps1`；skills 是链接，跟着仓库变。
 - **hooks 依赖仓库原位。** `hooks.json` 用的是仓库的绝对路径，仓库移动或切到不含 `adapters/dsh/` 的分支后 hooks 失败。
@@ -160,8 +160,9 @@ agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
 ```
 
 把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令与预算。工作经 `agent-loop-harness exec -- <command>` 执行，
-然后运行 `agent-loop-harness verify`。宿主的其他工具调用不在 runner 的硬控制边界之内。默认在 runner 执行 3 个动作、
-60 分钟或失败后触发 Goal Review，相关宿主事件也会触发刷新。`init --help` 列出预算与注意力相关的设置。
+然后运行 `agent-loop-harness verify`。宿主的其他工具调用不在 runner 的硬控制边界之内。失败直接进入诊断与自修，
+evidence stale 直接要求重新验证；默认不按动作数或时间暂停。确需固定 attention refresh 时，用
+`--goal-review-actions N` 或 `--goal-review-minutes N` 显式开启。
 
 ## 可选的独立 reviewer
 
