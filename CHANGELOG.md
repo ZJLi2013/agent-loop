@@ -55,8 +55,8 @@ invoke on-demand skills.
 
 ### Changed
 
-- Cursor's `preCompact` hook tells the user when context compaction pauses the Harness for Goal Review. For
-  context windows below one million tokens, it also suggests a larger-context model to reduce repeated compaction.
+- Cursor's first `preCompact` hook event tells the user when a context window below one million tokens compacts,
+  suggests switching to a 1M-context model, and leaves later Goal Reviews to the agent without repeated messages.
 - `upstream-contribute` looks for the upstream's own agent skills. A PR-writing skill shapes the body and its
   checks run before posting. When the upstream ships a review skill, the PR opens as a draft, the agent runs that
   skill from the upstream default branch, fixes the findings that hold up, answers the ones that do not in the PR

@@ -25,18 +25,23 @@ def output_for(raw: str) -> str:
         payload = json.loads(raw or "{}")
         if isinstance(payload, dict):
             paused = request_for(payload)
-            if paused:
-                message = (
-                    "Context compacted. agent-loop paused the Harness runner "
-                    "for Goal Review before the next action."
+            window = payload.get("context_window_size")
+            if (
+                paused
+                and payload.get("is_first_compaction") is True
+                and isinstance(window, int)
+                and window < LARGE_CONTEXT_WINDOW
+            ):
+                return json.dumps(
+                    {
+                        "user_message": (
+                            "Context compacted. agent-loop requested an automatic "
+                            "Goal Review before the next action. Cursor cannot switch "
+                            f"this {window:,}-token context window automatically; "
+                            "switch to a 1M-context model to reduce repeated compactions."
+                        )
+                    }
                 )
-                window = payload.get("context_window_size")
-                if isinstance(window, int) and window < LARGE_CONTEXT_WINDOW:
-                    message += (
-                        f" This session has a {window:,}-token context window; "
-                        "a larger-context model can reduce repeated compactions."
-                    )
-                return json.dumps({"user_message": message})
     except json.JSONDecodeError:
         pass
     return "{}"

@@ -54,6 +54,7 @@ class GoalRefreshHookTest(unittest.TestCase):
                                 "conversation_id": "active",
                                 "workspace_roots": [str(root)],
                                 "context_window_size": 300_000,
+                                "is_first_compaction": True,
                             }
                         )
                     )
@@ -62,18 +63,33 @@ class GoalRefreshHookTest(unittest.TestCase):
 
         self.assertEqual(request["kind"], "goal_review")
         self.assertIn("context compacted", request["reason"])
-        self.assertIn("paused the Harness runner", output["user_message"])
-        self.assertIn("larger-context model", output["user_message"])
+        self.assertIn("automatic Goal Review", output["user_message"])
+        self.assertIn("cannot switch", output["user_message"])
+        self.assertIn("1M-context model", output["user_message"])
 
-    def test_large_context_only_reports_pause(self) -> None:
+    def test_large_context_does_not_notify_user(self) -> None:
         payload = json.dumps(
-            {"context_window_size": HOOK.LARGE_CONTEXT_WINDOW}
+            {
+                "context_window_size": HOOK.LARGE_CONTEXT_WINDOW,
+                "is_first_compaction": True,
+            }
         )
         with patch.object(HOOK, "request_for", return_value=1):
             output = json.loads(HOOK.output_for(payload))
 
-        self.assertIn("paused the Harness runner", output["user_message"])
-        self.assertNotIn("larger-context model", output["user_message"])
+        self.assertEqual(output, {})
+
+    def test_later_compaction_does_not_notify_user(self) -> None:
+        payload = json.dumps(
+            {
+                "context_window_size": 300_000,
+                "is_first_compaction": False,
+            }
+        )
+        with patch.object(HOOK, "request_for", return_value=1):
+            output = json.loads(HOOK.output_for(payload))
+
+        self.assertEqual(output, {})
 
     def test_compact_leaves_other_sessions_task_alone(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -106,6 +122,7 @@ class GoalRefreshHookTest(unittest.TestCase):
                                 "conversation_id": "B",
                                 "workspace_roots": [str(root)],
                                 "context_window_size": 300_000,
+                                "is_first_compaction": True,
                             }
                         )
                     )
