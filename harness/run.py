@@ -18,6 +18,7 @@ from harness.core import (  # noqa: E402
     DEFAULT_MAX_WALL_SECONDS,
     DEFAULT_TIMEOUT_SECONDS,
     HarnessError,
+    clean_scratch,
     disable,
     initialize,
     load_runtime,
@@ -35,6 +36,7 @@ from harness.plan_review import (  # noqa: E402
     run_plan_review,
 )
 from harness.review import run_review  # noqa: E402
+from harness.scratch import scratch_path, strays  # noqa: E402
 
 
 SESSION_ENV = ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID", "DSH_SESSION_ID")
@@ -149,6 +151,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     goal_review.add_argument("--evidence", required=True)
     commands.add_parser("status", help="print current config and state")
+    commands.add_parser(
+        "clean-task", help="remove the verified task's scratch directory"
+    )
     commands.add_parser("disable", help="stop automatic completion gating")
     return parser
 
@@ -177,7 +182,12 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(
                 json.dumps(
-                    {"config": config, "state": state},
+                    {
+                        "config": config,
+                        "state": state,
+                        "scratch": scratch_path(args.task),
+                        "strays": strays(root, args.task),
+                    },
                     ensure_ascii=False,
                     indent=2,
                 )
@@ -263,12 +273,18 @@ def main(argv: list[str] | None = None) -> int:
                         "config": config,
                         "state": state,
                         "pause": pause_request(root),
+                        "scratch": scratch_path(state["task_id"]),
+                        "strays": strays(root, state["task_id"]),
                     },
                     ensure_ascii=False,
                     indent=2,
                 )
             )
             return 0
+        if args.action == "clean-task":
+            outcome = clean_scratch(root)
+            print(json.dumps(outcome, ensure_ascii=False, indent=2))
+            return 1 if outcome["error"] else 0
         state = disable(root)
         print(json.dumps(state, ensure_ascii=False, indent=2))
         return 0

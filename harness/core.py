@@ -38,6 +38,7 @@ from harness.protocol import Event, Phase, TransitionError, apply_event
 from harness.records import active_task_status, mainline_handoff
 from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
+from harness.scratch import clean_task, scratch_path, task_dir
 from harness.storage import (
     CONFIG_FILE,
     HARNESS_DIR,
@@ -112,6 +113,7 @@ def initialize(
 
     root = root.resolve()
     base = harness_dir(root)
+    scratch = task_dir(root, task_id)
     reviewer = load_reviewer(root)
     state_path = base / STATE_FILE
     if state_path.exists():
@@ -239,6 +241,7 @@ def initialize(
     atomic_write_json(base / CONFIG_FILE, config)
     atomic_write_json(state_path, state)
     (base / "artifacts").mkdir(exist_ok=True)
+    scratch.mkdir(parents=True, exist_ok=True)
     with contextlib.suppress(OSError):
         (base / PAUSE_FILE).unlink()
     if review == "proposed":
@@ -251,6 +254,21 @@ def initialize(
         atomic_write_json(state_path, state)
     _exclude_runtime_from_git(root)
     return config, state
+
+
+def clean_scratch(root: Path) -> dict[str, Any]:
+    config, state = load_runtime(root)
+    task_id = str(state["task_id"])
+    if state["phase"] != Phase.VERIFIED.value:
+        raise HarnessError(
+            f"task {task_id} is {state['phase']}; clean its scratch after the locked verifier passes"
+        )
+    review = state.get("review") or {}
+    if config.get("reviewer") and (
+        review.get("verify_run_id") != state.get("last_run_id") or not review.get("decision")
+    ):
+        raise HarnessError(f"task {task_id} is awaiting reviewer decision")
+    return {"task_id": task_id, "scratch": scratch_path(task_id), "error": clean_task(root, task_id)}
 
 
 def _exclude_runtime_from_git(root: Path) -> None:

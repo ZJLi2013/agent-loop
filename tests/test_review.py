@@ -95,6 +95,8 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
         ))
         self.assertIn("review", completion_gate(self.root) or "")
+        scratch = self.root / ".harness" / "tasks" / "t1"
+        (scratch / "kit.py").write_text("print(1)\n", encoding="utf-8")
 
         outcome = run_review(self.root)
         prompt = (self.root / ".harness" / "review" / "prompt.md").read_text(
@@ -102,6 +104,8 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         )
 
         self.assertEqual(outcome["review"]["decision"], "continue")
+        self.assertFalse(scratch.exists())
+        self.assertIsNone(outcome["review"]["cleanup_error"])
         self.assertIn("t1", prompt)
         self.assertIn(".agent-loop/task.md", prompt)
         self.assertIn("review 的单位是这个 verified task", prompt)

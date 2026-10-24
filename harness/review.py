@@ -20,6 +20,7 @@ from harness.project import (
 from harness.protocol import Phase
 from harness.records import CLOSED_MARKERS, active_task_status, close_task
 from harness.runner import execute_process
+from harness.scratch import clean_task
 from harness.storage import (
     HARNESS_DIR,
     STATE_FILE,
@@ -234,10 +235,12 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             if not status or any(marker in status for marker in CLOSED_MARKERS):
                 decision = None
                 error = f"next task {next_task} must be an open task in the task list"
+        cleanup_error = None
         if decision:
             close_task(
                 root, config.get("plan_doc"), str(state["task_id"]), decision.pop("review")
             )
+            cleanup_error = clean_task(root, str(state["task_id"]))
 
         review = {
             "verify_run_id": previous["verify_run_id"],
@@ -247,6 +250,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             "next_task": None,
             "why": None,
             "error": error,
+            "cleanup_error": cleanup_error,
             "at": utc_now(),
         }
         if decision:
