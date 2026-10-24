@@ -118,8 +118,10 @@ verifier 通过后：
    移到 linked archive，由脉络那一行链接；
 3. 通知 `task-state` 归档 closed task 与旧交接快照，通知 `agent-memory` 只保留未来仍会改变选择的
    结论、`disproved / rejected` 与证据指针；
-4. reviewer 决定落盘后（未配置 reviewer 时 verifier 通过后）删除该 task 的 run 目录；
-   位置与逐 run 表的要求归 `experiment-design`。
+4. 本 task 的临时文件（kit、workspace、本地 run 目录、job 清单、PR 草稿、task 专用 verifier）都放
+   `.harness/tasks/<task_id>/`，要留的在 locked verifier 前移出。配置 reviewer 时 Harness 在决定落盘后删除它，
+   未配置时 CLOSE 末尾运行 `clean-task`；`status` 的 `strays` 列出 `.harness/` 里不归 Harness 的条目，逐条移走或删除。
+   逐 run 表的要求归 `experiment-design`。
 
 ### 主线交接
 

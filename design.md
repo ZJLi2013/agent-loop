@@ -260,6 +260,7 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | closed task 与旧交接点 | `.agent-loop/archive/`（只按需读取） |
 | runtime phase、budget、当前 run | `.harness/state.json` |
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
+| task 临时文件 | `.harness/tasks/<task_id>/`（task 关闭时删除） |
 | 长期事实与结论 | `.agent-loop/memory/` |
 | 状态与转移是否合法 | `harness/protocol.py` |
 

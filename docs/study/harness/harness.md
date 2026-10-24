@@ -38,8 +38,11 @@ CLI 通过 `agent-loop-harness` 调用；每个工作项目的运行状态放在
 ├── state.json        # 当前 phase / attempt / budget，不复制 task 内容
 ├── pause.json        # 无锁 pause request；运行中的 runner 轮询它
 ├── runs.jsonl        # 有界执行摘要
-└── artifacts/        # 有界 stdout/stderr
+├── artifacts/        # 有界 stdout/stderr
+└── tasks/<task_id>/  # task 临时文件；reviewer 决定后或 clean-task 删除
 ```
+
+`status` 的 `strays` 列出 `.harness/` 里不归 Harness 的条目和非当前 task 的临时目录，只报告不删除。
 
 ## Contract
 

@@ -6,6 +6,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Harness owns task scratch: `init` creates `.harness/tasks/<task_id>/` for kits, workspaces, local run outputs, job
+  lists and PR drafts, and removes it after the reviewer's decision is saved; projects without a reviewer run
+  `clean-task` at CLOSE. A removal failure is reported, not raised. `init` and `status` list `strays`: `.harness/`
+  entries Harness does not own and scratch directories of other tasks.
 - `task.md` holds the whole backlog: besides the next 1–2 tasks, an optional `## Candidates` table (priority,
   title, entry condition) and a `## Triggered` list ("when <event>: <action>"). The plan document keeps only the
   Goal, boundaries, current conclusion and its evidence.
