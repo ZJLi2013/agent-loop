@@ -68,7 +68,8 @@ https://github.com/openai/whisper
 运行环境：`timeout 7200` 兜底，输出 `tee` 到 `$LOGDIR/run_<ts>.log`，结尾追加 `EXIT_CODE`
 与 `rocm-smi` 快照。
 
-**报告**：`./overnight-results/<date>/` 下一张
+**报告**：目标项目定义了产物格式就照它写，不另出总表——例如每个 repo 一张卡片（状态、一句结论、复现
+命令），由项目自己的检查脚本校验。没有定义时，在 `./overnight-results/<date>/` 下写一张
 `| Repo | Node | Status | Duration | Key Metric |` 总表，每个 repo 附命令、exit code、日志尾、
 GPU 峰值显存、错误，末尾列 Next Steps。
 
