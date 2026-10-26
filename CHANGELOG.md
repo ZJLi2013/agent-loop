@@ -59,6 +59,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- `remote-exec`: the agent picks the node itself by the section 2 score instead of asking the human. Before
+  scoring it excludes GPUs that `rocm-smi --showpids` shows busy or that another project's handoff note claims,
+  and records the chosen node and GPUs in its own handoff. The batch-run report follows the target project's
+  output format (for example one card per repo) when the project defines one.
 - The plan document keeps one append-only `## 脉络` table, one row per closed task and per `Plan Revision`, saying
   which next command or Goal change each step caused. Whoever makes the decision writes the row; CLOSE, replan and
   Goal freeze keep it. It replaces the `下一步决策` section and the task pointer rows in the Experiment Log, and the

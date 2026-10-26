@@ -24,7 +24,7 @@ allowed-tools: [Shell]
 
 首选 agent-loop 安装目录下的 `configs/node_inventory.yaml`（gitignored，模板见同目录 `.example`）；
 缺失则退回 `configs/gpu_nodes.list`（每行一个 SSH host，`# [hot]` 标热节点，无标注取前 5 行）。
-节点池属于 agent-loop，不跟随目标项目；具体任务使用哪个节点由 human 指定。
+节点池属于 agent-loop，不跟随目标项目；具体任务用哪个节点由 agent 按第 2 节自选，不问 human。
 
 30+ 节点的池子里**只精细维护 top 5 hot nodes**（标签 + 缓存 + 定期清理）；cold pool 只在
 hot 全部不可用时探测回退。字段含义与完整样例见 [reference.md](reference.md)。
@@ -66,6 +66,10 @@ models/datasets。顺带记 `docker system df` 与僵尸容器数。
 
 按分降序贪心分配，输出 `| Rank | Node | Score | Assigned | Reason |`。
 磁盘 `< 20G` 不分配任务先清理，`< 50G` 只分配轻量任务。
+
+打分前先排除别人在用的卡：`--showpids` 有进程的 GPU，以及本机其他项目 `task.md` 交接里写着正在占用的
+节点与卡。节点表注释（`[warn]`、root 分区满、要经 root 容器写 data 盘）照着处理。选定后把节点、卡号与理由
+写进交接笔记，下一个 agent 靠它避让。节点不保证一直在：长任务按阶段落盘，失联按失败处置表换节点。
 
 ## 3. 让它活下来
 
