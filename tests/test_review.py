@@ -111,6 +111,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("review 的单位是这个 verified task", prompt)
         self.assertIn("会改变 `continue / ask_human / stop`", prompt)
         self.assertIn("没有新 evidence 时不重新审查", prompt)
+        self.assertIn("不写 `.harness/runs.jsonl` 行号", prompt)
         self.assertIn("业界已有解法", prompt)
         self.assertIn("本地设计文档", prompt)
         self.assertIn("交给被测方", prompt)

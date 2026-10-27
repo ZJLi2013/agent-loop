@@ -193,7 +193,7 @@ class HarnessTest(unittest.TestCase):
         self.init("raise SystemExit(1)", max_attempts=1)
         verify(self.root)
 
-        self.assertIn("Auto-Stop Report", completion_gate(self.root) or "")
+        self.assertIn("Auto-Stop Report in .agent-loop/progress.md", completion_gate(self.root) or "")
         self.assertIsNone(completion_gate(self.root))
 
     def test_output_contract_can_reject_exit_zero(self) -> None:

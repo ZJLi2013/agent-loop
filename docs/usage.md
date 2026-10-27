@@ -258,7 +258,8 @@ active task 时注入检索上下文，dsh 适配器在会话开始时注入。�
 [Policies](../skills/README.md)。
 
 关闭的 task 与旧交接笔记移到 `.agent-loop/archive/`。运行时证据在 `.harness/`，日志与产物有上限。必须比运行时保留期更久的
-项目证据，放在项目自己的存储里。heartbeat 策略观察 detach 的作业，见 [Heartbeat](study/harness/heartbeat.md)。
+证据（读数、退出码、输出摘录）抄进实验文档的逐 run 表，见 `experiment-design` 的 CLOSE self-audit。
+heartbeat 策略观察 detach 的作业，见 [Heartbeat](study/harness/heartbeat.md)。
 
 ## 可选的手机检查点
 

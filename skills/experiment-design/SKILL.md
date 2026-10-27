@@ -163,8 +163,10 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
    被测变体同理：结果为正时作为下一个 task 进产品代码（单独 PR，human 合入）；结果为否时删除，只在文档留否定事实；
 4. 实验 run 输出（日志、事件流、逐步状态与观测）不放在实验文档目录：结论、verifier 与 reviewer
    要读的数据写成文档里每个 run 一行的表，本地 run 目录放 task scratch（`.harness/tasks/<task_id>/`），远端的按第 5 项定去留，
-   文档只写留下的路径与复现参数（保留脚本的路径加参数）。实验文档目录的未跟踪文件进 Harness 指纹，
-   留在那里的 run 输出在 verifier 之后删除会让证据 stale。结论标明不计入的 run 直接删除；
+   文档只写留下的路径与复现参数（保留脚本的路径加参数）。Harness 指纹只含已跟踪改动和未被 gitignore 的
+   未跟踪文件：文档目录在指纹内时，留在那里的 run 输出在 verifier 之后删除会让证据 stale；在 gitignore 里
+   （如 `.agent-loop/`）时，verifier 之后改文档不会让证据 stale。结论标明不计入的 run 直接删除。
+   逐 run 表写读数、退出码与必要的输出摘录，不引用 `.harness/runs.jsonl` 行号或 `artifacts/`：两者按条数截断与删除；
 5. 本 task 在远端节点上建的资产（容器、checkout、venv 与 build 目录、run 输出、只为它拉的镜像与权重）逐项按
    `remote-exec` §5 的分档定去留：一次性的删除，要留的把路径与用途写进 `facts.md`。只认交接笔记里记下的容器名与
    工作目录，不碰共享缓存与别人的容器；删镜像守 §5 的 Docker 禁令；
