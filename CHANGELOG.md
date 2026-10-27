@@ -59,6 +59,11 @@ invoke on-demand skills.
 
 ### Changed
 
+- The CLOSE self-audit decides the fate of what the task created on a remote node: containers, checkouts, venvs
+  and build directories, run outputs, and images and weights pulled only for it are classified by the `remote-exec`
+  storage tiers; one-off ones are deleted and kept ones go into `facts.md` with their path and purpose. Only the
+  container names and work directories recorded in the handoff note are claimed, so shared caches and other users'
+  containers are never touched. The handoff note records those container names and work directories.
 - `remote-exec`: the agent picks the node itself by the section 2 score instead of asking the human. Before
   scoring it excludes GPUs that `rocm-smi --showpids` shows busy or that another project's handoff note claims,
   and records the chosen node and GPUs in its own handoff. The batch-run report follows the target project's
