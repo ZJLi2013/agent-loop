@@ -59,6 +59,12 @@ invoke on-demand skills.
 
 ### Changed
 
+- A change that adds state persisting across runs, a read/write or permission boundary, concurrent writers, or an
+  interface with more than one caller gets a one-page module contract in its task design before code: owner,
+  data lifecycle, read/write modes, invariants each paired with a test, concurrency and failure behaviour, and
+  non-goals. The human reviews its invariants and trade-offs, the plan reviewer asks for a revision when the
+  contract or an invariant's test is missing, and `minimal-code` routes such a change there instead of treating the
+  structure as speculative abstraction.
 - The CLOSE self-audit decides the fate of what the task created on a remote node: containers, checkouts, venvs
   and build directories, run outputs, and images and weights pulled only for it are classified by the `remote-exec`
   storage tiers; one-off ones are deleted and kept ones go into `facts.md` with their path and purpose. Only the
