@@ -706,8 +706,8 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             atomic_write_json(state_path, state)
             return (
                 f"Harness budget for {state['task_id']} is exhausted. Do not retry. "
-                "Write an Auto-Stop Report with the current position, attempts, "
-                "and the first command for returning to the main path, then stop."
+                "Write an Auto-Stop Report in .agent-loop/progress.md with the current position, "
+                "attempts, and the first command for returning to the main path, then stop."
             )
 
         attention_reason = goal_review_reason(config, state)

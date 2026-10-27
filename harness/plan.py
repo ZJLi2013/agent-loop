@@ -9,6 +9,7 @@ from harness.errors import HarnessError
 from harness.project import runtime_dir, task_file
 from harness.protocol import Event, TransitionError, apply_event
 from harness.storage import (
+    HARNESS_DIR,
     STATE_FILE,
     atomic_write_json,
     harness_dir,
@@ -26,13 +27,21 @@ _PLAN_REVIEW_RE = re.compile(
 )
 
 
-def plan_metadata(root: Path, plan_path: str) -> tuple[int, str]:
+def plan_location(root: Path, plan_path: str) -> Path:
     root = root.resolve()
     plan = (root / plan_path).resolve()
-    try:
-        plan.relative_to(root)
-    except ValueError as exc:
-        raise HarnessError("plan path must stay inside the project root") from exc
+    if not plan.is_relative_to(root):
+        raise HarnessError("plan path must stay inside the project root")
+    if plan.is_relative_to(harness_dir(root).resolve()):
+        raise HarnessError(
+            f"plan document {plan_path} must live outside {HARNESS_DIR}/, "
+            "which holds runtime state and task scratch that Harness deletes"
+        )
+    return plan
+
+
+def plan_metadata(root: Path, plan_path: str) -> tuple[int, str]:
+    plan = plan_location(root, plan_path)
     try:
         content = plan.read_text(encoding="utf-8")
     except OSError as exc:

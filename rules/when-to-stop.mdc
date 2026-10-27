@@ -58,7 +58,8 @@ alwaysApply: true
 
 ## 硬性中止
 
-任一命中即停，写 `## Auto-Stop Report`：当前位置、已试过什么、回主线的第一步。
+任一命中即停，在被处理项目的 `.agent-loop/progress.md` 写 `## Auto-Stop Report`：当前位置、已试过什么、
+回主线的第一步（交接格式与归档见 `task-state`）。
 
 1. 连续 2 轮结果无论正负都不改变主线
 2. 连续 3 轮指标无改善或只在 noise 内波动

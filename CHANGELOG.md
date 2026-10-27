@@ -64,6 +64,12 @@ invoke on-demand skills.
   storage tiers; one-off ones are deleted and kept ones go into `facts.md` with their path and purpose. Only the
   container names and work directories recorded in the handoff note are claimed, so shared caches and other users'
   containers are never touched. The handoff note records those container names and work directories.
+- Durable records have a home. A plan document inside `.harness/` is rejected by `init`, `resume` and
+  `plan-review`. Auto-Stop Reports, overnight reports and pending `⚠️ 待确认` items go into the processed
+  project's `.agent-loop/progress.md` handoff. `remote-exec` reads and records GPU occupancy in `facts.md`.
+  Evidence that must outlive the runtime is copied into the per-run table instead of citing `runs.jsonl` lines or
+  `artifacts/`, which Harness truncates and prunes. `experiment-design` states that gitignored document
+  directories are outside the evidence fingerprint.
 - `remote-exec`: the agent picks the node itself by the section 2 score instead of asking the human. Before
   scoring it excludes GPUs that `rocm-smi --showpids` shows busy or that another project's handoff note claims,
   and records the chosen node and GPUs in its own handoff. The batch-run report follows the target project's

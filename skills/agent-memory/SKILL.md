@@ -96,8 +96,8 @@ hook 检测到超限会直接告警，届时把条目并粗（指向小节而不
 给它设统一行数上限是错的——那会逼着删掉最该留的那部分。
 
 memory consolidation 的判据不是“旧”，而是“是否还会改变未来选择”：项目文档已经承接、只复述成功
-历史的 experiment 行删除；能阻止重复试错的否定结论继续保留。原始 evidence 留在项目 archive /
-Harness artifacts，memory 不复制。
+历史的 experiment 行删除；能阻止重复试错的否定结论继续保留。原始 evidence 留在项目 archive 与实验文档的
+逐 run 表，memory 不复制。
 
 task / Goal CLOSE 时按下面顺序收敛：
 

@@ -257,6 +257,23 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(state["phase"], "ready")
         self.assertEqual(self.calls(), "1")
 
+    def test_plan_inside_harness_is_rejected(self) -> None:
+        self.configure(reviewer_writing({"t1": []}))
+        plan = ".harness/tasks/t1/plan.md"
+        (self.root / plan).parent.mkdir(parents=True)
+        (self.root / plan).write_text(
+            "# Plan\n\nPlan Revision: 1\nPlan Review: proposed\n", encoding="utf-8"
+        )
+
+        with self.assertRaisesRegex(HarnessError, "must live outside .harness/"):
+            run_plan_review(self.root, plan_doc=plan)
+        with self.assertRaisesRegex(HarnessError, "must live outside .harness/"):
+            initialize(
+                self.root, task_id="t1", plan_doc=plan,
+                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
+            )
+        self.assertEqual(self.calls(), "0")
+
     def test_approved_plan_cannot_skip_missing_review(self) -> None:
         self.configure(reviewer_writing({"t1": []}))
         self.write_plan(1, review="approved")

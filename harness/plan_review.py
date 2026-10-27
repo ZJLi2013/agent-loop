@@ -8,6 +8,7 @@ from harness.errors import HarnessError
 from harness.findings import normalize_findings
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
+from harness.plan import plan_location
 from harness.project import render_prompt, review_checklist, task_file
 from harness.records import open_task_ids, task_row
 from harness.review import load_reviewer
@@ -32,11 +33,8 @@ DEFAULT_MAX_JOURNAL_ENTRIES = 1000
 
 def _plan_path(root: Path, plan_doc: str) -> tuple[Path, str]:
     root = root.resolve()
-    path = (root / plan_doc).resolve()
-    try:
-        relative = path.relative_to(root).as_posix()
-    except ValueError as exc:
-        raise HarnessError("plan document must be inside the project root") from exc
+    path = plan_location(root, plan_doc)
+    relative = path.relative_to(root).as_posix()
     if not path.is_file():
         raise HarnessError(f"plan document does not exist: {relative}")
     return path, relative
