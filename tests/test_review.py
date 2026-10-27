@@ -114,6 +114,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("不写 `.harness/runs.jsonl` 行号", prompt)
         self.assertIn("业界已有解法", prompt)
         self.assertIn("本地设计文档", prompt)
+        self.assertIn("不放 `.harness/tasks/`", prompt)
         self.assertIn("交给被测方", prompt)
         self.assertIn("实际产物与设计不一致", prompt)
         self.assertNotIn("review-checklist.md", prompt)

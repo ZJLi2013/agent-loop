@@ -113,7 +113,7 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(self.calls(), "1")
         self.assertIn("- t1：t1 标题", prompt)
         for text in (
-            "领域先例", "本地设计文档", "交给被测方", "渲染样例", "设计文档显式链接的检查表",
+            "领域先例", "本地设计文档", "设计在 `.harness/tasks/` 下的报 revise", "交给被测方", "渲染样例", "设计文档显式链接的检查表",
             "`*-archive.md`", "不作判据", "其余文件不作证据", "够下结论就停止阅读",
             "被忽略时会让方向错", "各最多 3 条", "不要求补证",
         ):

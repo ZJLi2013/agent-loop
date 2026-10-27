@@ -28,7 +28,9 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，你不要做。
    下一个 task 已在列表里、且设计已审过时，不改写它，也不给它加交接或核验步骤；要新 task 时（取自
    `task.md` 的 Candidates 就删掉那一行），写好一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
-   失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。新 task 的 `rev` 沿用当前 plan revision。
+   失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。设计写成 plan document 里以 task id
+   开头的标题段或 linked sub-exp，不放 `.harness/tasks/`：那里在 task 关闭时被删除。
+   新 task 的 `rev` 沿用当前 plan revision。
    结果为否定或意外、或下一个 task 要换方向时，先核对 plan 是否已对照领域结论与业界已有解法；
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
 3. 选择 decision：

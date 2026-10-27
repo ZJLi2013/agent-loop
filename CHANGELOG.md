@@ -70,6 +70,9 @@ invoke on-demand skills.
   Evidence that must outlive the runtime is copied into the per-run table instead of citing `runs.jsonl` lines or
   `artifacts/`, which Harness truncates and prunes. `experiment-design` states that gitignored document
   directories are outside the evidence fingerprint.
+- A task design lives in the plan document (a heading section that starts with the task id) or a linked sub-exp,
+  never under `.harness/tasks/`, which is deleted when the task closes. The task reviewer is told so when it writes
+  the next task, and the plan reviewer asks for a revision when a design sits there.
 - `remote-exec`: the agent picks the node itself by the section 2 score instead of asking the human. Before
   scoring it excludes GPUs that `rocm-smi --showpids` shows busy or that another project's handoff note claims,
   and records the chosen node and GPUs in its own handoff. The batch-run report follows the target project's
