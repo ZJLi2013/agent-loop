@@ -115,7 +115,7 @@ class PlanReviewTest(unittest.TestCase):
         for text in (
             "领域先例", "本地设计文档", "设计在 `.harness/tasks/` 下的报 revise", "交给被测方", "渲染样例", "设计文档显式链接的检查表",
             "`*-archive.md`", "不作判据", "其余文件不作证据", "够下结论就停止阅读",
-            "被忽略时会让方向错", "各最多 3 条", "不要求补证",
+            "被忽略时会让方向错", "各最多 3 条", "不要求补证", "设计缺模块契约", "不变量没有各自对应的测试",
         ):
             self.assertIn(text, prompt)
         self.assertNotIn("review-checklist.md", prompt)

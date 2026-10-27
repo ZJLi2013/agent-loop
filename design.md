@@ -90,6 +90,7 @@ Policy 回答「这个状态下怎么做」，不重新定义转移：
 | Policy | Owner |
 |---|---|
 | Goal → plan document → proposed task → review | `work-planning` |
+| 新增持久状态或读写边界前的模块契约 | `work-planning` |
 | SELECT / task 状态与检查点 | `task-state` |
 | 实验假设、判据、记录 | `experiment-design` |
 | 失败分类与 Auto-Stop | `when-to-stop` |
@@ -159,6 +160,7 @@ plan / task / 设计文档直接链接的文件与设计列出的被测代码；
 两个 reviewer 都审被测内容本身，不只审格式与严谨性：交给被测方的题目、数据、样本或请求要有渲染样例，
 reviewer 看样例判断它是否在测 Goal 要测的东西；task reviewer 把实际产物与设计不一致归为 `ask_human`。
 领域检查项不进 agent-loop，由各 repo 的可选 `.agent-loop/review-checklist.md` 承载，存在时列入两份 prompt。
+plan reviewer 另查新增持久状态或读写边界的 task 是否带模块契约、每条不变量是否配了测试，不审代码布局。
 
 task 验证通过后，下一步由 reviewer 提议，worker 不给自己的下一步拍板。init 只要求 task 是 human 批准的
 `🔬 doing`，不要求等于 reviewer 的提议。无人值守（`Plan Review: unreviewed`）时只能 init reviewer 指名的 task：
