@@ -119,7 +119,8 @@ docker run --rm --device=/dev/kfd --device=/dev/dri \
 
 三档清理：**Hot**（inventory 里 `hot_models` 的基础模型）不清理；**Warm**（repo 专有 ckpt）
 `-atime +7`，清理时要 `! -name` 排除 hot；**Cold**（`.venv` / `build` / `__pycache__` / pip cache）
-`-mtime +3`。跑前跑后各打一次 `df -h`。
+`-mtime +3`。跑前跑后各打一次 `df -h`。task 结束时它自己建的资产由 `experiment-design` 的 CLOSE self-audit
+按这三档定去留，不等磁盘告警。
 
 **散落资产只 symlink 不移动**（公共资源礼仪）。首次纳入 hot 或磁盘告警时先扫再归档，避免重复下载：
 `find /home /tmp /data -size +500M \( -name '*.safetensors' -o -name '*.pt' -o -name '*.ckpt' \)`
@@ -158,7 +159,7 @@ running 但 > 90 天的僵尸容器可以 stop + rm，跳过 `node-exporter|prom
 
 ## 相关
 
-- `task-state`：把 session 名、日志路径、恢复命令写进交接笔记，跨 session 接手靠它不靠本 skill。
+- `task-state`：把 session 名、容器名、工作目录、日志路径、恢复命令写进交接笔记，跨 session 接手靠它不靠本 skill。
 - `agent-heartbeat`：远端日志用它的 `scripts/watch.sh`，不要另写观察脚本。
 - `upstream-contribute`：远端测出的兼容性修复要提 PR 时，body 生成与 GPU 型号脱敏走它。
 - 批量夜间测多个 repo 的具体流程见 [reference.md](reference.md)。
