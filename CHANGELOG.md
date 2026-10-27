@@ -127,6 +127,10 @@ invoke on-demand skills.
 
 ### Fixed
 
+- A plan review counts only for the plan document it reviewed. A task id reused under another Goal's plan is
+  reviewed again instead of inheriting the old task's review; reviews recorded before this change count for the
+  current plan.
+
 - Completion checks honor the review of a verified task before validating its plan, so deleting the plan
   during cleanup does not block completion or the reviewer's next-task handoff.
 
