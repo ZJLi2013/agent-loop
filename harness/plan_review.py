@@ -77,23 +77,27 @@ def _write(root: Path, record: dict[str, Any]) -> None:
     atomic_write_json(_record_path(root, record["task_id"]), record)
 
 
-def review_status(root: Path, task_id: str) -> str:
+def review_status(root: Path, task_id: str, plan_doc: str) -> str:
     if task_row(root, task_id) is None:
         return "missing"
+    _, plan = _plan_path(root, plan_doc)
     record = task_record(root, task_id)
     reviews = record["reviews"]
-    if not reviews or any(item["at"] >= reviews[-1]["at"] for item in record["again"]):
+    # Task ids restart across Goals; reviews recorded before plan_doc existed count for this plan.
+    if not reviews or reviews[-1].get("plan_doc", plan) != plan:
+        return "not_reviewed"
+    if any(item["at"] >= reviews[-1]["at"] for item in record["again"]):
         return "needs_review"
     return "reviewed"
 
 
 def plan_review_ready(
-    root: Path, task_id: str, *, review: str | None = None
+    root: Path, task_id: str, *, plan_doc: str, review: str | None = None
 ) -> tuple[bool, str | None]:
-    status = review_status(root, task_id)
+    status = review_status(root, task_id, plan_doc)
     if status == "missing":
         return False, f"task {task_id} is missing from the task list"
-    if status == "needs_review":
+    if status in {"not_reviewed", "needs_review"}:
         return False, f"task {task_id} has no independent review"
     record = task_record(root, task_id)
     last = record["reviews"][-1]
@@ -167,9 +171,11 @@ def record_task_review(
     summary: str,
     source: str,
     run_id: str | None,
+    plan_doc: str,
 ) -> None:
     record = task_record(root, task_id)
     record["reviews"].append({
+        "plan_doc": _plan_path(root, plan_doc)[1],
         "findings": findings,
         "dropped": dropped,
         "summary": summary,
@@ -197,7 +203,7 @@ def run_plan_review(
         pending = [
             task_id
             for task_id in open_task_ids(root)
-            if review_status(root, task_id) == "needs_review"
+            if review_status(root, task_id, relative) in {"not_reviewed", "needs_review"}
         ]
         if not pending:
             return {"summary": None, "tasks": {}}
@@ -275,7 +281,7 @@ def run_plan_review(
         for task_id, entry in report["tasks"].items():
             record_task_review(
                 root, task_id, **entry, summary=report["summary"],
-                source="plan_review", run_id=run_id,
+                source="plan_review", run_id=run_id, plan_doc=relative,
             )
         running.unlink(missing_ok=True)
         return report

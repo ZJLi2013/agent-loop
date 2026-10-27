@@ -478,8 +478,13 @@ class MainlineHandoffTest(unittest.TestCase):
             "level": "must", "claim": "wrong input", "consequence": "wasted run",
             "evidence": "plan:1", "change": "fix input", "human": False,
         }
+        (self.root / "next").mkdir()
+        (self.root / "next" / "plan.md").write_text(
+            "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n", encoding="utf-8"
+        )
         record_task_review(
-            self.root, "t2", findings=[must], dropped=0, summary="", source="plan_review", run_id=None
+            self.root, "t2", findings=[must], dropped=0, summary="", source="plan_review", run_id=None,
+            plan_doc="next/plan.md",
         )
         with self.assertRaisesRegex(HarnessError, "must items"):
             self.start([DONE_A, NEXT_B])

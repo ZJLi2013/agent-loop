@@ -120,6 +120,19 @@ class PlanReviewTest(unittest.TestCase):
             self.assertIn(text, prompt)
         self.assertNotIn("review-checklist.md", prompt)
 
+    def test_task_id_reused_by_another_plan_is_reviewed_again(self) -> None:
+        self.configure(reviewer_writing({"t1": []}))
+        self.review()
+        (self.root / "next.md").write_text(
+            "# Next\n\nPlan Revision: 1\nPlan Review: proposed\n", encoding="utf-8"
+        )
+
+        report = run_plan_review(self.root, plan_doc="next.md")
+
+        self.assertEqual(list(report["tasks"]), ["t1"])
+        self.assertEqual(self.calls(), "2")
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="next.md")[0])
+
     def test_lock_is_free_while_the_reviewer_runs(self) -> None:
         slow = reviewer_writing({"t1": []})
         slow[-1] = "import time; time.sleep(2); " + slow[-1]
@@ -206,7 +219,7 @@ class PlanReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "no reviewer item 3"):
             respond_task(self.root, "t1", items=["3=applied"])
 
-        self.assertTrue(plan_review_ready(self.root, "t1")[0])
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md")[0])
 
     def test_human_items_wait_for_the_human(self) -> None:
         human = {**MUST, "human": True}
@@ -215,15 +228,15 @@ class PlanReviewTest(unittest.TestCase):
         self.review()
         respond_task(self.root, "t1", items=["1=applied"])
 
-        ready, reason = plan_review_ready(self.root, "t1")
+        ready, reason = plan_review_ready(self.root, "t1", plan_doc="plan.md")
         self.assertFalse(ready)
         self.assertIn("--approve t1", reason or "")
-        self.assertTrue(plan_review_ready(self.root, "t2")[0])
+        self.assertTrue(plan_review_ready(self.root, "t2", plan_doc="plan.md")[0])
 
         approve_task(self.root, "t1", reason="选方案 A")
-        self.assertTrue(plan_review_ready(self.root, "t1", review="approved")[0])
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md", review="approved")[0])
         with self.assertRaisesRegex(HarnessError, "human decision"):
-            plan_review_ready(self.root, "t1", review="unreviewed")
+            plan_review_ready(self.root, "t1", plan_doc="plan.md", review="unreviewed")
 
     def test_cli_respond_approve_and_again(self) -> None:
         from harness.run import main
@@ -236,7 +249,7 @@ class PlanReviewTest(unittest.TestCase):
             self.assertEqual(main([*base, "--respond", "t1", "--item", "1=applied"]), 0)
             self.assertEqual(main([*base, "--approve", "t1", "--reason", "批"]), 0)
             self.assertEqual(main([*base, "--again", "t1", "--reason", "再审"]), 0)
-        self.assertEqual(review_status(self.root, "t1"), "needs_review")
+        self.assertEqual(review_status(self.root, "t1", "plan.md"), "needs_review")
         for argv in (
             [*base, "--reason", "x"],
             [*base, "--respond", "t1"],
@@ -292,7 +305,7 @@ class PlanReviewTest(unittest.TestCase):
             "again": [],
         }), encoding="utf-8")
 
-        self.assertTrue(plan_review_ready(self.root, "t1")[0])
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md")[0])
         self.assertEqual(task_record(self.root, "t1")["reviews"][0]["findings"][0]["level"], "suggest")
 
 if __name__ == "__main__":
