@@ -287,6 +287,31 @@ class PlanReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "set Plan Review to proposed"):
             self.init()
 
+    def test_a_record_of_another_task_id_is_refused_everywhere(self) -> None:
+        self.configure(reviewer_writing({"t1": []}))
+        path = self.root / ".harness" / "plan-review" / "tasks" / "t1.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps({
+            "task_id": "T1",
+            "reviews": [{"digest": "x", "findings": [], "summary": "", "source": "plan_review", "run_id": "r",
+                         "at": "2026-10-01T00:00:00+00:00", "plan_doc": "plan.md"}],
+            "approvals": [],
+            "again": [],
+        }), encoding="utf-8")
+        before = path.read_bytes()
+        entries = {
+            "run_plan_review": self.review,
+            "plan_review_ready": lambda: plan_review_ready(self.root, "t1", plan_doc="plan.md"),
+            "respond_task": lambda: respond_task(self.root, "t1", items=["1=applied"]),
+            "approve_task": lambda: approve_task(self.root, "t1", reason="ok"),
+        }
+        for name, call in entries.items():
+            with self.subTest(name):
+                with self.assertRaisesRegex(HarnessError, "rename the task"):
+                    call()
+                self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(self.calls(), "0")
+
     def test_records_from_before_the_protocol_still_read(self) -> None:
         path = self.root / ".harness" / "plan-review" / "tasks" / "t1.json"
         path.parent.mkdir(parents=True)

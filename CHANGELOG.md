@@ -162,6 +162,9 @@ invoke on-demand skills.
 - On Windows, Harness state writes wait up to about one second for a reader that has the file open (a hook reading
   `state.json` while the runner writes it), instead of failing with `WinError 5`. A failed write leaves no temporary
   file behind.
+- A task whose plan-review record file belongs to another task id is refused with "rename the task". On Windows and
+  macOS, ids that differ only in case (`t1`, `T1`) share one file; a new `t1` used to inherit `T1`'s review and
+  skip the reviewer.
 - A plan review counts only for the plan document it reviewed. A task id reused under another Goal's plan is
   reviewed again instead of inheriting the old task's review; reviews recorded before this change count for the
   current plan.
