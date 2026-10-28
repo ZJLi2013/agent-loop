@@ -159,6 +159,9 @@ invoke on-demand skills.
 
 ### Fixed
 
+- On Windows, Harness state writes wait up to about one second for a reader that has the file open (a hook reading
+  `state.json` while the runner writes it), instead of failing with `WinError 5`. A failed write leaves no temporary
+  file behind.
 - A plan review counts only for the plan document it reviewed. A task id reused under another Goal's plan is
   reviewed again instead of inheriting the old task's review; reviews recorded before this change count for the
   current plan.

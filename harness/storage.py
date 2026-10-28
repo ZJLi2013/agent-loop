@@ -18,6 +18,8 @@ STATE_FILE = "state.json"
 JOURNAL_FILE = "runs.jsonl"
 LOCK_FILE = "lock"
 LOCK_WAIT_SECONDS = 5.0
+REPLACE_ATTEMPTS = 50
+REPLACE_WAIT_SECONDS = 0.02
 
 
 def utc_now() -> str:
@@ -45,7 +47,18 @@ def atomic_write_json(path: Path, value: dict[str, Any]) -> None:
         json.dumps(value, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    os.replace(temp, path)
+    # Windows refuses to replace a file another reader has open; readers hold it only while reading.
+    for attempt in range(REPLACE_ATTEMPTS):
+        try:
+            os.replace(temp, path)
+            return
+        except OSError as error:
+            if isinstance(error, PermissionError) and os.name == "nt" and attempt < REPLACE_ATTEMPTS - 1:
+                time.sleep(REPLACE_WAIT_SECONDS)
+                continue
+            with contextlib.suppress(OSError):
+                temp.unlink()
+            raise
 
 
 def config_digest(config: dict[str, Any]) -> str:
