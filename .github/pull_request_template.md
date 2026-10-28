@@ -35,6 +35,7 @@ python -m unittest discover -s tests -v
 ## Checklist
 
 - [ ] The replaced path was removed; this does not create a second owner.
+- [ ] Tests added to `tests/` pin a contract; a test that only proves this fix was removed before merge.
 - [ ] User-facing docs and CHANGELOG are updated.
 - [ ] No `.harness/`, project memory/task state, credentials, transcripts, private hosts, or unpublished data are included.
 - [ ] AI use is disclosed according to `AI_POLICY.md`.
