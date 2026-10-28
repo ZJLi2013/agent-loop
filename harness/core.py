@@ -116,6 +116,7 @@ def initialize(
     scratch = task_dir(root, task_id)
     reviewer = load_reviewer(root)
     state_path = base / STATE_FILE
+    successor = False
     if state_path.exists():
         old = read_json(state_path)
         if old.get("active") and old.get("phase") not in {
@@ -160,6 +161,7 @@ def initialize(
                     raise HarnessError(
                         f"task {task_id} must be approved as 🔬 doing before init"
                     )
+                successor = prior_review.get("next_task") == task_id
 
     revision: int | None = None
     review: str | None = None
@@ -175,7 +177,7 @@ def initialize(
                 root, task_id, plan_doc=plan_doc, review=review
             )
             if not ready:
-                if review == "approved":
+                if review == "approved" and not successor:
                     raise HarnessError(
                         f"{reason}; set Plan Review to proposed before approval"
                     )

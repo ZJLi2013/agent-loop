@@ -396,11 +396,12 @@ class HumanSuccessorTest(unittest.TestCase):
 
     def test_successor_is_plan_reviewed_before_init(self) -> None:
         cases = (
-            ("reviewer-named successor", False, "unreviewed", True),
-            ("record left by the old shortcut", True, "unreviewed", True),
-            ("approved plan", False, "approved", False),
+            ("reviewer-named successor", "t2", False, "unreviewed", True),
+            ("record left by the old shortcut", "t2", True, "unreviewed", True),
+            ("successor under an approved plan", "t2", False, "approved", True),
+            ("unnamed task under an approved plan", None, False, "approved", False),
         )
-        for name, legacy, review, starts in cases:
+        for name, next_task, legacy, review, starts in cases:
             with self.subTest(name):
                 self.tearDown()
                 self.setUp()
@@ -409,7 +410,7 @@ class HumanSuccessorTest(unittest.TestCase):
                     "\n".join(tasks.read_text(encoding="utf-8").splitlines()[:3]) + "\n",
                     encoding="utf-8",
                 )
-                self.review_as("continue", "t2")
+                self.review_as("continue" if next_task else "stop", next_task)
                 if legacy:
                     record_task_review(
                         self.root, "t2", findings=[], dropped=0, summary="", source="task_review",
