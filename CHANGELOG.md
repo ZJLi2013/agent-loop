@@ -6,6 +6,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Shared memory root: when `AGENT_LOOP_SHARED_MEMORY` names a directory with an `INDEX.md`, the memory hook injects
+  that index after the project's memory on every `task.md` read, including in projects without `memory/`, and appends
+  one line per injection to `~/.agent-loop/shared-memory-arrivals.jsonl`. Unset, the hook behaves as before. See
+  `skills/agent-memory/SKILL.md`.
+
 - Skill packs: any directory with a `pack.toml` can be listed in a machine-local `~/.agent-loop/packs.txt` together
   with the repository checkouts it refers to and the active profiles. `scripts/install-skills.py`, called by both
   `sync-to-cursor.ps1` and `sync-to-dsh.ps1`, links agent-loop's skills and the selected pack skills (Cursor:

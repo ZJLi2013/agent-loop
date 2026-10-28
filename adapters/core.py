@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
 import re
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +18,7 @@ TRIGGER = "task.md"
 STORES = ("facts.md", "episodes.md", "lessons.md")
 MAX_HITS = 5
 INDEX_MAX_LINES = 30
+SHARED_MEMORY_ENV = "AGENT_LOOP_SHARED_MEMORY"
 STOPWORDS = {
     "the", "and", "for", "with", "from", "into", "that", "this", "有", "的", "了",
     "把", "在", "是", "和", "到", "个", "不", "要", "还", "会", "已", "做",
@@ -99,19 +103,82 @@ def _health(memory: Path) -> str:
     return " / ".join(counts)
 
 
+def arrivals_file() -> Path:
+    return Path.home() / ".agent-loop" / "shared-memory-arrivals.jsonl"
+
+
+def _doing_task(task_md: str) -> str:
+    for line in task_md.splitlines():
+        if "🔬" in line and line.startswith("|"):
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            if len(cells) > 2:
+                return f"{cells[1]}@{cells[2]}"
+    return ""
+
+
+def _record_arrival(project: Path, task_md: str, shared: Path) -> None:
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(shared), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        commit = head.stdout.strip() if head.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        commit = ""
+    line = json.dumps({
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "project": str(project.resolve()),
+        "task": _doing_task(task_md),
+        "shared_commit": commit,
+    }, ensure_ascii=False)
+    try:
+        path = arrivals_file()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as log:
+            log.write(line + "\n")
+    except OSError:
+        pass
+
+
+def _shared_context(project: Path, task_md: str) -> str | None:
+    root = os.environ.get(SHARED_MEMORY_ENV)
+    if not root:
+        return None
+    shared = Path(root)
+    index = _read(shared / "INDEX.md").strip()
+    if not index:
+        return (
+            f"## Shared memory\n\n⚠️ `{SHARED_MEMORY_ENV}` 指向 `{shared}`，"
+            "但那里的 `INDEX.md` 缺失或为空。"
+        )
+    _record_arrival(project, task_md, shared)
+    parts = [f"## Shared memory（`{shared}`，由 hook 注入，非可选）", index]
+    line_count = len([line for line in index.splitlines() if line.strip()])
+    if line_count > INDEX_MAX_LINES:
+        parts.append(
+            f"⚠️ 共享 `INDEX.md` 已 {line_count} 行，超过 {INDEX_MAX_LINES} 行上限，"
+            "中段可能被忽略；交给它的维护者合并。"
+        )
+    return "\n\n".join(parts)
+
+
 def memory_context(task_path: Path) -> str | None:
     if (
         task_path.name.lower() != TRIGGER
         or task_path.parent.name not in {RUNTIME_DIR, LEGACY_RUNTIME_DIR}
     ):
         return None
-    memory = memory_dir(task_path.parent.parent)
+    project = task_path.parent.parent
+    task_md = _read(task_path)
+    shared = _shared_context(project, task_md)
+    memory = memory_dir(project)
     if not memory.is_dir():
-        return (
+        missing = (
             "## Memory\n\n本项目还没有 `.agent-loop/memory/`。"
             "**先按 `agent-memory` 建起来再往下做**"
             "——没有它，「这件事是不是已经做过」无从判断。"
         )
+        return "\n\n".join(part for part in (missing, shared) if part)
 
     index = _read(memory / "INDEX.md").strip()
     parts = ["## Memory（由 hook 注入，非可选）"]
@@ -125,7 +192,7 @@ def memory_context(task_path: Path) -> str | None:
             "先把条目并粗（指向小节而不是逐条），再往下做。"
         )
 
-    hits = _hits(_terms(_read(task_path)), memory)
+    hits = _hits(_terms(task_md), memory)
     if hits:
         parts.append("### 与当前 task 词面相关\n" + "\n".join(f"- {hit}" for hit in hits))
     else:
@@ -133,6 +200,8 @@ def memory_context(task_path: Path) -> str | None:
             f"### 无词面命中\n库存：{_health(memory)}。"
             "**命中为空不等于没做过**，按上面索引判断是否要定向细读。"
         )
+    if shared:
+        parts.append(shared)
     return "\n\n".join(parts)
 
 

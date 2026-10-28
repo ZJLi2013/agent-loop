@@ -55,6 +55,13 @@ procedural memory 就是 `skills/` 本身，不在这里重复索引。
 查询由 `task.md` 的 Goal 行与当前 `🔬 doing` 行组成。**命中为空会明说库存条数**——
 索引坏了和确实没做过必须可区分，否则脚本哪天挂了，表现和「这事没人试过」一模一样。
 
+**跨项目的共享记忆**：环境变量 `AGENT_LOOP_SHARED_MEMORY` 指向一个含 `INDEX.md` 的目录时，
+hook 每次读 `task.md` 都把那份索引附在项目记忆之后注入，项目还没有 `memory/` 时也注入；
+共享层的写法与取用规则由它自己的 `INDEX.md` 头部说明。每次注入在
+`~/.agent-loop/shared-memory-arrivals.jsonl` 追加一行（时间、项目、当前 `🔬 doing` 的 id@rev、
+共享目录的 git commit），用来统计索引是否真的到达了 agent。hook 进程只继承用户级环境变量，
+所以这个变量要设在用户级。
+
 hook 覆盖不到的时刻（临时问一句、中途换方向），靠 `INDEX.md` 里的 **Retrieval hints**：
 它把「我该不该查」翻译成一串**情境**（准备跑实验 / 要改已验证的假设 / 调不熟悉的失败 /
 在方案间选 / 对项目事实下断言），情境比判断好匹配。
