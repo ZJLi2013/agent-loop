@@ -219,7 +219,7 @@ class InstallSkillsTest(unittest.TestCase):
     def test_pack_named_agent_loop_dsh_gets_no_own_skill_rights(self) -> None:
         self.check_pack_named_agent_loop("dsh", self.home / "skills")
 
-    def test_no_packs_file_installs_own_skills_as_before(self) -> None:
+    def test_no_packs_file_links_own_skills_and_reports_a_plain_copy(self) -> None:
         self.packs = self.tmp / "absent.txt"
         own = self.home / "skills-cursor"
         (own / "gen-ppt").mkdir(parents=True)
@@ -227,12 +227,30 @@ class InstallSkillsTest(unittest.TestCase):
         stale = skill(self.tmp / "moved-checkout" / "work-planning")
         install.make_link(own / "work-planning", stale)
         result = self.run_installer()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        for name in ("work-planning", "remote-exec", "experiment-design", "gen-ppt"):
+        self.assertEqual(result.returncode, 1)
+        self.assertRegex(result.stdout, r"gen-ppt\s+agent-loop\s+SKIPPED: .* is a plain directory")
+        self.assertEqual((own / "gen-ppt" / "copy.md").read_text(encoding="utf-8"), "old copy")
+        self.assertEqual(list(self.home.glob("skills-backup-*")), [])
+        for name in ("work-planning", "remote-exec", "experiment-design"):
             self.assertEqual(self.target(own / name), install.norm(self.checkout / "skills" / name))
-        backups = list(self.home.glob("skills-backup-*/gen-ppt/copy.md"))
-        self.assertEqual([b.read_text(encoding="utf-8") for b in backups], ["old copy"])
         self.assertEqual(self.run_installer().stdout.count("Linked skill"), 0)
+
+    def test_hash_inside_a_path_is_not_a_comment(self) -> None:
+        project = self.tmp / "proj#2"
+        shutil.move(str(self.project), str(project))
+        self.project, self.bar = project, project / ".cursor" / "skills" / "bar"
+        self.packs.write_text(
+            f"# my packs\npack {self.pack}\nrepo some-project {project}\nprofiles ops\n", encoding="utf-8")
+        self.run_installer()
+        self.assertEqual(self.target(self.pack_dest / "bar"), install.norm(self.bar))
+
+    def test_owner_column_fits_the_longest_pack_name(self) -> None:
+        text = (self.pack / "pack.toml").read_text(encoding="utf-8")
+        (self.pack / "pack.toml").write_text(text.replace('name = "my-pack"', 'name = "a-long-pack-name"'),
+                                             encoding="utf-8")
+        result = self.run_installer()
+        starts = {line.split()[0]: line.index("->") for line in result.stdout.splitlines() if " -> " in line}
+        self.assertEqual(starts["bar"], starts["work-planning"])
 
 
 if __name__ == "__main__":

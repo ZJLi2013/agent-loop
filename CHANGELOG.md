@@ -67,10 +67,10 @@ invoke on-demand skills.
 
 ### Changed
 
-- Installing skills on Cursor: a plain directory with the name of an agent-loop skill in `~/.cursor/skills-cursor` is
-  moved to `~/.cursor/skills-backup-<time>` and replaced by the link, as on dsh; it used to be left in place and
-  shadow the agent-loop skill. Dead links that do not point into agent-loop or a registered pack are no longer
-  pruned; they are listed as `unmanaged`.
+- Installing skills: a plain directory with the name of an agent-loop skill in the host's skill directory is reported
+  as a conflict and the installer exits non-zero; the directory is left untouched. On dsh it used to be moved to
+  `skills-backup-<time>`; on Cursor it was left in place silently and shadowed the agent-loop skill. Dead links that
+  do not point into agent-loop or a registered pack are no longer pruned; they are listed as `unmanaged`.
 - A change that adds state persisting across runs, a read/write or permission boundary, concurrent writers, or an
   interface with more than one caller gets a one-page module contract in its task design before code: owner,
   data lifecycle, read/write modes, invariants each paired with a test, concurrency and failure behaviour, and

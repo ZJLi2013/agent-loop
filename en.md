@@ -98,8 +98,8 @@ After trying the CLI, Windows + Cursor users can install the enforced adapter fr
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-The installer creates user-level junctions and hooks, backing up existing ordinary directories with the same
-names. Keep the checkout at its installed path, restart Cursor, and make sure Cursor can resolve `python`.
+The installer creates user-level junctions and hooks, backing up existing ordinary directories where rules,
+harness and hooks go; a skill whose name is already taken is reported as a conflict and not overwritten. Keep the checkout at its installed path, restart Cursor, and make sure Cursor can resolve `python`.
 Hooks execute local Python code across workspaces covered by the host; read the [security boundary](SECURITY.md)
 before installation. Use `scripts/uninstall-from-cursor.ps1` to remove the integration; restore backups manually.
 

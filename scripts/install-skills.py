@@ -4,7 +4,7 @@
 
 A skill pack is a directory with a pack.toml; ~/.agent-loop/packs.txt lists the packs, repository checkouts
 and active profiles of this machine. Formats and the rules below are in docs/usage.md#skill-packs.
-Exits 1 when any pack skill was skipped or any input could not be read.
+Exits 1 when any skill was skipped or any input could not be read.
 """
 
 from __future__ import annotations
@@ -14,10 +14,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
-import time
 import tomllib
 
 REPO = Path(__file__).resolve().parents[1]
@@ -80,8 +78,8 @@ def read_packs(path: Path, errors: list[str]) -> tuple[list[Path], dict[str, Pat
     if not path.exists():
         return packs, repos, profiles
     for number, raw in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
-        line = raw.split("#", 1)[0].strip()
-        if not line:
+        line = raw.strip()
+        if not line or line.startswith("#"):
             continue
         key, _, rest = line.partition(" ")
         rest = rest.strip()
@@ -191,7 +189,6 @@ def main(argv: list[str] | None = None) -> int:
                 remove_link(entry)
                 print(f"Removed link: {entry.name}")
 
-    stamp = time.strftime("%Y%m%d-%H%M%S")
     for s in install:
         link = s.dest / s.name
         target = link_target(link)
@@ -201,18 +198,14 @@ def main(argv: list[str] | None = None) -> int:
             if not s.own:
                 s.problem = f"{link} links to {target}, outside the registered sources"
                 continue
-            remove_link(link)
+            remove_link(link)  # an agent-loop skill left behind by a moved checkout
         elif os.path.lexists(link):
-            if not s.own:
-                s.problem = f"{link} is a plain directory"
-                continue
-            backup = home / f"skills-backup-{stamp}"  # outside the skill directory, so the host does not load it
-            backup.mkdir(exist_ok=True)
-            shutil.move(str(link), str(backup / s.name))
-            print(f"Backed up existing skill {s.name} to {backup}")
+            s.problem = f"{link} is a plain directory"
+            continue
         make_link(link, s.src)
         print(f"Linked skill: {s.name}")
 
+    width = max(len(owner) for owner in ["unmanaged", OWN, *(s.owner for s in packed)])
     print(f"\n--- Skills ({args.host}) ---")
     for s in own + packed:
         if s.problem:
@@ -221,13 +214,13 @@ def main(argv: list[str] | None = None) -> int:
             status = "not selected by profiles"
         else:
             status = f"-> {s.src}" + (git_state(s) if s.checkout else "")
-        print(f"{s.name:<26} {s.owner:<12} {status}")
+        print(f"{s.name:<26} {s.owner:<{width}} {status}")
     for dest in dests:
         for entry in sorted(dest.iterdir()):
             target = link_target(entry)
             if target and norm(entry) not in desired:
-                print(f"{entry.name:<26} {'unmanaged':<12} -> {target}")
-    problems = errors + [f"{s.name}: {s.problem}" for s in packed if s.problem]
+                print(f"{entry.name:<26} {'unmanaged':<{width}} -> {target}")
+    problems = errors + [f"{s.name}: {s.problem}" for s in own + packed if s.problem]
     for problem in problems:
         print(f"ERROR: {problem}", file=sys.stderr)
     return 1 if problems else 0
