@@ -51,25 +51,7 @@ if (Test-Path $hooksJson) {
     Write-Host "Removed agent-loop entries from hooks.json" -ForegroundColor Green
 }
 
-$skillsDest = "$cursorHome\skills-cursor"
-if (Test-Path $skillsDest) {
-    $skillsRoots = @(
-        Normalize-Path "$repo\skills"
-        Normalize-Path "$repo\.cursor\skills"
-    )
-    Get-ChildItem $skillsDest -Force |
-        Where-Object { $_.LinkType -eq 'Junction' } |
-        ForEach-Object {
-            $targets = @($_.Target | ForEach-Object { Normalize-Path $_ })
-            if (@($targets | Where-Object {
-                $target = $_
-                @($skillsRoots | Where-Object { $target.StartsWith($_) }).Count -gt 0
-            }).Count -gt 0) {
-                cmd /c "rmdir `"$($_.FullName)`"" | Out-Null
-                Write-Host "Removed skill: $($_.Name)" -ForegroundColor Green
-            }
-        }
-}
+python "$repo\scripts\install-skills.py" --host cursor --home $cursorHome --uninstall
 
 Remove-OwnedJunction "$cursorHome\rules" @("$repo\rules")
 Remove-OwnedJunction "$cursorHome\harness" @("$repo\harness")

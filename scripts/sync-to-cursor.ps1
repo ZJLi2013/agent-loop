@@ -6,8 +6,9 @@
     每次增删或重命名 skill 之后重跑一次——失效的 junction 会被清掉，新增的会补上。
     无需管理员权限。
 
-    rules 用整目录 junction，skills 逐个 junction：全局 skills-cursor/ 里还混着
-    Cursor 自带的 skill，不能整目录替换。
+    rules 用整目录 junction；skills 由 scripts/install-skills.py 逐个链接：本库的进
+    skills-cursor/（那里还混着 Cursor 自带的 skill，不能整目录替换），
+    ~/.agent-loop/packs.txt 登记的 skill 包进 skills/。有包 skill 被跳过时以非零退出。
 
     不要改用硬链接（mklink /H）链 rules：硬链接绑的是文件本身，而 git pull /
     git checkout 是「删掉重写」，一拉就断，之后仓库改动再也不会反映到 Cursor，
@@ -32,29 +33,9 @@ if (Test-Path $rulesDest) {
 cmd /c "mklink /J `"$rulesDest`" `"$repo\rules`"" | Out-Null
 Write-Host "Linked rules/ -> $repo\rules" -ForegroundColor Green
 
-# --- Skills：先清失效链接，再补新增的 ---
-$skillsDest = "$env:USERPROFILE\.cursor\skills-cursor"
-New-Item -ItemType Directory -Force $skillsDest | Out-Null
-
-Get-ChildItem $skillsDest -Force |
-    Where-Object { $_.LinkType -eq 'Junction' -and -not (Test-Path ($_.Target -join '')) } |
-    ForEach-Object {
-        cmd /c "rmdir `"$($_.FullName)`"" | Out-Null
-        Write-Host "Pruned dead link: $($_.Name)" -ForegroundColor Yellow
-    }
-
-Get-ChildItem "$repo\skills" -Directory | ForEach-Object {
-    $t = Join-Path $skillsDest $_.Name
-    $existing = Get-Item $t -Force -ErrorAction SilentlyContinue
-    if ($null -ne $existing -and $existing.LinkType -eq 'Junction' -and
-        ($existing.Target -join '') -ne $_.FullName) {
-        cmd /c "rmdir `"$t`"" | Out-Null
-    }
-    if (-not (Test-Path $t)) {
-        cmd /c "mklink /J `"$t`" `"$($_.FullName)`"" | Out-Null
-        Write-Host "Linked skill: $($_.Name)" -ForegroundColor Green
-    }
-}
+# --- Skills ---
+python "$repo\scripts\install-skills.py" --host cursor --home "$env:USERPROFILE\.cursor"
+$skillsExit = $LASTEXITCODE
 
 # --- Harness：整目录 junction ---
 $harnessSrc  = "$repo\harness"
@@ -140,9 +121,6 @@ if (Test-Path $hooksSrc) {
 Write-Host "`n--- Verify ---" -ForegroundColor Cyan
 "rules/ LinkType = $((Get-Item $rulesDest).LinkType)   (必须是 Junction)"
 "harness/ LinkType = $((Get-Item $harnessDest).LinkType)   (必须是 Junction)"
-Get-ChildItem $skillsDest -Force | Where-Object { $_.LinkType -eq 'Junction' } | ForEach-Object {
-    "{0,-26} target-exists={1}" -f $_.Name, (Test-Path ($_.Target -join ''))
-}
 # hook 从 ~/.cursor/harness 导入，工作项目里的 CLI 只能靠 pip 安装；在 TEMP 里查，避免当前目录遮蔽。
 Push-Location $env:TEMP
 $cli = if (Get-Command python -ErrorAction SilentlyContinue) {
@@ -154,3 +132,4 @@ if ($cli -notlike "$repo\harness\*") {
     Write-Host "工作项目里调不到本 checkout 的 CLI：在 $repo 运行 python -m pip install -e ." -ForegroundColor Yellow
 }
 Write-Host "`nCursor 重启后生效。" -ForegroundColor Cyan
+exit $skillsExit

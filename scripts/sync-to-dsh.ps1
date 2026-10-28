@@ -4,8 +4,9 @@
 
 .DESCRIPTION
     dsh 不读 .mdc：always-apply rule 去掉 frontmatter 后按文件名顺序拼成 $DshHome\AGENTS.md，
-    这是生成文件，rule 改动后重跑。skills 逐个 junction 到 $DshHome\skills\<name>，
-    $DshHome\skills 里其他 skill 不动。hooks 与 provider 仍按 docs/usage.md 手工配置。
+    这是生成文件，rule 改动后重跑。skills 由 scripts/install-skills.py 逐个链接到
+    $DshHome\skills\<name>，含 ~/.agent-loop/packs.txt 登记的 skill 包；那里其他 skill 不动。
+    hooks 与 provider 仍按 docs/usage.md 手工配置。
 #>
 param([string]$DshHome = $env:DSH_HOME)
 
@@ -33,29 +34,6 @@ $content = (@($marker) + $bodies) -join "`n`n"
 [IO.File]::WriteAllText($agents, "$content`n", (New-Object Text.UTF8Encoding $false))
 Write-Host "Wrote $agents from $(@($bodies).Count) always-apply rules" -ForegroundColor Green
 
-# --- Skills：逐个 junction ---
-$skillsDest = Join-Path $DshHome 'skills'
-New-Item -ItemType Directory -Force $skillsDest | Out-Null
-
-Get-ChildItem $skillsDest -Force |
-    Where-Object { $_.LinkType -eq 'Junction' -and -not (Test-Path ($_.Target -join '')) } |
-    ForEach-Object {
-        cmd /c "rmdir `"$($_.FullName)`"" | Out-Null
-        Write-Host "Pruned dead link: $($_.Name)" -ForegroundColor Yellow
-    }
-
-Get-ChildItem "$repo\skills" -Directory | Where-Object { Test-Path "$($_.FullName)\SKILL.md" } | ForEach-Object {
-    $t = Join-Path $skillsDest $_.Name
-    if (Test-Path $t) {
-        if ((Get-Item $t -Force).LinkType) {
-            cmd /c "rmdir `"$t`"" | Out-Null       # 重建，checkout 换了位置也指得对
-        } else {
-            $bk = Join-Path $DshHome "skills-backup-$stamp"   # 放在 skills 外，免得被 dsh 当成 skill 加载
-            New-Item -ItemType Directory -Force $bk | Out-Null
-            Move-Item $t $bk
-            Write-Host "Backed up existing skill $($_.Name) to $bk" -ForegroundColor Yellow
-        }
-    }
-    cmd /c "mklink /J `"$t`" `"$($_.FullName)`"" | Out-Null
-    Write-Host "Linked skill: $($_.Name)" -ForegroundColor Green
-}
+# --- Skills ---
+python "$repo\scripts\install-skills.py" --host dsh --home $DshHome
+exit $LASTEXITCODE

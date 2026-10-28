@@ -18,6 +18,7 @@ class SyncToDshTest(unittest.TestCase):
         self.checkout = Path(tmp.name) / "checkout"
         (self.checkout / "scripts").mkdir(parents=True)
         shutil.copy(SCRIPT, self.checkout / "scripts")
+        shutil.copy(SCRIPT.parent / "install-skills.py", self.checkout / "scripts")
         rules = self.checkout / "rules"
         rules.mkdir()
         (rules / "always.mdc").write_text(
@@ -35,6 +36,7 @@ class SyncToDshTest(unittest.TestCase):
         if home:
             args += ["-DshHome", str(home)]
         env = {k: v for k, v in os.environ.items() if k != "DSH_HOME"}
+        env["USERPROFILE"] = str(self.checkout.parent)
         return subprocess.run(args, capture_output=True, text=True, env=env)
 
     def agents(self) -> str:
