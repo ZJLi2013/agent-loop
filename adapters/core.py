@@ -127,7 +127,7 @@ def _record_arrival(project: Path, task_md: str, shared: Path) -> None:
         commit = ""
     line = json.dumps({
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "project": str(project),
+        "project": str(project.resolve()),
         "task": _doing_task(task_md),
         "shared_commit": commit,
     }, ensure_ascii=False)

@@ -52,7 +52,7 @@ class AdapterCoreTest(unittest.TestCase):
             home = base / "home"
             env = {"HOME": str(home), "USERPROFILE": str(home), SHARED_MEMORY_ENV: str(shared)}
 
-            def read_task(project: Path, with_memory: bool) -> str:
+            def read_task(project: Path, with_memory: bool, path: str | None = None) -> str:
                 runtime = project / ".agent-loop"
                 runtime.mkdir(parents=True, exist_ok=True)
                 if with_memory:
@@ -66,7 +66,7 @@ class AdapterCoreTest(unittest.TestCase):
                 response = handle(HookRequest(
                     event=HookEvent.TOOL_USED,
                     workspace_roots=(project,),
-                    tool_input={"path": str(task)},
+                    tool_input={"path": path or str(task)},
                 ))
                 return response.message or ""
 
@@ -85,17 +85,29 @@ class AdapterCoreTest(unittest.TestCase):
                     message = read_task(base / "b", with_memory=False)
                     self.assertIn("agent-memory", message)
                     self.assertIn("render backends", message)
-                with self.subTest("re-read injects again and logs each arrival"):
-                    self.assertIn("render backends", read_task(base / "a", with_memory=True))
+                with self.subTest("re-read injects the current index and logs each arrival"):
+                    (shared / "INDEX.md").write_text("- render backends → render-v2.md\n", encoding="utf-8")
+                    self.assertIn("render-v2.md", read_task(base / "a", with_memory=True))
                     logged = arrivals()
                     self.assertEqual(len(logged), 3)
                     self.assertEqual(logged[0]["task"], "t1@r2")
-                    self.assertEqual(Path(logged[1]["project"]), base / "b")
+                    self.assertEqual(Path(logged[1]["project"]), (base / "b").resolve())
+                with self.subTest("one project key however the path is spelled"):
+                    project = base / "c"
+                    absolute = str(project / ".agent-loop" / "task.md")
+                    spellings = [absolute, ".agent-loop/task.md"]
+                    if os.name == "nt":
+                        spellings.append(absolute[0].swapcase() + absolute[1:])
+                    for spelling in spellings:
+                        read_task(project, with_memory=False, path=spelling)
+                    keys = {entry["project"] for entry in arrivals()[3:]}
+                    self.assertEqual(len(keys), 1, keys)
                 with self.subTest("unset variable leaves project memory alone"):
+                    count = len(arrivals())
                     with mock.patch.dict(os.environ, {SHARED_MEMORY_ENV: ""}):
                         message = read_task(base / "a", with_memory=True)
                     self.assertNotIn("render backends", message)
-                    self.assertEqual(len(arrivals()), 3)
+                    self.assertEqual(len(arrivals()), count)
 
     def test_active_workspace_without_harness_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
