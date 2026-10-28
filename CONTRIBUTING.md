@@ -66,6 +66,12 @@ A pull request should contain:
 New behavior must remove the path it replaces. Do not duplicate a transition in prose, create a second backlog,
 or add text-matching tests where an executable transition/guard test is possible.
 
+Tests in `tests/` pin contracts: lifecycle transitions and guards, the invariants a design's module contract
+names, and formats other tools read. A test that only proves one fix (a bug no contract names, output layout,
+parsing details, prompt wording) lives in the pull request's history: it fails on the first commit, passes with
+the fix, and is removed before merge, as the auto-fix flow does. Variants of one contract are cases of one test
+with `subTest`. A compatibility test is removed with the release that ends its window.
+
 Commit subjects are imperative statements of the resulting state. Keep unrelated changes in separate commits.
 
 ## Reporting problems

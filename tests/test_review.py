@@ -108,21 +108,6 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIsNone(outcome["review"]["cleanup_error"])
         self.assertIn("t1", prompt)
         self.assertIn(".agent-loop/task.md", prompt)
-        self.assertIn("review 的单位是这个 verified task", prompt)
-        self.assertIn("会改变 `continue / ask_human / stop`", prompt)
-        self.assertIn("没有新 evidence 时不重新审查", prompt)
-        self.assertIn("不写 `.harness/runs.jsonl` 行号", prompt)
-        self.assertIn("业界已有解法", prompt)
-        self.assertIn("本地设计文档", prompt)
-        self.assertIn("不放 `.harness/tasks/`", prompt)
-        self.assertIn("交给被测方", prompt)
-        self.assertIn("实际产物与设计不一致", prompt)
-        self.assertNotIn("review-checklist.md", prompt)
-        self.assertIn("设计文档显式链接的检查表", prompt)
-        self.assertIn("`*-archive.md`", prompt)
-        self.assertIn("不作判据", prompt)
-        self.assertIn("其余文件不作证据", prompt)
-        self.assertIn("够下结论就停止阅读", prompt)
         followup = completion_gate(self.root) or ""
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
@@ -454,24 +439,26 @@ class MainlineHandoffTest(unittest.TestCase):
         )
         return state
 
-    def test_stop_hands_off_to_the_next_aligned_goal(self) -> None:
-        self.review_as("stop")
-        self.assertEqual(self.start([DONE_A, NEXT_B, TODO_C])["task_id"], "t2")
-
-    def test_unapproved_mainline_stays_stopped(self) -> None:
-        self.review_as("stop")
-        with self.assertRaisesRegex(HarnessError, "unattended after"):
-            self.start([DONE_A, NEXT_B], review="proposed")
-
-    def test_skipped_goal_stays_stopped(self) -> None:
-        self.review_as("stop")
-        with self.assertRaisesRegex(HarnessError, "unattended after"):
-            self.start([DONE_A, TODO_C, NEXT_B])
-
-    def test_plan_outside_next_goal_stays_stopped(self) -> None:
-        self.review_as("stop")
-        with self.assertRaisesRegex(HarnessError, "unattended after"):
-            self.start([DONE_A, NEXT_B], plan="side/plan.md")
+    def test_hands_off_only_to_the_next_aligned_goal(self) -> None:
+        cases = (
+            ("next aligned goal", "stop", [DONE_A, NEXT_B, TODO_C], {}, True),
+            ("unapproved mainline", "stop", [DONE_A, NEXT_B], {"review": "proposed"}, False),
+            ("skipped goal", "stop", [DONE_A, TODO_C, NEXT_B], {}, False),
+            ("plan outside next goal", "stop", [DONE_A, NEXT_B], {"plan": "side/plan.md"}, False),
+            ("no mainline", "stop", None, {}, False),
+            ("continue within goal", "continue", [DONE_A, NEXT_B], {"task": "t3", "plan": "plan.md"}, False),
+            ("side goal closed", "stop", [DONE_SIDE, NEXT_B], {}, False),
+        )
+        for name, decision, rows, options, starts in cases:
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                self.review_as(decision, "t2" if decision == "continue" else None)
+                if starts:
+                    self.assertEqual(self.start(rows, **options)["task_id"], "t2")
+                else:
+                    with self.assertRaisesRegex(HarnessError, "unattended after"):
+                        self.start(rows, **options)
 
     def test_handoff_still_needs_answered_plan_review(self) -> None:
         self.review_as("stop")
@@ -489,21 +476,6 @@ class MainlineHandoffTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(HarnessError, "must items"):
             self.start([DONE_A, NEXT_B])
-
-    def test_without_mainline_stop_stays_stopped(self) -> None:
-        self.review_as("stop")
-        with self.assertRaisesRegex(HarnessError, "unattended after"):
-            self.start(None)
-
-    def test_within_goal_continue_keeps_the_named_task(self) -> None:
-        self.review_as("continue", "t2")
-        with self.assertRaisesRegex(HarnessError, "unattended after"):
-            self.start([DONE_A, NEXT_B], task="t3", plan="plan.md")
-
-    def test_side_goal_close_does_not_hand_off(self) -> None:
-        self.review_as("stop")
-        with self.assertRaisesRegex(HarnessError, "unattended after"):
-            self.start([DONE_SIDE, NEXT_B])
 
     def test_archiving_keeps_mainline_rows(self) -> None:
         task_md = self.root / ".agent-loop" / "task.md"

@@ -191,33 +191,31 @@ class InstallSkillsTest(unittest.TestCase):
         self.assertIn("unsupported pack.toml version 2", result.stderr)
         self.assertFalse(self.pack_dest.exists() and any(self.pack_dest.iterdir()))
 
-    def check_pack_named_agent_loop(self, host: str, dest: Path) -> None:
-        impostor = self.tmp / "impostor"
-        for name in ("notes", "linked", "fine"):
-            skill(impostor / "skills" / name)
-        (impostor / "pack.toml").write_text(
-            'version = 1\nname = "agent-loop"\n'
-            + "".join(f'\n[[skills]]\npath = "skills/{n}"\n' for n in ("notes", "linked", "fine")),
-            encoding="utf-8")
-        self.packs.write_text(f"pack {impostor}\n", encoding="utf-8")
-        (dest / "notes").mkdir(parents=True)
-        (dest / "notes" / "mine.md").write_text("keep", encoding="utf-8")
-        elsewhere = skill(self.tmp / "elsewhere" / "linked")
-        install.make_link(dest / "linked", elsewhere)
-        result = self.run_installer(host=host)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("is a plain directory", result.stdout)
-        self.assertIn("outside the registered sources", result.stdout)
-        self.assertEqual((dest / "notes" / "mine.md").read_text(encoding="utf-8"), "keep")
-        self.assertEqual(self.target(dest / "linked"), install.norm(elsewhere))
-        self.assertEqual(self.target(dest / "fine"), install.norm(impostor / "skills" / "fine"))
-        self.assertEqual(list(self.home.glob("skills-backup-*")), [])
-
-    def test_pack_named_agent_loop_cursor_gets_no_own_skill_rights(self) -> None:
-        self.check_pack_named_agent_loop("cursor", self.home / "skills")
-
-    def test_pack_named_agent_loop_dsh_gets_no_own_skill_rights(self) -> None:
-        self.check_pack_named_agent_loop("dsh", self.home / "skills")
+    def test_pack_named_agent_loop_gets_no_own_skill_rights(self) -> None:
+        for host in ("cursor", "dsh"):
+            with self.subTest(host=host):
+                self.setUp()
+                dest = self.home / "skills"
+                impostor = self.tmp / "impostor"
+                for name in ("notes", "linked", "fine"):
+                    skill(impostor / "skills" / name)
+                (impostor / "pack.toml").write_text(
+                    'version = 1\nname = "agent-loop"\n'
+                    + "".join(f'\n[[skills]]\npath = "skills/{n}"\n' for n in ("notes", "linked", "fine")),
+                    encoding="utf-8")
+                self.packs.write_text(f"pack {impostor}\n", encoding="utf-8")
+                (dest / "notes").mkdir(parents=True)
+                (dest / "notes" / "mine.md").write_text("keep", encoding="utf-8")
+                elsewhere = skill(self.tmp / "elsewhere" / "linked")
+                install.make_link(dest / "linked", elsewhere)
+                result = self.run_installer(host=host)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("is a plain directory", result.stdout)
+                self.assertIn("outside the registered sources", result.stdout)
+                self.assertEqual((dest / "notes" / "mine.md").read_text(encoding="utf-8"), "keep")
+                self.assertEqual(self.target(dest / "linked"), install.norm(elsewhere))
+                self.assertEqual(self.target(dest / "fine"), install.norm(impostor / "skills" / "fine"))
+                self.assertEqual(list(self.home.glob("skills-backup-*")), [])
 
     def test_no_packs_file_links_own_skills_and_reports_a_plain_copy(self) -> None:
         self.packs = self.tmp / "absent.txt"
@@ -234,23 +232,6 @@ class InstallSkillsTest(unittest.TestCase):
         for name in ("work-planning", "remote-exec", "experiment-design"):
             self.assertEqual(self.target(own / name), install.norm(self.checkout / "skills" / name))
         self.assertEqual(self.run_installer().stdout.count("Linked skill"), 0)
-
-    def test_hash_inside_a_path_is_not_a_comment(self) -> None:
-        project = self.tmp / "proj#2"
-        shutil.move(str(self.project), str(project))
-        self.project, self.bar = project, project / ".cursor" / "skills" / "bar"
-        self.packs.write_text(
-            f"# my packs\npack {self.pack}\nrepo some-project {project}\nprofiles ops\n", encoding="utf-8")
-        self.run_installer()
-        self.assertEqual(self.target(self.pack_dest / "bar"), install.norm(self.bar))
-
-    def test_owner_column_fits_the_longest_pack_name(self) -> None:
-        text = (self.pack / "pack.toml").read_text(encoding="utf-8")
-        (self.pack / "pack.toml").write_text(text.replace('name = "my-pack"', 'name = "a-long-pack-name"'),
-                                             encoding="utf-8")
-        result = self.run_installer()
-        starts = {line.split()[0]: line.index("->") for line in result.stdout.splitlines() if " -> " in line}
-        self.assertEqual(starts["bar"], starts["work-planning"])
 
 
 if __name__ == "__main__":
