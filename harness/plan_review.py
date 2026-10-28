@@ -89,7 +89,8 @@ def review_status(root: Path, task_id: str, plan_doc: str) -> str:
     record = task_record(root, task_id)
     reviews = record["reviews"]
     # Task ids restart across Goals; reviews recorded before plan_doc existed count for this plan.
-    if not reviews or reviews[-1].get("plan_doc", plan) != plan:
+    # Older versions recorded a task the task reviewer wrote as reviewed without running the plan reviewer.
+    if not reviews or reviews[-1].get("plan_doc", plan) != plan or reviews[-1].get("source") == "task_review":
         return "not_reviewed"
     if any(item["at"] >= reviews[-1]["at"] for item in record["again"]):
         return "needs_review"
