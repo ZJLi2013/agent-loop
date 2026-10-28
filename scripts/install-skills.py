@@ -41,7 +41,9 @@ def norm(path: str | Path) -> str:
     text = str(path)
     if text.startswith("\\\\?\\"):
         text = text[4:]
-    return os.path.normcase(os.path.abspath(text))
+    # Resolve only the parent: 8.3 names and aliased directories compare equal, and a link is not followed to its target.
+    head, tail = os.path.split(os.path.abspath(text))
+    return os.path.normcase(os.path.join(os.path.realpath(head), tail))
 
 
 def link_target(path: Path) -> str | None:
