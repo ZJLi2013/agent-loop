@@ -72,7 +72,10 @@ profiles research,ops
   把包整个从 `packs.txt` 删掉后，它的旧链接在输出里标为 `unmanaged`，手动删除。
 - **输出**：末尾 `--- Skills ---` 一节每行写 skill、源头与目标；`repo` 来源另写 `behind=N dirty=yes|no`，
   是该 checkout 相对上次 fetch 的上游落后几个提交、skill 目录有无未提交改动。安装器不 pull 也不 fetch。
-- 包只提供 skill，不提供 rule。`pack.toml` 的 `version` 不是 1 时整个包被拒绝。
+- 包只提供 skill，不提供 rule。`pack.toml` 的 `version` 不是 1 时整个包被拒绝。清单用 TOML，是因为标准库
+  `tomllib` 就能解析，安装器不引入第三方依赖。
+- 包的 `name` 只用于输出与重名报告，不授予权限：旧链接替换只对 agent-loop 自己的 skill 生效，名为 `agent-loop` 的包
+  也没有这个例外。
 - agent-loop 的 skill 名是 `requires` 的对外接口；改名或删除先在 CHANGELOG 标弃用，保留一个版本。
 
 <a id="dsh-enforced-mode"></a>
