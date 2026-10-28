@@ -57,6 +57,10 @@ All notable user-facing changes are documented here. This project follows Semant
   GPU models listed in `external-output-boundary`, credentials and transcripts, and requires an AI-use line; a
   blocked or over-limit report is saved under `.agent-loop/reports/` instead. It catches only defects with a visible
   signal; `CONTRIBUTING.md` lists what it misses and when to open an issue yourself.
+- `CONTRIBUTING.md`: a rule, skill, or reviewer-prompt change that changes a decision is accepted by a behavior
+  replay. The pull request states the decision as a contract, replays a few synthetic scenarios plus one control on
+  the base branch and with the change, and records the model, inputs, and expected and observed actions. A check
+  that the prompt contains a sentence is not evidence; wording that changes no decision needs no replay.
 - On-demand `code-to-uml-diagram` skill: a Mermaid class diagram of a class and its direct collaborators, with
   inheritance, composition, injection and construct-then-register each read from one kind of source line, plus
   one sequence diagram per key scenario whose participants come from the class diagram.

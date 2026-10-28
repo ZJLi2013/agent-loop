@@ -66,6 +66,15 @@ A pull request should contain:
 New behavior must remove the path it replaces. Do not duplicate a transition in prose, create a second backlog,
 or add text-matching tests where an executable transition/guard test is possible.
 
+A rule, skill, or reviewer-prompt change that changes a decision is accepted by behavior, not by its wording. It
+changes a decision when, for some input, an agent would run, refuse, or stop a different action, keep evidence for a
+different time, or hand work to a different owner. The pull request states that decision as a contract ("given X,
+the agent does / refuses / stops Y"). It then replays a few public synthetic scenarios through the real call path,
+once on the base branch and once with the change: the agent or reviewer reads the rules and acts, rather than a
+check that the prompt contains the new sentence. One more scenario is a control the new rule must not trigger. The pull
+request records the model, the inputs, and the expected and observed action of each run. A small manual or
+fixed-model replay is enough. A wording change that changes no decision needs no replay.
+
 Tests in `tests/` pin contracts: lifecycle transitions and guards, the invariants a design's module contract
 names, and formats other tools read. A test that only proves one fix (a bug no contract names, output layout,
 parsing details, prompt wording) lives in the pull request's history: it fails on the first commit, passes with
@@ -99,8 +108,9 @@ Open an issue yourself when:
 - a project's `.agent-loop/reports/` holds a draft;
 - the problem shows only in a private project. Describe it with a synthetic reproduction.
 
-Only Kernel and Adapter bugs carry the `auto-fix` label; proposals and Policy wording need a human decision and
-have no failing test that proves the change. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
+Only Kernel and Adapter bugs carry the `auto-fix` label; proposals and Policy wording need a human decision, and a
+Policy change that changes a decision is proven by the behavior replay described under Pull requests, not by a
+failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
 hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
 regression test alone and passes with the fix. It then reverts the test, so the suite does not grow with every fix;
 the test stays in the pull request's history. The script does not read why the first commit failed: a test that
