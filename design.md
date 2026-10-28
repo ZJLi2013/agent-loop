@@ -16,8 +16,8 @@ adapter 还是确实需要扩展 kernel。
 
 独立 reviewer 在两个确定性边界运行：Plan Revision 提交后、human 批准前审 task 准入；task
 `VERIFIED` 后审证据解释与下一步。plan reviewer 只向 human 提供风险意见，不能批准 plan、关闭 task
-或授权执行；human 保留 `approve / revise / stop` 权限。每个 plan identity + revision 只审一次，
-初始化、resume、pager 与无人值守批准都不能绕过有效记录。task reviewer 继续由 Harness 在 verify
+或授权执行；human 保留 `approve / revise / stop` 权限。plan review 按 task 审，每个 task 只审一次；
+同一 revision 下新增的 task（含 task reviewer 写的 successor）另审。初始化、resume、pager 与无人值守批准都不能绕过有效记录。task reviewer 继续由 Harness 在 verify
 后调用，并只报告会改变 `continue / ask_human / stop` 或下一条命令的问题。
 固定时间与文件修改 review 不采用——它们没有稳定的决策边界。
 Codex、Cursor 等宿主的会话与缓存目录不属于项目状态，也不进入 agent-loop 的生命周期。
@@ -151,7 +151,13 @@ human 可用 `plan-review --again` 要求重审。记录在 `.harness/plan-revie
 reviewer 与 executor 之间的协议：意见分 `must`（不改就方向错、结论错或白跑昂贵实验，须写后果与依据，否则按
 `suggest` 记）与 `suggest`（严谨性，executor 可跳过），各最多 3 条，超出的丢弃。`must` 必须由 executor 逐条回应
 `applied` 或带事实的 `reject`，init 前检查；带 `human: true` 的 must 须 human 用 `--approve` 选择，`unreviewed` 不认。
-task reviewer 写的 successor 若未审过，记为已审。Plan Revision 只承担 human 纠偏。
+task reviewer 写的 successor 与其他 task 一样，在 init 前经独立 plan review：未审时 `init` 先跑 plan review 再复查准入，
+仍有未回应的 `must` 或待 human `--approve` 的项即拒绝。plan 已 `approved` 时这条补审只给上一个 task reviewer
+指名的 task；其他未审 task 被拒绝，须改回 `proposed`、跑 plan review、经 human 批准再 `init`。
+代价是每个新 successor 多一次 plan reviewer 调用。记录只由 plan review 写入
+（`source="plan_review"` 与它的 `run_id`）；旧版本在 reviewer 指名 successor 时写过 `source="task_review"` 而没跑
+plan reviewer，最后一条是这种记录的 task 视为未审。旧记录不迁移：上面的补审路径已覆盖它们。
+Plan Revision 只承担 human 纠偏。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、

@@ -181,6 +181,10 @@ invoke on-demand skills.
 
 ### Fixed
 
+- A successor task written by the task reviewer goes through plan review before `init`, like any other task; it no
+  longer counts as reviewed because the task reviewer named it. `init` runs that plan review itself, also under
+  `Plan Review: approved`, and starts the task once its `must` items are answered and no item awaits the human.
+  Records left by that shortcut count as not reviewed.
 - On Windows, Harness state writes wait up to about one second for a reader that has the file open (a hook reading
   `state.json` while the runner writes it), instead of failing with `WinError 5`. A failed write leaves no temporary
   file behind.

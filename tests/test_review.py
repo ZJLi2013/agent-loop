@@ -17,7 +17,7 @@ from harness.core import (
     run_command,
     verify,
 )
-from harness.plan_review import record_task_review
+from harness.plan_review import record_task_review, task_record
 from harness.records import archive_closed_tasks, close_task
 from harness.review import run_review
 
@@ -393,6 +393,37 @@ class HumanSuccessorTest(unittest.TestCase):
                 else:
                     with self.assertRaisesRegex(HarnessError, "unattended after"):
                         self.init_successor()
+
+    def test_successor_is_plan_reviewed_before_init(self) -> None:
+        cases = (
+            ("reviewer-named successor", "t2", False, "unreviewed", True),
+            ("record left by the old shortcut", "t2", True, "unreviewed", True),
+            ("successor under an approved plan", "t2", False, "approved", True),
+            ("unnamed task under an approved plan", None, False, "approved", False),
+        )
+        for name, next_task, legacy, review, starts in cases:
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                tasks = self.root / ".agent-loop" / "task.md"
+                tasks.write_text(
+                    "\n".join(tasks.read_text(encoding="utf-8").splitlines()[:3]) + "\n",
+                    encoding="utf-8",
+                )
+                self.review_as("continue" if next_task else "stop", next_task)
+                if legacy:
+                    record_task_review(
+                        self.root, "t2", findings=[], dropped=0, summary="", source="task_review",
+                        run_id=None, plan_doc="plan.md",
+                    )
+                self.human_decides(1, review)
+                if starts:
+                    self.init_successor()
+                else:
+                    with self.assertRaisesRegex(HarnessError, "set Plan Review to proposed"):
+                        self.init_successor()
+                sources = [item["source"] for item in task_record(self.root, "t2")["reviews"]]
+                self.assertEqual("plan_review" in sources, starts)
 
 MAINLINE = (
     "## 主线\n\nOne line.\nMainline Review: {review}\n\n"

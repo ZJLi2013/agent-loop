@@ -255,22 +255,6 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         }
         if decision:
             review.update(decision)
-            if decision["next_task"]:
-                from harness.plan_review import record_task_review, review_status
-
-                plan_doc = config.get("plan_doc")
-                next_task = str(decision["next_task"])
-                if plan_doc and review_status(root, next_task, plan_doc) == "not_reviewed":
-                    record_task_review(
-                        root,
-                        next_task,
-                        findings=[],
-                        dropped=0,
-                        summary=decision["why"],
-                        source="task_review",
-                        run_id=run_id,
-                        plan_doc=plan_doc,
-                    )
         elif previous.get("decision"):
             review.update(
                 {key: previous[key] for key in ("decision", "next_task", "why")}
