@@ -258,14 +258,18 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 
 | 内容 | 唯一真相源 |
 |---|---|
-| Goal、边界、当前结论、决策及其证据 | plan document |
+| 项目的长期事实与结论：行为与接口、测得的结果、约束、带理由的决策、否定发现 | 项目被跟踪的文档（README、设计文档、`docs/`、实验记录） |
+| 进行中 Goal 的边界、工作结论与脉络 | plan document |
 | active task、`rN`、候选与触发项 | `.agent-loop/task.md` |
 | closed task 与旧交接点 | `.agent-loop/archive/`（只按需读取） |
 | runtime phase、budget、当前 run | `.harness/state.json` |
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
 | task 临时文件 | `.harness/tasks/<task_id>/`（task 关闭时删除） |
-| 长期事实与结论 | `.agent-loop/memory/` |
+| 运行环境事实、否决项与指向项目文档的指针 | `.agent-loop/memory/` |
 | 状态与转移是否合法 | `harness/protocol.py` |
+
+plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实的家：它们常被 ignore、不进 upstream，
+接手人 clone 项目时拿不到。
 
 `.cursor/task.md` 与 `.cursor/memory/` 只作为旧项目读取兼容，不再写入。`.harness/state.json`
 不复制 backlog；memory 不复制 stdout；README 不复制本设计。

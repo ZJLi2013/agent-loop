@@ -67,6 +67,11 @@ invoke on-demand skills.
 
 ### Changed
 
+- A project's facts and conclusions live in its own tracked documents; the plan document holds the active Goal's
+  working conclusions and links to them, and memory holds runtime facts, rejected options and pointers. Before the
+  locked verifier the worker writes the facts a task established into the project's documents, and the task reviewer
+  reports a fact found only under `.agent-loop/` or `.harness/` as must and does not stop a Goal until all of its
+  facts have landed.
 - Comparison experiments run every arm once on the smallest case before the full batch (`experiment-design`
   Phase 1.5), and the plan reviewer checks the design for that step. While a batch runs, `when-to-stop` stops the
   remaining jobs as soon as they can no longer change the planned next command, for example when the acceptance
