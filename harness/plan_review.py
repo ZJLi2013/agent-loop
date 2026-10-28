@@ -60,6 +60,11 @@ def task_record(root: Path, task_id: str) -> dict[str, Any]:
     if not path.exists():
         return {"task_id": task_id, "reviews": [], "approvals": [], "again": []}
     record = read_json(path)
+    if record.get("task_id", task_id) != task_id:
+        raise HarnessError(
+            f"{path} holds the plan-review record of task {record['task_id']}, not {task_id}: task ids that "
+            "differ only in case share a file on this file system; rename the task"
+        )
     # Records written before the must / suggest protocol hold plain-string findings.
     for review in record["reviews"]:
         review.setdefault("responses", {})
