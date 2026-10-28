@@ -144,6 +144,9 @@ Experiment Log；只有 `work-planning` 判定需要拆分时才写 linked sub-e
 
 预估 > 10 分钟的实验，先用极小参数快速跑：验证不 crash、输入输出格式正确、关键计数符合预期。**不看指标**，只验管线畅通。
 
+对比实验（baseline 对 candidate、A 对 B）的每个 arm 都要在最小 case 上跑通一次，并记进设计；起不来的 arm
+不是对照，回 plan 而不是开整批。
+
 ### Phase 2 — 过程中实时记录
 
 error 与意外行为立即记；多轮迭代用表格追踪 `| 轮次 | 问题 | 修复 |`。

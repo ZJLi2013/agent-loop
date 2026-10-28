@@ -67,6 +67,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- Comparison experiments run every arm once on the smallest case before the full batch (`experiment-design`
+  Phase 1.5), and the plan reviewer checks the design for that step. While a batch runs, `when-to-stop` stops the
+  remaining jobs as soon as they can no longer change the planned next command, for example when the acceptance
+  check is already decided or the control arm failed everywhere.
 - Installing skills: a plain directory with the name of an agent-loop skill in the host's skill directory is reported
   as a conflict and the installer exits non-zero; the directory is left untouched. On dsh it used to be moved to
   `skills-backup-<time>`; on Cursor it was left in place silently and shadowed the agent-loop skill. Dead links that
