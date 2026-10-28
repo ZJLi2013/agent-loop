@@ -93,9 +93,13 @@ CLI 跑通后，在 Windows + Cursor 下安装 enforced adapter（从仓库根�
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-安装器会创建 user-level junction 和 hooks，并将已有同名普通目录备份。保持仓库路径可用，
+安装器会创建 user-level junction 和 hooks，并将 rules / harness / hooks 位置上已有的普通目录备份；
+skill 重名时报冲突、不覆盖。保持仓库路径可用，
 重启 Cursor，并确保它能找到 `python`。hooks 会在宿主覆盖的 workspace 中执行本地代码；安装前
 阅读 [安全边界](SECURITY.md)。卸载使用 `scripts/uninstall-from-cursor.ps1`，备份需自行恢复。
+
+自己或团队维护的 skill 可以做成 skill 包，登记在本机 `~/.agent-loop/packs.txt`，由同一个安装器装进
+Cursor 与 dsh，并检查重名与依赖，见[安装 skill 包](docs/usage.md#skill-packs)。
 
 用 [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) 当 worker 时，用
 `scripts/sync-to-dsh.ps1` 分发 rules / skills，hooks 按[使用指南](docs/usage.md#dsh-enforced-mode)接线；模型在 dsh 里配，

@@ -98,10 +98,14 @@ After trying the CLI, Windows + Cursor users can install the enforced adapter fr
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-The installer creates user-level junctions and hooks, backing up existing ordinary directories with the same
-names. Keep the checkout at its installed path, restart Cursor, and make sure Cursor can resolve `python`.
+The installer creates user-level junctions and hooks, backing up existing ordinary directories where rules,
+harness and hooks go; a skill whose name is already taken is reported as a conflict and not overwritten. Keep the checkout at its installed path, restart Cursor, and make sure Cursor can resolve `python`.
 Hooks execute local Python code across workspaces covered by the host; read the [security boundary](SECURITY.md)
 before installation. Use `scripts/uninstall-from-cursor.ps1` to remove the integration; restore backups manually.
+
+Skills you or your team maintain elsewhere can be packaged as skill packs and listed in a machine-local
+`~/.agent-loop/packs.txt`; the same installer links them into Cursor and dsh and checks name collisions and
+dependencies, see [installing skill packs](docs/usage.md#skill-packs) (Chinese).
 
 With [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) as the worker, distribute rules and
 skills with `scripts/sync-to-dsh.ps1` and wire the hooks per the [usage guide](docs/usage.md#dsh-enforced-mode); models

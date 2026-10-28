@@ -18,6 +18,7 @@ class SyncToDshTest(unittest.TestCase):
         self.checkout = Path(tmp.name) / "checkout"
         (self.checkout / "scripts").mkdir(parents=True)
         shutil.copy(SCRIPT, self.checkout / "scripts")
+        shutil.copy(SCRIPT.parent / "install-skills.py", self.checkout / "scripts")
         rules = self.checkout / "rules"
         rules.mkdir()
         (rules / "always.mdc").write_text(
@@ -35,6 +36,7 @@ class SyncToDshTest(unittest.TestCase):
         if home:
             args += ["-DshHome", str(home)]
         env = {k: v for k, v in os.environ.items() if k != "DSH_HOME"}
+        env["USERPROFILE"] = str(self.checkout.parent)
         return subprocess.run(args, capture_output=True, text=True, env=env)
 
     def agents(self) -> str:
@@ -53,15 +55,16 @@ class SyncToDshTest(unittest.TestCase):
         (self.home / "skills" / "mine").mkdir(parents=True)
         (self.home / "skills" / "demo").mkdir()
         (self.home / "AGENTS.md").write_text("my own rules\n", encoding="utf-8")
-        self.assertEqual(self.sync(self.home).returncode, 0)
+        self.assertEqual(self.sync(self.home).returncode, 1)
         first = self.agents()
-        self.assertEqual(self.sync(self.home).returncode, 0)
+        self.assertEqual(self.sync(self.home).returncode, 1)
         self.assertEqual(self.agents(), first)
         self.assertEqual(first.count("Keep task state in task.md."), 1)
         backups = list(self.home.glob("AGENTS.md.backup-*"))
         self.assertEqual([b.read_text(encoding="utf-8") for b in backups], ["my own rules\n"])
         self.assertTrue((self.home / "skills" / "mine").is_dir())
-        self.assertEqual(len(list(self.home.glob("skills-backup-*/demo"))), 1)
+        self.assertFalse((self.home / "skills" / "demo" / "SKILL.md").exists())
+        self.assertEqual(list(self.home.glob("skills-backup-*")), [])
         self.assertEqual(sorted(p.name for p in (self.home / "skills").iterdir()), ["demo", "mine"])
 
     def test_missing_home_fails_with_message(self) -> None:

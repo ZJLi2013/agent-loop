@@ -6,6 +6,14 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Skill packs: any directory with a `pack.toml` can be listed in a machine-local `~/.agent-loop/packs.txt` together
+  with the repository checkouts it refers to and the active profiles. `scripts/install-skills.py`, called by both
+  `sync-to-cursor.ps1` and `sync-to-dsh.ps1`, links agent-loop's skills and the selected pack skills (Cursor:
+  `~/.cursor/skills`). A pack skill whose name is taken, whose target is occupied, or whose `requires` names a
+  missing agent-loop skill is skipped and the installer exits non-zero. Only links into registered sources are ever
+  removed. agent-loop skill names are now a public interface: a rename or removal is announced here and kept for one
+  release. See `docs/usage.md#skill-packs`.
+
 - Harness owns task scratch: `init` creates `.harness/tasks/<task_id>/` for kits, workspaces, local run outputs, job
   lists and PR drafts, and removes it after the reviewer's decision is saved; projects without a reviewer run
   `clean-task` at CLOSE. A removal failure is reported, not raised. `init` and `status` list `strays`: `.harness/`
@@ -59,6 +67,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- Installing skills: a plain directory with the name of an agent-loop skill in the host's skill directory is reported
+  as a conflict and the installer exits non-zero; the directory is left untouched. On dsh it used to be moved to
+  `skills-backup-<time>`; on Cursor it was left in place silently and shadowed the agent-loop skill. Dead links that
+  do not point into agent-loop or a registered pack are no longer pruned; they are listed as `unmanaged`.
 - A change that adds state persisting across runs, a read/write or permission boundary, concurrent writers, or an
   interface with more than one caller gets a one-page module contract in its task design before code: owner,
   data lifecycle, read/write modes, invariants each paired with a test, concurrency and failure behaviour, and
