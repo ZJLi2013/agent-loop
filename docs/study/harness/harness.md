@@ -9,7 +9,7 @@
 
 ## 结论
 
-最小 Harness 已落地：显式 runner 命令受 hard timeout、attempt / wall budget 和有界 journal 控制；
+最小 Harness 已落地：显式 runner 命令受 hard timeout、failed-verification attempt / wall budget 和有界 journal 控制；
 锁定 verifier 通过且工作树未变化时，enforced adapter 才允许宿主结束。它不拦截所有 host tool call，
 任务状态仍以 `.agent-loop/task.md` 为唯一真相源。运行中 pause 与 Plan Revision gate 已落地。
 
