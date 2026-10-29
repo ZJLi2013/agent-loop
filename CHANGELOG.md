@@ -187,6 +187,9 @@ invoke on-demand skills.
 
 ### Fixed
 
+- Passing Harness verification no longer consumes `max_attempts`, so stale evidence can be verified again.
+  Failed verification (including output-contract rejection) still consumes the attempt budget; wall time remains bounded.
+
 - A successor task written by the task reviewer goes through plan review before `init`, like any other task; it no
   longer counts as reviewed because the task reviewer named it. `init` runs that plan review itself, also under
   `Plan Review: approved`, and starts the task once its `must` items are answered and no item awaits the human.
