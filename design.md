@@ -24,6 +24,87 @@ Codex、Cursor 等宿主的会话与缓存目录不属于项目状态，也不�
 上下文与 token 按决策需要花，不按完整性花：常驻面只放路由与当前状态，已关闭记录退出活跃面，
 reviewer 只读列出的判据与直接链接的证据，够下结论即停。
 
+## 范围
+
+agent-loop 只维护三类公开保证：
+
+1. 已声明的 task 生命周期：准入、执行、验证、review、暂停、停止、交接、记录退役；
+2. 让这些保证在支持的宿主上成立的安装、接线与兼容；
+3. 本仓库自身的发行、贡献、安全与缺陷反馈。
+
+| 输入 | 处置 |
+|---|---|
+| 已有保证被违反，有一次可复现证据 | 收为 defect，不要求第二个项目佐证 |
+| 现有状态下的通用决策方法 | 交现有 Policy owner，写出可观察的决策与误触发代价 |
+| 理由只是「放得进某个 skill」或「没有 owner」 | 转外部 skill pack，agent-loop 不承担维护 |
+| 依赖个人节点池、个人风格或个人调度 | 转用户私有 pack 或执行工具仓库 |
+| 新的受控对象、持久身份、权限，或与现有不变量相反 | 先 RFC 或原型 |
+| 只有预防性设想，没有公开保证或实际使用方 | 以范围外关闭，写明重新提出的条件 |
+
+外部 pack 经 `~/.agent-loop/packs.txt` 安装；agent-loop 不点名任何包内 skill。本节对新 issue / PR 立即生效；
+已发行而落在范围外的 skill 与 rule 迁出到外部 pack，迁出前照常维护，迁移步骤记在 CHANGELOG。
+
+| 需求 | 处置 | 依据 |
+|---|---|---|
+| [#98](https://github.com/ZJLi2013/agent-loop/issues/98) 新 Goal 的同名 task 继承旧 plan review | 收，defect | 违反保证 1 的准入 |
+| [#108](https://github.com/ZJLi2013/agent-loop/issues/108) Windows 上有读者打开 `state.json` 时写入失败 | 收，defect | 违反保证 2 |
+| [#46](https://github.com/ZJLi2013/agent-loop/issues/46) 新增画 UML 类图的 skill | 转外部 pack | 理由只是「没有 owner」 |
+| [#93](https://github.com/ZJLi2013/agent-loop/issues/93) 自动挑远端 GPU 节点 | 转用户私有 pack | 依赖个人节点池 |
+| [#16](https://github.com/ZJLi2013/agent-loop/issues/16) 与确认模式不变量相反的 exploration mode | 先 RFC / 原型 | 与现有不变量相反 |
+
+## 状态模型
+
+决定 agent-loop 允许、拒绝或结束一个动作的持久状态只有下表六个维度。**改变表中任一项的语义就是 Kernel 变更**，
+先走 Issue / RFC。参与判定的时序比较写在各维度的「取值」里；只写不读的记录时间、日志、消息文本与 hook payload
+不参与判定。
+
+| 维度 | 身份 | 取值 | 谁能改 | 存在哪 | 契约测试 |
+|---|---|---|---|---|---|
+| task 实例 | task id 按原字符串匹配，大小写不同却共享同一记录文件时拒绝；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
+| 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py` |
+| 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；无人值守自批只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
+| 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
+| 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
+| 记录寿命 | closed task 按 task id 归档 | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或在 `<plan>-archive.md`；scratch 存在或已删；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；plan → `<plan>-archive.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py` |
+
+已知与实现不符：task 设计段只在标题首词是 task id 时退役，写在主题标题下的设计不退役（[#123](https://github.com/ZJLi2013/agent-loop/issues/123)）。
+
+执行尝试的 phase 与转移：
+
+| State | 含义 |
+|---|---|
+| `PROPOSED` | plan / task 等待 review |
+| `READY` | plan 已批准，可选择下一动作 |
+| `RUNNING` | runner 正在执行命令 |
+| `PAUSED` | 等待 human review，拒绝新命令 |
+| `VERIFYING` | 独立 verifier 正在运行 |
+| `VERIFIED` | evidence 通过且 fingerprint 未变化 |
+| `FAILED` | 当前动作失败，可 diagnose / repair |
+| `STOPPED` | budget 用尽、禁用或 Auto-Stop |
+
+| Event | 典型转移 |
+|---|---|
+| `PLAN_APPROVED` | `PROPOSED → READY` |
+| `RUN_STARTED / RUN_FINISHED` | `READY|FAILED → RUNNING → READY` |
+| `VERIFY_STARTED / VERIFY_PASSED` | `READY|FAILED → VERIFYING → VERIFIED` |
+| `VERIFY_FAILED` | `VERIFYING → FAILED` |
+| `USER_CORRECTION / PAUSE_REQUESTED` | active state → `PAUSED` |
+| `PLAN_RESUMED` | `PAUSED → READY` |
+| `EVIDENCE_STALE` | `VERIFIED → FAILED` |
+| `BUDGET_EXHAUSTED / DISABLED` | active state → `STOPPED` |
+
+跨维度的 guard 是可执行条件，不写成 agent 自觉：
+
+- plan document `Plan Revision` = task `rN` = runtime revision；
+- `Plan Review` 是 `approved` 或 `unreviewed`；有待 human 决定的 review 项时不认 `unreviewed`；
+- task 有有效的 plan review：最后一条记录由 plan reviewer 写、对应当前 `plan_doc`、之后没有 `--again`，
+  `must` 全部回应，human 项有不早于 review 的 `--approve`；
+- pause request 不存在；
+- `config.json` 的摘要等于 init 时记下的 `config_sha256`；
+- attempt / wall budget 尚有余额，用尽后只要求一次 Auto-Stop Report；
+- task reviewer 的决策落盘前，runner 与下一 task 的 init 都被拒绝；
+- verifier 通过且 workspace fingerprint 未变化；
+- 请求的会话不是 `owner` 时，gate 不写状态、不发 followup。
 
 ## Architecture
 
@@ -51,37 +132,8 @@ reviewer 只读列出的判据与直接链接的证据，够下结论即停。
 
 ### Stable Kernel
 
-Kernel 不知道 plan 文档怎么写、实验用什么指标，也不知道任何平台的 hook JSON。它只处理：
-
-| State | 含义 |
-|---|---|
-| `PROPOSED` | plan / task 等待 review |
-| `READY` | plan 已批准，可选择下一动作 |
-| `RUNNING` | runner 正在执行命令 |
-| `PAUSED` | 等待 human review，拒绝新命令 |
-| `VERIFYING` | 独立 verifier 正在运行 |
-| `VERIFIED` | evidence 通过且 fingerprint 未变化 |
-| `FAILED` | 当前动作失败，可 diagnose / repair |
-| `STOPPED` | budget 用尽、禁用或 Auto-Stop |
-
-| Event | 典型转移 |
-|---|---|
-| `PLAN_APPROVED` | `PROPOSED → READY` |
-| `RUN_STARTED / RUN_FINISHED` | `READY|FAILED → RUNNING → READY` |
-| `VERIFY_STARTED / VERIFY_PASSED` | `READY|FAILED → VERIFYING → VERIFIED` |
-| `VERIFY_FAILED` | `VERIFYING → FAILED` |
-| `USER_CORRECTION / PAUSE_REQUESTED` | active state → `PAUSED` |
-| `PLAN_RESUMED` | `PAUSED → READY` |
-| `EVIDENCE_STALE` | `VERIFIED → FAILED` |
-| `BUDGET_EXHAUSTED / DISABLED` | active state → `STOPPED` |
-
-Guard 是可执行条件，不写成 agent 自觉：
-
-- plan document `Plan Revision` = task `rN` = runtime revision；
-- `Plan Review` 是 `approved` 或 `unreviewed`；
-- pause request 不存在；
-- attempt / wall budget 尚有余额；
-- verifier 通过且 workspace fingerprint 未变化。
+Kernel 不知道 plan 文档怎么写、实验用什么指标，也不知道任何平台的 hook JSON。它只拥有[状态模型](#状态模型)
+里的状态、转移与 guard。
 
 ### Policies
 
@@ -147,16 +199,15 @@ Harness 不自动回收。占用标记的进程已不在时，exec / verify / ga
 ### Independent review boundaries
 
 plan review 的单位是 task：每个 task 只在第一次出现时审一次，一次调用审完所有未审的 task，设计之后再改也不重审；
-human 可用 `plan-review --again` 要求重审。记录在 `.harness/plan-review/tasks/<id>.json`。
+human 可用 `plan-review --again` 要求重审。记录的身份与准入 guard 见[状态模型](#状态模型)的 task 实例。
 reviewer 与 executor 之间的协议：意见分 `must`（不改就方向错、结论错或白跑昂贵实验，须写后果与依据，否则按
 `suggest` 记）与 `suggest`（严谨性，executor 可跳过），各最多 3 条，超出的丢弃。`must` 必须由 executor 逐条回应
 `applied` 或带事实的 `reject`，init 前检查；带 `human: true` 的 must 须 human 用 `--approve` 选择，`unreviewed` 不认。
 task reviewer 写的 successor 与其他 task 一样，在 init 前经独立 plan review：未审时 `init` 先跑 plan review 再复查准入，
 仍有未回应的 `must` 或待 human `--approve` 的项即拒绝。plan 已 `approved` 时这条补审只给上一个 task reviewer
 指名的 task；其他未审 task 被拒绝，须改回 `proposed`、跑 plan review、经 human 批准再 `init`。
-代价是每个新 successor 多一次 plan reviewer 调用。记录只由 plan review 写入
-（`source="plan_review"` 与它的 `run_id`）；旧版本在 reviewer 指名 successor 时写过 `source="task_review"` 而没跑
-plan reviewer，最后一条是这种记录的 task 视为未审。旧记录不迁移：上面的补审路径已覆盖它们。
+代价是每个新 successor 多一次 plan reviewer 调用。记录只由 plan review 写入（`source="plan_review"` 与它的
+`run_id`）；最后一条记录不是 plan review 写的 task 视为未审。
 Plan Revision 只承担 human 纠偏。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
@@ -272,6 +323,8 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
 | task 临时文件 | `.harness/tasks/<task_id>/`（task 关闭时删除） |
 | 运行环境事实、否决项与指向项目文档的指针 | `.agent-loop/memory/` |
+| 会话绑定的项目与已发的 followup | 系统 temp 的 `agent-loop-cursor-sessions/`、`agent-loop-followups/` |
+| 共享 memory 的注入记录 | `~/.agent-loop/shared-memory-arrivals.jsonl`（只追加，不参与判定，没有退役规则） |
 | 状态与转移是否合法 | `harness/protocol.py` |
 
 plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实的家：它们常被 ignore、不进 upstream，
@@ -291,6 +344,12 @@ plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实�
 
 每次扩展必须同时删除被替代路径。Kernel contract test 测 transition 与 guard；platform adapter
 用原生 payload fixture 测 codec，不复制共享动作测试。
+
+设计文档的写法：
+
+- 只写当前为真的设计；迁移步骤与兼容历史进 CHANGELOG，计划、下一步与实验记录进 plan document。
+- 改设计文档的 PR 说出改了哪个设计决定；说不出就不改设计文档。
+- 同一节在一个 4 周窗口内第二次补特例时停止追加，改为 RFC 重写该节。
 
 ## Public repository contract
 
@@ -336,4 +395,5 @@ agent-loop/
 - 不把扁平 task 变成 DAG。
 - 不让 Harness 接管未显式交给 runner 的全部 host tool call。
 - 不为行数目标删判据；重构只删除重复 owner 与重复路径。
+- 与生命周期状态无关的个人工作流 skill / rule 不进发行。
 
