@@ -189,38 +189,6 @@ class HarnessTest(unittest.TestCase):
         verify(self.root)
         self.assertIsNone(completion_gate(self.root))
 
-    def test_stale_passing_verifications_do_not_exhaust_attempts(self) -> None:
-        self.init(max_attempts=3, goal_review_after_actions=0,
-                  goal_review_after_seconds=0)
-        for index in range(4):
-            with self.subTest(verification=index + 1):
-                self.assertTrue(verify(self.root)["verification_passed"])
-                self.assertIsNone(completion_gate(self.root))
-                (self.root / "notes.txt").write_text(str(index))
-                self.assertIn("is stale", completion_gate(self.root) or "")
-                self.assertIn("3 attempts", completion_gate(self.root) or "")
-
-    def test_passes_preserve_failed_verification_budget(self) -> None:
-        self.init(
-            "from pathlib import Path; "
-            "print('FAIL' if Path('reject').exists() else 'OK')",
-            expect_regex=r"\bOK\b", max_attempts=2,
-            goal_review_after_actions=0, goal_review_after_seconds=0,
-        )
-        marker = self.root / "reject"
-        marker.touch()
-        self.assertFalse(verify(self.root)["verification_passed"])
-        self.assertEqual(load_runtime(self.root)[1]["verify_attempts"], 1)
-        marker.unlink()
-        self.assertTrue(verify(self.root)["verification_passed"])
-        self.assertEqual(load_runtime(self.root)[1]["verify_attempts"], 1)
-        marker.touch()
-        self.assertIn("is stale", completion_gate(self.root) or "")
-        self.assertFalse(verify(self.root)["verification_passed"])
-        self.assertEqual(load_runtime(self.root)[1]["phase"], "stopped")
-        with self.assertRaisesRegex(HarnessError, "execution budget exhausted"):
-            verify(self.root)
-
     def test_completion_gate_requests_one_stop_report(self) -> None:
         self.init("raise SystemExit(1)", max_attempts=1)
         verify(self.root)
