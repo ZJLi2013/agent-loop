@@ -135,10 +135,15 @@ Open an issue yourself when:
 - a project's `.agent-loop/reports/` holds a draft;
 - the problem shows only in a private project. Describe it with a synthetic reproduction.
 
-Only Kernel and Adapter bugs triaged `restores-contract` carry the `auto-fix` label, and `run.ps1` refuses an issue
-that lacks that label or also carries another triage label before it creates a worktree. Proposals and Policy
-wording need a human decision, and a Policy change that changes a decision is proven by the behavior replay
-described under Pull requests, not by a failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
+Only Kernel and Adapter bugs triaged `restores-contract` carry the `auto-fix` label. The maintainer writes triage
+labels and `.github/auto-fix/run.ps1` only reads them. Without `-Issue` it picks the lowest-numbered open issue
+labelled both `auto-fix` and `restores-contract` that has no open pull request, and exits 0 when there is none.
+Once either path has chosen the issue, the script reads that issue's labels once, before it fetches or creates a
+worktree. It stops with exit 1 when `restores-contract` is missing or another triage label is also present, and
+exits non-zero when the labels cannot be read; in each case it neither fetches, creates a worktree, nor starts
+Codex. A relabel during the run does not stop it, so the maintainer re-checks the triage before merging.
+Proposals and Policy wording need a human decision, and a Policy change that changes a decision is proven by the
+behavior replay described under Pull requests, not by a failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
 hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
 regression test alone and passes with the fix. It then reverts the test, so the suite does not grow with every fix;
 the test stays in the pull request's history. The script does not read why the first commit failed: a test that
