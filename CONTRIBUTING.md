@@ -4,6 +4,33 @@ Thanks for improving agent-loop. Start with [`design.md`](design.md): the reposi
 state-machine kernel, state-specific policies, and platform adapters.
 Participation is governed by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
+## Admission
+
+Decide first whether agent-loop takes a change, then which layer it goes to. [The scope in
+`design.md`](design.md#范围) lists the three public guarantees agent-loop maintains and how each kind of request is
+handled. The issue forms and the pull request template ask which guarantee a change maintains.
+
+The maintainer triages new issues every Monday and gives each open issue exactly one label:
+
+- `restores-contract`: an existing guarantee is broken, with one reproducible piece of evidence. It is a defect and
+  needs no second project to confirm it.
+- `changes-contract`: the change alters a contract, adds a decision method, or introduces a new controlled object,
+  persistent identity, or permission.
+- `out-of-scope`: closed with a comment naming where the request belongs and what would justify reopening it.
+
+Contract changes (identity, admission, authorization, closure semantics, and Policy changes that change a decision)
+merge only on window days: every fourth Monday from 2026-11-02 (2026-11-02, 2026-11-30, 2026-12-28, …).
+`restores-contract` fixes and Adapter compatibility fixes merge at any time.
+
+When the same contract is fixed a second time within one four-week cycle, the fix still merges, and a
+`changes-contract` issue reviews that contract, as the [Extension rule](design.md#extension-rule) requires.
+
+agent-loop counts as stable after two consecutive windows in which no core contract was redefined, no invariant
+received a patch to a patch, no capability entered the core without admission, and independent incidents per 100
+task boundaries fell. This needs at least 3 projects, 2 hosts and 100 task boundaries; below that the result is
+recorded as too few samples. Fewer issues or an unchanged `protocol.py` are not evidence of stability. The first
+review is on 2026-12-28 and its result goes into [`ROADMAP.md`](ROADMAP.md).
+
 ## Before coding
 
 Open an Issue first when a change:
@@ -108,9 +135,10 @@ Open an issue yourself when:
 - a project's `.agent-loop/reports/` holds a draft;
 - the problem shows only in a private project. Describe it with a synthetic reproduction.
 
-Only Kernel and Adapter bugs carry the `auto-fix` label; proposals and Policy wording need a human decision, and a
-Policy change that changes a decision is proven by the behavior replay described under Pull requests, not by a
-failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
+Only Kernel and Adapter bugs triaged `restores-contract` carry the `auto-fix` label, and `run.ps1` refuses an issue
+that lacks that label or also carries another triage label before it creates a worktree. Proposals and Policy
+wording need a human decision, and a Policy change that changes a decision is proven by the behavior replay
+described under Pull requests, not by a failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
 hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
 regression test alone and passes with the fix. It then reverts the test, so the suite does not grow with every fix;
 the test stays in the pull request's history. The script does not read why the first commit failed: a test that

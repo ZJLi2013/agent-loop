@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Hands one open auto-fix issue to Codex and opens a pull request for its fix.
+Hands one open auto-fix issue triaged as restores-contract to Codex and opens a pull request for its fix.
 
 .DESCRIPTION
 Codex runs in its workspace-write sandbox in a fresh worktree of origin/main and follows agent.md. This script pushes
@@ -45,7 +45,7 @@ function Get-FailedChecks([string]$Pr) {
 }
 
 if (-not $Issue) {
-    $open = Invoke-Checked gh issue list --repo $repo --label auto-fix --state open --json number -q '.[].number'
+    $open = Invoke-Checked gh issue list --repo $repo --label auto-fix --label restores-contract --state open --json number -q '.[].number'
     $Issue = $open | Sort-Object { [int]$_ } | Where-Object {
         -not (Invoke-Checked gh pr list --repo $repo --state open --label auto-fix --search "#$_ in:body" --json number -q '.[].number')
     } | Select-Object -First 1
@@ -54,6 +54,12 @@ if (-not $Issue) {
         exit 0
     }
 }
+
+# Triage labels are written by the maintainer; a relabel during the run does not stop it.
+$triage = Invoke-Checked gh issue view $Issue --repo $repo --json labels -q '.labels[].name'
+if ($triage -notcontains 'restores-contract') { Stop-Run "#$Issue is not triaged as restores-contract" }
+$conflict = $triage | Where-Object { $_ -in 'changes-contract', 'out-of-scope' }
+if ($conflict) { Stop-Run "#$Issue is triaged both restores-contract and $($conflict -join ', ')" }
 
 $branch = "auto-fix/$Issue"
 $wt = Join-Path (Split-Path $root -Parent) "agent-loop-autofix-$Issue"
