@@ -187,6 +187,11 @@ invoke on-demand skills.
 
 ### Fixed
 
+- A task design written under a topic heading such as `### Data cleanup (a1)` stayed in the active plan forever, since
+  CLOSE archives only sections whose heading starts with the task id. `init --plan-doc` now refuses a task unless every
+  link from its `task.md` row into the plan lands in such a section (by GitHub heading slug or an `<a id>` before it)
+  and at least one link locates the design there or in a file under the plan's directory, such as `sub-exp/`.
+
 - A successor task written by the task reviewer goes through plan review before `init`, like any other task; it no
   longer counts as reviewed because the task reviewer named it. `init` runs that plan review itself, also under
   `Plan Review: approved`, and starts the task once its `must` items are answered and no item awaits the human.

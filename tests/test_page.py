@@ -58,7 +58,7 @@ class PagerCheckpointTest(unittest.TestCase):
         runtime.mkdir()
         (runtime / "task.md").write_text(
             "| P | id | rev | task | check | status | fail |\n"
-            "| P0 | t1 | r1 | demo | check | 🔬 doing | 0 |\n",
+            "| P0 | t1 | r1 | demo | [design](../plan.md#t1-design) | 🔬 doing | 0 |\n",
             encoding="utf-8",
         )
         (self.root / "fake_pager.py").write_text(FAKE_PAGER, encoding="utf-8")
@@ -78,7 +78,7 @@ class PagerCheckpointTest(unittest.TestCase):
     def write_plan(self, revision: int, review: str) -> None:
         (self.root / "plan.md").write_text(
             f"# Demo\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n"
-            "## Goal\nDemo goal\n",
+            "## Goal\nDemo goal\n\n## t1 design\n",
             encoding="utf-8",
         )
 

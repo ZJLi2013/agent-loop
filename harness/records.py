@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 from harness.project import runtime_dir, task_file
 
@@ -234,6 +235,48 @@ def _task_sections(lines: list[str], task_id: str) -> list[tuple[int, int]]:
         )
         spans.append((start, end))
     return spans
+
+
+def _slug(heading: str) -> str:
+    return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
+
+
+def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None:
+    plan = (root / plan_doc).resolve()
+    lines = plan.read_text(encoding="utf-8").splitlines() if plan.is_file() else []
+    structural = _structural_lines(lines)
+    archived = set()
+    for start, end in _task_sections(lines, task_id):
+        for index in range(start, end):
+            if not structural[index]:
+                continue
+            if anchor := _ANCHOR_LINE.match(lines[index]):
+                archived.add(anchor.group(1))
+            elif heading := _HEADING.match(lines[index]):
+                archived.add(_slug(heading.group(2)))
+
+    base = task_file(root).parent
+    located, stray = False, []
+    for match in _TARGET.finditer(" | ".join(task_row(root, task_id) or [])):
+        parts = _local(match.group(2))
+        if not parts or not parts[0]:
+            continue
+        target = (base / unquote(parts[0])).resolve()
+        if target == plan:
+            if unquote(parts[1]) in archived:
+                located = True
+            else:
+                stray.append(match.group(2))
+        elif target.is_file() and target.is_relative_to(plan.parent):
+            located = True
+    if located and not stray:
+        return None
+    found = f" (not archivable: {', '.join(stray)})" if stray else ""
+    return (
+        f"task {task_id} must link its design to a {plan_doc} section whose heading starts "
+        f"with {task_id} (add <a id> before it if the slug differs) or to a file under "
+        f"{plan.parent.name}/; CLOSE archives only those{found}"
+    )
 
 
 def _mark_done(root: Path, task_id: str) -> None:

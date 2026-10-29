@@ -35,7 +35,7 @@ from harness.plan import (
 from harness.page import load_pager, page_followup
 from harness.plan_review import plan_review_ready, run_plan_review
 from harness.protocol import Event, Phase, TransitionError, apply_event
-from harness.records import active_task_status, mainline_handoff
+from harness.records import active_task_status, design_location_error, mainline_handoff
 from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
 from harness.scratch import clean_task, scratch_path, task_dir
@@ -172,6 +172,8 @@ def initialize(
             raise HarnessError(
                 f"task {task_id} binds r{task_revision}, plan is r{revision}"
             )
+        if misplaced := design_location_error(root, task_id, plan_doc):
+            raise HarnessError(misplaced)
         if reviewer:
             ready, reason = plan_review_ready(
                 root, task_id, plan_doc=plan_doc, review=review
