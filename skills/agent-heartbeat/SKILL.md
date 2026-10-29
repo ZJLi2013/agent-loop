@@ -10,7 +10,7 @@ description: >-
 
 detach 的长任务要能看出两件事：到那台机器的连接还在，以及远端脚本仍在写出预期内容。进程还在、但有效日志不再增长，算挂住。
 
-**边界**：跨会话交接归 `task-state`，实验结论归 `experiment-design`，上机、detach、短 SSH 归 `remote-exec`。
+**边界**：跨会话交接归 `task-state`，实验结论归 `experiment-design`；上机、detach、短 SSH 不归本 skill。
 
 预计短于 30 分钟：不挂观察。开跑前一句，结束时报耗时和退出码。
 
@@ -28,7 +28,14 @@ detach 的长任务要能看出两件事：到那台机器的连接还在，以�
 
 实验只填参数，不新写观察脚本。脚本在本 skill 的 `scripts/`。
 
-1. 任务结束时把退出码原子写到 `<log>.exit`；`remote-exec` 的启动模板已包含这一步。把 `watch.sh` 拷到日志所在机器，detach 后把 stdout 接到 `<log>.hb`：
+1. 启动命令在任务结束时把退出码原子写到 `<log>.exit`：先写 `<log>.exit.tmp` 再 `mv`，watcher 不会读到半个文件。每次运行用新日志。detach 一条命令：
+
+```bash
+LOG=/path/to/run-$(date +%s).log
+nohup bash -c 'python train.py; rc=$?; printf "%s\n" "$rc" > "$0.exit.tmp"; mv "$0.exit.tmp" "$0.exit"' "$LOG" > "$LOG" 2>&1 &
+```
+
+把 `watch.sh` 拷到日志所在机器，detach 后把 stdout 接到 `<log>.hb`：
 
 ```bash
 bash watch.sh --log PATH --expect-secs SECS

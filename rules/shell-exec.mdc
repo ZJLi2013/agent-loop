@@ -32,4 +32,4 @@ alwaysApply: true
 
 ## 边界
 
-远端执行另有一套（`ssh -A` 的 socket 失效、tmux 引号嵌套），归 `remote-exec` 的「两个坑」。
+远端执行另有一套（`ssh -A` 的 socket 失效、tmux 引号嵌套），归远端执行工具。

@@ -177,6 +177,15 @@ invoke on-demand skills.
 - Usage recommends an editable CLI install for Cursor enforced mode, so the CLI and the linked hooks run the
   same checkout. `sync-to-cursor.ps1` warns when the CLI is not installed from that checkout.
 
+### Deprecated
+
+- `remote-exec` leaves agent-loop in the next release: it depends on a personal node pool, which `design.md#范围`
+  places in a private pack, and the maintainer's private pack will provide it under the same name. To keep using it,
+  copy `skills/remote-exec` from this release into a pack of your own and list that pack in `~/.agent-loop/packs.txt`;
+  `requires = ["remote-exec"]` then resolves to it unchanged. Core rules and skills no longer route to it:
+  `agent-heartbeat` states its own `<log>.exit` launch contract, and the `experiment-design` CLOSE self-audit carries
+  the remote asset rules. Fail-fast for detached batches (#107) belongs to that pack.
+
 ### Removed
 
 - `case_study/`. Problems found while running agent-loop are reported as issues instead.
