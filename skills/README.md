@@ -26,7 +26,6 @@ Descriptions stay in context; bodies load only when the current event matches.
 
 只在 user 点名时加载：
 
-- `remote-exec`：远端节点、detach、传输、存储与环境自修。
 - `code-review`：本地 diff / PR review 标准。
 - `code-to-kernel-diagram`：模块到 kernel 数据流。
 - `code-to-uml-diagram`：类与直接协作者的 Mermaid 类图（结构）与按场景的时序图（调用顺序）。

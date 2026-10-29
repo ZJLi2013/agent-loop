@@ -1,6 +1,7 @@
 ---
 name: remote-exec
 description: >-
+  已弃用：下一个版本移出 agent-loop（依赖个人节点池，见 design.md 范围），迁移见 CHANGELOG。
   在远端 GPU 节点上跑东西并让它活下来：SSH 与认证、选节点、tmux 保活、容器内写缓存与磁盘治理，
   外加一张远端失败的自修表（改什么、重试几次、什么时候换节点）。
   Use when running anything on a remote GPU node, or when a remote run fails.

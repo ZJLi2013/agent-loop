@@ -459,7 +459,6 @@ def run_command(
             _transition(state, Event.PAUSE_REQUESTED)
             state["verified_fingerprint"] = None
         elif kind == "verify":
-            state["verify_attempts"] = int(state["verify_attempts"]) + 1
             contract_passed = (
                 result["outcome"] == "pass"
                 and _matches_contract(config, run_dir)
@@ -469,6 +468,7 @@ def run_command(
                 _transition(state, Event.VERIFY_PASSED)
                 state["verified_fingerprint"] = workspace_fingerprint(root)
             else:
+                state["verify_attempts"] = int(state["verify_attempts"]) + 1
                 if result["outcome"] == "pass":
                     result["outcome"] = "reject"
                 _transition(state, Event.VERIFY_FAILED)
