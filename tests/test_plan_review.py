@@ -63,7 +63,7 @@ class PlanReviewTest(unittest.TestCase):
 
     def write_plan(self, revision: int, review: str = "proposed", body: str = "alpha") -> None:
         (self.root / "plan.md").write_text(
-            f"# Plan\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n{body}\n",
+            f"# Plan\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n{body}\n\n## t1 design\n",
             encoding="utf-8",
         )
 
@@ -72,7 +72,7 @@ class PlanReviewTest(unittest.TestCase):
             "| P | id | rev | task | check | status | fail |\n"
             "|---|---|---|---|---|---|---|\n"
             + "".join(
-                f"| P0 | {task_id} | r{revision} | {task_id} 标题 | 通过 | {status} | 0 |\n"
+                f"| P0 | {task_id} | r{revision} | {task_id} 标题 | [设计](../plan.md#{task_id}-design) | {status} | 0 |\n"
                 for task_id, status in rows
             ),
             encoding="utf-8",

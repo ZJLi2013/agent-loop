@@ -61,7 +61,8 @@ agent 写 human 的决定。只追加，写错追加更正行；CLOSE、replan �
    此外改动新增跨 run 持久的状态、读写或权限边界、并发写者，或有多个调用方的接口时，实现前展开成约一页
    模块契约：唯一 owner 与职责、数据布局与生命周期、谁以什么模式读写、不变量（各配一个测试）、并发与失败行为、
    不做的事。Gate 上 human 只审其中的不变量与取舍，不审代码布局。
-3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。
+3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。task 行链接它的设计：plan 里以
+   task id 开头的标题段，或 plan 目录下的独立文件；CLOSE 只归档前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
 4. 配置 reviewer 时，提交后运行 `plan-review`：每个 task 只在第一次出现时审一次，设计之后再改也不重审。
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
 5. 逐条回应 `must`：照改后 `plan-review --respond <task> --item N=applied`；只在与事实不符时

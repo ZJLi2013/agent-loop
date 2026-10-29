@@ -275,7 +275,11 @@ PLAN_WITH_T1 = (
     + "### t2 本地设计\nnext\n"
 )
 PLAN_MOVED = PLAN_HEAD + "\nt1 已归档：[plan-archive.md](plan-archive.md)\n### t2 本地设计\nnext\n"
-PLAN_TASKS = REWRITTEN_TASKS.replace("| — |", "| r1 |")
+PLAN_TASKS = (
+    REWRITTEN_TASKS.replace("| — |", "| r1 |")
+    .replace("| first | check |", "| first | [设计](../plan.md#t1-design) |")
+    .replace("| next | check |", "| next | [设计](../plan.md#t2-本地设计) |")
+)
 
 
 def plan_reviewer(*calls: tuple[dict[str, object] | None, str, bool]) -> list[str]:
@@ -341,7 +345,7 @@ class ClosedPlanSectionTest(unittest.TestCase):
 SUCCESSOR_TASKS = (
     "| P | id | rev | task | check | status | fail |\n"
     "|---|---|---|---|---|---|---|\n"
-    "| P0 | t2 | r{revision} | next | check | 🔬 doing | 0 |\n"
+    "| P0 | t2 | r{revision} | next | [设计](../plan.md#t2-本地设计) | 🔬 doing | 0 |\n"
 )
 
 
@@ -435,8 +439,9 @@ NEXT_B = "| B | b | b | ▶ next | [plan](../next/plan.md) |"
 TODO_C = "| C | c | c | ⬜ todo | |"
 HANDOFF_TASKS = (
     "## Goal\n\n| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
-    "| P0 | {task} | r1 | next | check | 🔬 doing | 0 |\n"
+    "| P0 | {task} | r1 | next | [设计](../next/plan.md#t2-design) | 🔬 doing | 0 |\n"
 )
+NEXT_PLAN = "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## t2 design\n"
 
 
 class MainlineHandoffTest(unittest.TestCase):
@@ -455,9 +460,7 @@ class MainlineHandoffTest(unittest.TestCase):
     ) -> dict[str, object]:
         for name in ("next", "side"):
             (self.root / name).mkdir(exist_ok=True)
-            (self.root / name / "plan.md").write_text(
-                "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n", encoding="utf-8"
-            )
+            (self.root / name / "plan.md").write_text(NEXT_PLAN, encoding="utf-8")
         mainline = MAINLINE.format(review=review, rows="\n".join(rows)) if rows else ""
         (self.root / ".agent-loop" / "task.md").write_text(
             mainline + HANDOFF_TASKS.format(task=task), encoding="utf-8"
@@ -498,9 +501,7 @@ class MainlineHandoffTest(unittest.TestCase):
             "evidence": "plan:1", "change": "fix input", "human": False,
         }
         (self.root / "next").mkdir()
-        (self.root / "next" / "plan.md").write_text(
-            "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n", encoding="utf-8"
-        )
+        (self.root / "next" / "plan.md").write_text(NEXT_PLAN, encoding="utf-8")
         record_task_review(
             self.root, "t2", findings=[must], dropped=0, summary="", source="plan_review", run_id=None,
             plan_doc="next/plan.md",

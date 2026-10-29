@@ -32,7 +32,7 @@ class HarnessPauseTest(unittest.TestCase):
 
     def write_plan(self, revision: int, review: str) -> None:
         self.plan.write_text(
-            f"# Feature\n\nPlan Revision: {revision}\nPlan Review: {review}\n",
+            f"# Feature\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n## t1 design\n",
             encoding="utf-8",
         )
 
@@ -42,7 +42,7 @@ class HarnessPauseTest(unittest.TestCase):
         (task_dir / "task.md").write_text(
             "| P | id | rev | task | check | status | failures |\n"
             "|---|---|---|---|---|---|---|\n"
-            f"| P0 | t1 | r{revision} | test | command | 🔬 doing | 0 |\n",
+            f"| P0 | t1 | r{revision} | test | [design](../plan.md#t1-design) | 🔬 doing | 0 |\n",
             encoding="utf-8",
         )
 
