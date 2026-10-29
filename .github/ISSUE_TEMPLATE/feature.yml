@@ -11,6 +11,17 @@ body:
       required: true
   - type: dropdown
     attributes:
+      label: Which public guarantee does it maintain?
+      description: "The three guarantees are listed in [design.md](https://github.com/ZJLi2013/agent-loop/blob/main/design.md#范围)."
+      options:
+        - "1. Declared task lifecycle: admission, execution, verification, review, pause, stop, handoff, record retirement"
+        - "2. Installation, wiring and compatibility on supported hosts"
+        - "3. This repository's release, contribution, security and defect reporting"
+        - "None of these (likely out of scope)"
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
       label: Proposed layer
       options:
         - Config / Profile

@@ -78,6 +78,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- Admission: issue forms and the pull request template ask which public guarantee a change maintains, and blank
+  issues are off. The maintainer triages each open issue weekly as `restores-contract`, `changes-contract` or
+  `out-of-scope`; contract changes merge on window days, every fourth Monday from 2026-11-02, and
+  `.github/auto-fix/run.ps1` takes only issues triaged `restores-contract`. See `CONTRIBUTING.md#admission`.
 - A project's facts and conclusions live in its own tracked documents; the plan document holds the active Goal's
   working conclusions and links to them, and memory holds runtime facts, rejected options and pointers. Before the
   locked verifier the worker writes the facts a task established into the project's documents, and the task reviewer

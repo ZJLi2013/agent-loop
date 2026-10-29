@@ -2,6 +2,14 @@
 
 <!-- State the user-visible problem and the resulting behavior. -->
 
+## Public guarantee
+
+Which public guarantee does it maintain? See the [scope in design.md](https://github.com/ZJLi2013/agent-loop/blob/main/design.md#范围).
+
+- [ ] 1. Declared task lifecycle
+- [ ] 2. Installation, wiring and compatibility on supported hosts
+- [ ] 3. This repository's release, contribution, security and defect reporting
+
 ## Layer
 
 - [ ] Config / Profile
