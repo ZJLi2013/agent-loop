@@ -20,7 +20,7 @@ disable-model-invocation: true
 - **工具按谁来做片选**：agent 从实验数据直接做片用 [onetake](https://github.com/feitangyuan/onetake)，流程按它自己的
   SKILL.md；人录界面演示用 [Recordly](https://github.com/webadderallorg/Recordly) 这类录屏剪辑工具。
 - **换工具先看许可证**：onetake 是 PolyForm Noncommercial，公司宣传等商业用途先停下问 user。
-- 编译与渲染在远端节点跑，归 `remote-exec`；披露、型号脱敏与去私料归 `external-output-boundary` rule。
+- 编译与渲染在远端节点跑，上机归远端执行工具；披露、型号脱敏与去私料归 `external-output-boundary` rule。
 
 ## onetake 实操
 

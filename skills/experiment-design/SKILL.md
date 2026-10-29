@@ -171,9 +171,11 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
    未跟踪文件：文档目录在指纹内时，留在那里的 run 输出在 verifier 之后删除会让证据 stale；在 gitignore 里
    （如 `.agent-loop/`）时，verifier 之后改文档不会让证据 stale。结论标明不计入的 run 直接删除。
    逐 run 表写读数、退出码与必要的输出摘录，不引用 `.harness/runs.jsonl` 行号或 `artifacts/`：两者按条数截断与删除；
-5. 本 task 在远端节点上建的资产（容器、checkout、venv 与 build 目录、run 输出、只为它拉的镜像与权重）逐项按
-   `remote-exec` §5 的分档定去留：一次性的删除，要留的把路径与用途写进 `facts.md`。只认交接笔记里记下的容器名与
-   工作目录，不碰共享缓存与别人的容器；删镜像守 §5 的 Docker 禁令；
+5. 本 task 在远端节点上建的资产（容器、checkout、venv 与 build 目录、run 输出、只为它拉的镜像与权重）逐项按三档定去留：
+   Hot（节点清单 `hot_models` 里的基础模型）不清理；Warm（repo 专有 ckpt）`-atime +7`，清理时 `! -name` 排除 Hot；
+   Cold（`.venv` / `build` / `__pycache__` / pip cache）`-mtime +3`。一次性的删除，要留的把路径与用途写进 `facts.md`。
+   只认交接笔记里记下的容器名与工作目录，不碰共享缓存与别人的容器；公共节点上不用 `docker image prune -a`、
+   `docker system prune -a`、`docker image rm <tag>`；
 6. 再读最终 diff：删掉一段内容不会改变未来判断或下一条命令，就不恢复。
 
 不知道归属的文件不删；先留下一行边界并按 `when-to-stop` 处理。最常残留的是平均着墨的分级标题、
