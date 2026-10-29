@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from dataclasses import dataclass, field
+import graphlib
 import os
 from pathlib import Path
 import subprocess
@@ -123,6 +124,27 @@ def read_pack(root: Path, repos: dict[str, Path], profiles: set[str], dest: Path
     return skills
 
 
+def resolve_installable(skills: list[Skill]) -> list[Skill]:
+    ok = {s.name: s for s in skills if not s.problem}
+    while True:
+        dropped = True
+        while dropped:
+            dropped = False
+            for s in list(ok.values()):
+                missing = [r for r in s.requires if r not in ok]
+                if missing:
+                    s.problem = "requires " + ", ".join(missing) + ", which is not installable"
+                    del ok[s.name]
+                    dropped = True
+        try:
+            order = graphlib.TopologicalSorter({n: s.requires for n, s in ok.items()}).static_order()
+            return [ok[name] for name in order]
+        except graphlib.CycleError as exc:
+            cycle = exc.args[1]
+            for name in set(cycle):
+                ok.pop(name).problem = "requires cycle " + " -> ".join(cycle)
+
+
 def git_state(skill: Skill) -> str:
     def git(*argv: str) -> str | None:
         result = subprocess.run(["git", "-C", str(skill.checkout), *argv], capture_output=True, text=True)
@@ -169,41 +191,60 @@ def main(argv: list[str] | None = None) -> int:
     chosen = [s for s in packed if s.selected]
     counts = Counter(s.name for s in chosen)
     for s in chosen:
-        missing = [r for r in s.requires if r not in own_names]
+        builtin = own_dest / s.name
         if s.name in own_names:
             s.problem = "name also owned by agent-loop"
         elif counts[s.name] > 1:
             s.problem = "name owned by more than one pack: " + ", ".join(sorted(o.owner for o in chosen if o.name == s.name))
-        elif missing:
-            s.problem = "requires missing agent-loop skill " + ", ".join(missing)
-        elif own_dest != pack_dest and os.path.lexists(own_dest / s.name):
-            s.problem = f"{own_dest / s.name} already exists"
-    install = own + [s for s in chosen if not s.problem]
+        elif own_dest != pack_dest and os.path.lexists(builtin) and not inside(link_target(builtin) or "", roots):
+            s.problem = f"{builtin} already exists"
+    install = resolve_installable(own + chosen)
     desired = {norm(s.dest / s.name): norm(s.src) for s in install}
+    names = {s.name for s in own + chosen}
 
     for dest in dests:
         dest.mkdir(parents=True, exist_ok=True)
         for entry in sorted(dest.iterdir()):
             target = link_target(entry)
-            if target and inside(target, roots) and desired.get(norm(entry)) != target:
-                remove_link(entry)
+            if target and inside(target, roots) and entry.name not in names:
+                try:
+                    remove_link(entry)
+                except OSError as exc:
+                    errors.append(f"cannot remove {entry}: {exc}")
+                    continue
                 print(f"Removed link: {entry.name}")
 
+    failed = {s.name for s in own + packed if s.problem}
     for s in install:
         link = s.dest / s.name
         target = link_target(link)
-        if target == norm(s.src):
+        current = target == norm(s.src)
+        # On Cursor a skill moved between agent-loop and a pack leaves its old link in the other directory.
+        stale = [d / s.name for d in dests if d != s.dest and inside(link_target(d / s.name) or "", roots)]
+        blocked = [r for r in s.requires if r in failed]
+        if blocked:
+            s.problem = "requires " + ", ".join(blocked) + ", which was not linked"
+        elif current and not stale:
             continue
-        if target is not None:
-            if not s.own:
-                s.problem = f"{link} links to {target}, outside the registered sources"
-                continue
-            remove_link(link)  # an agent-loop skill left behind by a moved checkout
-        elif os.path.lexists(link):
+        elif target is not None and not s.own and not inside(target, roots):
+            s.problem = f"{link} links to {target}, outside the registered sources"
+        elif target is None and os.path.lexists(link):
             s.problem = f"{link} is a plain directory"
-            continue
-        make_link(link, s.src)
-        print(f"Linked skill: {s.name}")
+        else:
+            try:
+                for old in stale:
+                    remove_link(old)
+                    print(f"Removed link: {old.name}")
+                if not current:
+                    if target is not None:
+                        remove_link(link)  # an old registered source, or an agent-loop skill left behind by a moved checkout
+                    make_link(link, s.src)
+            except OSError as exc:
+                s.problem = f"cannot link {link}: {exc}"
+        if s.problem:
+            failed.add(s.name)
+        elif not current:
+            print(f"Linked skill: {s.name}")
 
     width = max(len(owner) for owner in ["unmanaged", OWN, *(s.owner for s in packed)])
     print(f"\n--- Skills ({args.host}) ---")

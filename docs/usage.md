@@ -48,7 +48,7 @@ profiles = ["research"]
 repo = "some-project"                    # skill 留在它操作的项目里，path 相对该项目的 checkout
 path = ".cursor/skills/bar"
 profiles = ["ops"]
-requires = ["remote-exec", "experiment-design"]   # 依赖的 agent-loop skill 名
+requires = ["remote-exec", "experiment-design"]   # 依赖的 skill 名，agent-loop 或任一已登记的包提供
 ```
 
 本机启用哪些包写在 `~/.agent-loop/packs.txt`，不入任何仓库；以 `#` 开头的行是注释，路径里可以有 `#`：
@@ -65,9 +65,14 @@ profiles research,ops
 
 - **选择**：skill 不写 `profiles` 时总被选中，否则与 `profiles` 行有交集才选中。每个已装 skill 的 description 都常驻上下文，
   只装当前场景要用的。切换 profile 后重跑，未选中 skill 的链接被撤掉。
-- **一个名字一个 owner**：包 skill 与 agent-loop 的 skill 或别的包重名、目标位置已有普通目录或指向别处的链接、
-  `requires` 里的名字不存在，都会跳过该 skill，其余照装，最后以非零退出。不覆盖、不移走。
+- **一个名字一个 owner**：包 skill 与 agent-loop 的 skill 或别的包重名、目标位置已有普通目录或指向别处的链接，
+  都会跳过该 skill，其余照装，最后以非零退出。不覆盖、不移走。
   agent-loop 自己的 skill 遇到同名普通目录也一样；只有指向别处的旧链接（checkout 挪过位置）会被换成新链接。
+- **依赖**：`requires` 在本次安装的所有来源里找唯一的提供者。提供者缺失、未选中、被跳过或参与循环时，依赖它的
+  skill 及其间接依赖者都跳过；提供者先于依赖者链接，提供者链接失败时依赖者也跳过。因冲突或依赖不成立而跳过的
+  skill，已有的链接都不动；只有未选中或已从 `pack.toml` 删掉的 skill，它指向登记来源的链接才被撤掉。
+  一个 skill 自己的旧链接撤掉后新链接建立失败时，它可能没有链接，安装器不回滚，修好原因后重跑即可。
+  skill 从 agent-loop 迁到包里后重跑一次即可：指向 agent-loop `skills/` 的旧链接先撤掉，再链包里的那份。
 - **只删自己的链接**：安装器只删除目标位于 agent-loop `skills/`、已登记包或已登记 checkout 之内的链接。
   把包整个从 `packs.txt` 删掉后，它的旧链接在输出里标为 `unmanaged`，手动删除。
 - **输出**：末尾 `--- Skills ---` 一节每行写 skill、源头与目标；`repo` 来源另写 `behind=N dirty=yes|no`，
