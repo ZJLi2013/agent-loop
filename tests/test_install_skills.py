@@ -135,7 +135,7 @@ class InstallSkillsTest(unittest.TestCase):
     def test_inv2_missing_requires_is_skipped(self) -> None:
         result = self.run_installer()
         self.assertEqual(result.returncode, 1)
-        self.assertRegex(result.stdout, r"needs-missing\s+my-pack\s+SKIPPED: requires missing agent-loop skill no-such-skill")
+        self.assertRegex(result.stdout, r"needs-missing\s+my-pack\s+SKIPPED: requires no-such-skill, which is not installable")
         self.assertFalse(os.path.lexists(self.pack_dest / "needs-missing"))
         self.assertIn("ERROR: needs-missing", result.stderr)
 

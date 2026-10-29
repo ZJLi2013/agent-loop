@@ -14,9 +14,11 @@ All notable user-facing changes are documented here. This project follows Semant
 - Skill packs: any directory with a `pack.toml` can be listed in a machine-local `~/.agent-loop/packs.txt` together
   with the repository checkouts it refers to and the active profiles. `scripts/install-skills.py`, called by both
   `sync-to-cursor.ps1` and `sync-to-dsh.ps1`, links agent-loop's skills and the selected pack skills (Cursor:
-  `~/.cursor/skills`). A pack skill whose name is taken, whose target is occupied, or whose `requires` names a
-  missing agent-loop skill is skipped and the installer exits non-zero. Only links into registered sources are ever
-  removed. agent-loop skill names are now a public interface: a rename or removal is announced here and kept for one
+  `~/.cursor/skills`). A pack skill whose name is taken or whose target is occupied is skipped and the installer
+  exits non-zero. `requires` names a skill of agent-loop or of any registered pack; a missing, unselected, skipped or
+  cyclic provider skips its direct and indirect dependents, providers are linked first, and a provider that fails to
+  link skips its dependents, keeps their existing links, and does not abort the run. A skill moved from agent-loop into a pack switches over in one
+  run. Only links into registered sources are ever removed. agent-loop skill names are now a public interface: a rename or removal is announced here and kept for one
   release. See `docs/usage.md#skill-packs`.
 
 - Harness owns task scratch: `init` creates `.harness/tasks/<task_id>/` for kits, workspaces, local run outputs, job
