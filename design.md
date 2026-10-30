@@ -356,7 +356,7 @@ plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实�
 
 - 只写当前为真的设计；迁移步骤与兼容历史进 CHANGELOG，计划、下一步与实验记录进 plan document。
 - 改设计文档的 PR 说出改了哪个设计决定；说不出就不改设计文档。
-- 同一节在一个 4 周窗口内第二次补特例时停止追加，改为 RFC 重写该节。
+- 同一节在一个 4 周周期内第二次补特例时停止追加，改为 RFC 重写该节。
 
 ## Public repository contract
 
