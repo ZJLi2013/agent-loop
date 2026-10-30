@@ -24,6 +24,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 | 当前事件 / 状态 | 读 |
 |---|---|
 | 新 Goal、缺 plan Goal、`📝 proposed`、Goal Review、human 纠偏 | `work-planning` |
+| 改代码的设计引入新抽象、已有概念的第二份实现或跨模块接口 | `work-planning` 第 2 步的类级设计，图用 `code-to-uml-diagram` |
 | 选择 task、写检查点、维护状态 | `task-state` |
 | 已批准 task 要跑实验 / 验证 | `experiment-design` |
 | 失败、重试、预算或停机判断 | `when-to-stop` |
@@ -73,4 +74,4 @@ user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时
 
 只有 user 点名才读：审 diff / PR → `code-review`；提上游 → `upstream-contribute`；
 写对外文章 → `research-to-blog`；写 arXiv 稿 / 宣传短片 → `research-to-paper`；
-画 kernel 数据流图 → `code-to-kernel-diagram`；画类图 / 时序图 → `code-to-uml-diagram`。
+画 kernel 数据流图 → `code-to-kernel-diagram`。

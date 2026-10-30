@@ -19,6 +19,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 | `agent-memory` | facts / episodes / lessons 的准入、检索、写回与去重 |
 | `agent-heartbeat` | detach 长任务的连接与日志心跳 |
 | `self-report` | agent-loop 自身缺陷的归因、去重、发布前检查与 issue 上报 |
+| `code-to-uml-diagram` | 类级设计的现状 / 目标类图与按场景的时序图（`work-planning` 第 2 步触发） |
 
 状态、事件和 guard 归 `harness/protocol.py`；常驻 `agent-loop` rule 只把状态路由到上表。
 
@@ -28,7 +29,6 @@ Descriptions stay in context; bodies load only when the current event matches.
 
 - `code-review`：本地 diff / PR review 标准。
 - `code-to-kernel-diagram`：模块到 kernel 数据流。
-- `code-to-uml-diagram`：类与直接协作者的 Mermaid 类图（结构）与按场景的时序图（调用顺序）。
 - `upstream-contribute`：上游 PR / Issue 判断与正文。
 - `research-to-blog`：调研到对外文章。
 - `research-to-paper`：实验到 arXiv 稿，可选 10–15 s 短片（agent 做片用 onetake，人录界面演示用录屏工具）。
