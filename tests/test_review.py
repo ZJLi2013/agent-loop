@@ -11,6 +11,7 @@ from pathlib import Path
 
 from harness.core import (
     HarnessError,
+    clean_scratch,
     completion_gate,
     initialize,
     load_runtime,
@@ -266,6 +267,90 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         run_review(self.root)
 
         self.assertIn("Suggest: state snapshot not saved", completion_gate(self.root) or "")
+
+REVISE = {"decision": "revise", "why": "t1 fact only in .agent-loop", "findings": [
+    {"level": "must", "claim": "usage.md lacks the default", "consequence": "lost on clone", "evidence": "plan.md:3"}
+]}
+
+
+def reviewer_sequence(*decisions: dict[str, object]) -> list[str]:
+    code = "\n".join(
+        [
+            "import json",
+            "from pathlib import Path",
+            "counter = Path('.harness/review/calls.txt')",
+            "n = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(n + 1))",
+            f"Path({DECISION!r}).write_text(json.dumps(json.loads({json.dumps(decisions)!r})[n]))",
+        ]
+    )
+    return [sys.executable, "-S", "-c", code]
+
+
+class ReviseTest(unittest.TestCase):
+    setUp = TaskBoundaryReviewTest.setUp
+    tearDown = TaskBoundaryReviewTest.tearDown
+    init = TaskBoundaryReviewTest.init
+
+    def test_revise_keeps_the_task_open_until_it_is_verified_again(self) -> None:
+        self.init(reviewer_sequence(REVISE, {**CONTINUE}), run_verifier=False)
+        scratch = self.root / ".harness" / "tasks" / "t1"
+        (scratch / "kit.py").write_text("print(1)\n", encoding="utf-8")
+
+        review = verify(self.root)["automatic_review"]
+        tasks = self.root / ".agent-loop" / "task.md"
+
+        self.assertEqual((review["decision"], review["error"]), ("revise", None))
+        self.assertIn("| t1 | — | first | check | 🔬 doing |", tasks.read_text(encoding="utf-8"))
+        self.assertTrue((scratch / "kit.py").exists())
+        followup = completion_gate(self.root) or ""
+        self.assertIn("sent t1 back", followup)
+        self.assertIn("verify", followup)
+        with self.assertRaisesRegex(HarnessError, "sent t1 back"):
+            clean_scratch(self.root)
+        with self.assertRaisesRegex(HarnessError, "sent t1 back"):
+            initialize(self.root, task_id="t2", verifier_argv=[sys.executable, "-S", "-c", "pass"])
+        self.assertTrue((scratch / "kit.py").exists())
+
+        run_command(self.root, [sys.executable, "-S", "-c", "print('close')"], kind="exec")
+        second = verify(self.root)["automatic_review"]
+
+        self.assertEqual((second["decision"], second["attempts"]), ("continue", 1))
+        self.assertNotIn("| t1 |", tasks.read_text(encoding="utf-8"))
+        self.assertFalse(scratch.exists())
+
+    def test_other_decisions_still_block_execution(self) -> None:
+        self.init(reviewer_sequence({"decision": "ask_human", "why": "pick"}), run_verifier=False)
+        verify(self.root)
+        with self.assertRaisesRegex(HarnessError, "execution remains blocked"):
+            run_command(self.root, [sys.executable, "-S", "-c", "pass"], kind="exec")
+
+    def test_revise_is_allowed_once_per_task(self) -> None:
+        with self.subTest("a second verify cannot be sent back again"):
+            self.init(reviewer_sequence(REVISE, REVISE), run_verifier=False)
+            verify(self.root)
+            review = verify(self.root)["automatic_review"]
+            self.assertIsNone(review["decision"])
+            self.assertIn("once per task", review["error"])
+        self.tearDown()
+        self.setUp()
+        with self.subTest("an objection on the same verify may keep revise"):
+            self.init(reviewer_sequence(REVISE, REVISE), run_verifier=False)
+            verify(self.root)
+            review = run_review(self.root, objection="the default is in usage.md")["review"]
+            self.assertEqual((review["decision"], review["error"]), ("revise", None))
+        self.tearDown()
+        self.setUp()
+        with self.subTest("a new task may revise once"):
+            self.init(reviewer_sequence(REVISE, CONTINUE, REVISE), run_verifier=False)
+            verify(self.root)
+            verify(self.root)
+            tasks = self.root / ".agent-loop" / "task.md"
+            tasks.write_text(tasks.read_text(encoding="utf-8").replace("📝 proposed", "🔬 doing"), encoding="utf-8")
+            initialize(self.root, task_id="t2", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
+            review = verify(self.root)["automatic_review"]
+            self.assertEqual((review["decision"], review["error"]), ("revise", None))
+
 
 CONTINUE = {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
 PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 脉络\nt2\n"

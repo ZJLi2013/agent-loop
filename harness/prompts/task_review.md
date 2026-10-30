@@ -14,7 +14,7 @@
 ## Review contract
 
 review 的单位是这个 verified task，不是实验记录的一次修改、判据的一个版本或一轮讨论。
-只指出会改变 `continue / ask_human / stop` 或下一条命令的问题；没有新 evidence 时不重新审查
+只指出会改变 `continue / revise / ask_human / stop` 或下一条命令的问题；没有新 evidence 时不重新审查
 已接受的判据。没有这类问题就直接完成交接，不扩写一般性建议。
 
 ## 要做的事
@@ -23,10 +23,11 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    同时核对实际交给被测方的题目、数据、样本或请求（落盘的产物，不是摘要）与设计一致，且仍在测
    Goal 要测的东西；有上述检查表时逐条对照。
    plan 里关于 {task_id} 的项目事实（行为与接口、测得的结果、约束、带理由的决策、否定发现）必须链接到项目被跟踪的
-   文档，且链接目标含这条事实；只在 `.agent-loop/` 或 `.harness/` 下的，报 `must`。证明它的验证读数是 evidence，
-   留在脉络，不要求进项目文档。选 `stop` 前这一点要对整个 Goal
-   成立，不成立就写一个把结论收口到项目文档的 `📝 proposed` task 并选 `continue`。
-2. 更新 plan 的当前结论，并在「脉络」追加 {task_id} 一行：问题、结果与 evidence、所以（改变的下一条命令）。
+   文档，且链接目标含这条事实；只在 `.agent-loop/` 或 `.harness/` 下的，报 `must` 并选 `revise`。证明它的验证读数是
+   evidence，留在脉络，不要求进项目文档。设计写明的收口要求没做（例如 diff 里留着调试输出或一次性脚手架），
+   同样报 `must` 并选 `revise`。选 `stop` 前第一点要对整个 Goal 成立；其他已关闭 task 的事实没收口，就写一个
+   把结论收口到项目文档的 `📝 proposed` task 并选 `continue`。
+2. 选 `revise` 时跳过这一步：worker 补完收口后重跑 verify，下一轮 review 再做。其余决策：更新 plan 的当前结论，并在「脉络」追加 {task_id} 一行：问题、结果与 evidence、所以（改变的下一条命令）。
    evidence 写读数与文档链接，不写 `.harness/runs.jsonl` 行号或 `artifacts/` 路径：它们会被截断与删除。
    当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写进 `review` 字段。
    标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，你不要做。
@@ -39,6 +40,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
 3. 选择 decision：
    - `continue`：Goal 与 scope 不变，下一个 task 已在列表里；
+   - `revise`：{task_id} 自己的收口没做完（见第 1 步），worker 补完后重跑 verify 就能交接；不写 `next_task`。
+     每个 task 只能退回一次，退回过就从其余三种里选。方法或结果本身的问题不用它；
    - `ask_human`：需要改 Goal / scope，要在有显著权衡的方案间选型，或实际产物与设计不一致、
      不在测 Goal 要测的东西（要改设计，由 human 决定修正还是换方向）；
    - `stop`：Goal 已达成，或继续不再改变主线。
@@ -50,7 +53,7 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 
 ## 意见门槛
 
-每个 task 只审这一次，executor 照你的意见改完就开工，不再回审。所以只写值得写的：
+每个 task 只审这一次（`revise` 退回后再审一次），executor 照你的意见改完就开工，不再回审。所以只写值得写的：
 
 - `must`：被忽略时会让方向错、结论错或白跑昂贵实验。必须写出 `consequence`（不改会怎样）与 `evidence`
   （文件:行或事实），缺一个就会被当作 `suggest`。补齐后下一条命令不变的，不是 `must`。
@@ -64,5 +67,5 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 把下面的 JSON 写到 `{decision_file}`：
 
 ```json
-{"decision": "continue | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}], "review": "<本 task 的 review 依据>"}
+{"decision": "continue | revise | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}], "review": "<本 task 的 review 依据>"}
 ```

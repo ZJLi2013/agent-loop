@@ -78,6 +78,12 @@ invoke on-demand skills.
 
 ### Changed
 
+- The task reviewer can choose `revise` when the verified task's own CLOSE is unfinished: a project fact it
+  established is only under `.agent-loop/`, or the design's closing step was skipped. Harness keeps the task open
+  and its scratch in place, allows only the runner and verify, and refuses init and `clean-task` until the next
+  verify is reviewed. A task can be sent back once; a second `revise` counts as an invalid decision. Gaps in other
+  tasks before `stop` still become a new closing task. The review record gains `revised_run`; state written before
+  this release has none and behaves as before.
 - Admission: issue forms and the pull request template ask which public guarantee a change maintains, and blank
   issues are off. The maintainer triages each open issue weekly as `restores-contract`, `changes-contract` or
   `out-of-scope`; contract changes merge any time while agent-loop has no outside users and on window days, every
