@@ -247,7 +247,9 @@ runner 与下一 task 初始化都被 guard 拒绝。reviewer 只读落盘证据
 `<plan>-archive.md`、改写指向被移走锚点的链接由 Harness 确定性地完成。worker 只能以事实错误异议一次，
 仍分歧即 `ask_human`。
 `revise` 把漏了收口的 task 退回给它自己：Harness 不关闭、不清理 scratch，只放行 runner 与 verify，期间拒绝
-init 与 `clean-task`；重跑 verify 后自动再审。每个 task 只能退回一次，第二次 `revise` 按无效决策处理。
+init 与 `clean-task`；重跑 verify 后自动再审。每个 task 只能退回一次：review 记录的 `revised_run` 记住被退回的
+verify run，跨 review 与 verify 保留，init 时清空。同一 verify 的异议重审仍可选 `revise`；更晚的 verify 再选 `revise`
+时本轮没有有效决策（不沿用上一轮的决策，它属于上一次 verify），按无效 review 重审，`MAX_REVIEWS` 次后交 human。
 调研见 [`study/multi_agent.md`](docs/study/planning-review/multi_agent.md)。
 
 ### Human checkpoints on the phone
