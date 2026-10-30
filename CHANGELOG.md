@@ -78,6 +78,14 @@ invoke on-demand skills.
 
 ### Changed
 
+- Code work that introduces a new abstraction, adds a second implementation of a concept the codebase already has
+  (a check, a state reader, a registry), or changes an interface used across modules writes a class-level design
+  before its tasks are split: current and target class diagrams, one sequence diagram, one owner per concept, and the
+  smallest mergeable migration order (`work-planning` step 2). It is the first task's design, so that task's plan
+  review is the architecture review; later tasks wait until it closes. The plan reviewer reports a code task that
+  adds such a second implementation without a class-level design naming the single owner as must.
+  `code-to-uml-diagram` is no longer deprecated: it now loads in the loop for this design, and marks the new or
+  changed parts of a target diagram as `<<proposed>>`.
 - The task reviewer can choose `revise` when the verified task's own CLOSE is unfinished: a project fact it
   established is only under `.agent-loop/`, or the design's closing step was skipped. Harness keeps the task open
   and its scratch in place, allows only the runner and verify, and refuses init and `clean-task` until the next
@@ -196,9 +204,8 @@ invoke on-demand skills.
   `requires = ["remote-exec"]` then resolves to it unchanged. Core rules and skills no longer route to it:
   `agent-heartbeat` states its own `<log>.exit` launch contract, and the `experiment-design` CLOSE self-audit carries
   the remote asset rules. Fail-fast for detached batches (#107) belongs to that pack.
-- Seven on-demand skills leave agent-loop in the release after the one carrying this notice: `code-review`,
-  `code-to-kernel-diagram`, `code-to-uml-diagram`, `gen-ppt`, `research-to-blog`, `research-to-paper` and
-  `upstream-contribute`. None is part of the task lifecycle, so `design.md#范围` places them in an external pack. They
+- Six on-demand skills leave agent-loop in the release after the one carrying this notice: `code-review`,
+  `code-to-kernel-diagram`, `gen-ppt`, `research-to-blog`, `research-to-paper` and `upstream-contribute`. None is part of the task lifecycle, so `design.md#范围` places them in an external pack. They
   ship and are maintained as before until then. The maintainer's private pack will provide them under the same
   names; it is not public. To keep using one after removal, copy `skills/<name>` with its resource files from this
   release into a pack of your own and list that pack in `~/.agent-loop/packs.txt`; rerunning the installer switches
