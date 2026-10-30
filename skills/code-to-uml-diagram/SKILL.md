@@ -3,10 +3,9 @@ name: code-to-uml-diagram
 description: >-
   把一组类画成 Mermaid UML：类图回答谁继承谁、谁持有谁、对外给什么 API；时序图按一个场景回答
   调用按什么顺序发生、在哪循环与分支。每个类名、方法名、每条边与每条消息都能指回源码里的一行。
-  Use when asked to draw a class diagram, sequence diagram, or UML for a class and its collaborators,
-  or to explain how a call flows through them (e.g. "Toolkit 和 MemoryManager 的关系",
-  "一次工具调用经过哪些对象").
-disable-model-invocation: true
+  Use when `work-planning` step 2 asks for a class-level design (current and target diagrams), when asked to
+  draw a class diagram, sequence diagram, or UML for a class and its collaborators, or to explain how a call
+  flows through them (e.g. "Toolkit 和 MemoryManager 的关系", "一次工具调用经过哪些对象").
 ---
 
 # Code → UML Diagram
@@ -18,6 +17,7 @@ disable-model-invocation: true
 用户只点名一种就只画那一种。
 
 读者要拿着图去读代码：**图上每个名字都必须能在源码里 grep 到**，推不出来的关系或消息不画。
+目标设计里还没实现的部分是唯一例外，写法见第 4 节。
 在 markdown 里用 Mermaid（`classDiagram` / `sequenceDiagram`）：GitHub、Cursor、VS Code 原生渲染，
 diff 是纯文本。节点超过约 12 个、参与者超过约 6 个时布局会挤，拆图，或改用 PlantUML 并提交渲染后的 SVG。
 
@@ -79,6 +79,13 @@ rg -n '^class |def __init__|^\s+def [a-z]' path/to/module.py
 
 每条一句：某一步为什么必须在这个对象里、为什么在这个时刻。代码或注释写明的直接陈述；
 从调用结构推出来的要标出是推断。
+
+## 4. 目标设计
+
+`work-planning` 的类级设计要现状与目标两张类图，加关键场景的一张时序图。现状图照上面的规则对着源码画。
+目标图里沿用的节点、方法和边仍要能 grep 到；新增或改动的类与方法标 `<<proposed>>`（Mermaid 写在类体里），
+新增的边在图下逐条列出。图下再写：每个概念的唯一 owner、被替换的现有实现与它的去向、迁移顺序。
+时序图画目标场景时，`<<proposed>>` 的参与者与消息在 `Note` 里标出。
 
 ## 样例
 
@@ -144,8 +151,8 @@ sequenceDiagram
 
 ## 自检
 
-- 每个类名、方法名、消息名能直接 grep 到吗？
-- 类图每条边、时序图每条消息，能指出是哪一行建立的吗？指不出来就删。
+- 每个类名、方法名、消息名能直接 grep 到吗？目标图里 grep 不到的，标了 `<<proposed>>` 或列在图下吗？
+- 类图每条边、时序图每条消息，能指出是哪一行建立的吗？指不出来、又不是目标图里列出的新增，就删。
 - 有没有把 `import` 或类型注解画成了关系？
 - 时序图里条件执行的步骤都在 `opt` / `alt` 里吗？一张图是不是只有一个场景？
 - 时序图的参与者都在类图里吗？不在就补进类图，或说明它为什么在范围外。
