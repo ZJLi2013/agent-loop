@@ -99,8 +99,9 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
 The installer links each rule and skill into `~/.cursor` one by one and uses user-level junctions for harness and
-hooks, backing up existing ordinary directories where harness and hooks go; a rule or skill whose name is already
-taken is reported as a conflict and not overwritten. Rules are file symlinks, so Windows needs Developer Mode; the
+hooks, backing up existing ordinary directories where harness and hooks go; an ordinary file or directory already
+at a rule or skill's place is reported as a conflict and not overwritten, while agent-loop's own rules and skills
+replace a same-named link that points elsewhere (see [installing skill packs](docs/usage.md#skill-packs)). Rules are file symlinks, so Windows needs Developer Mode; the
 first sync replaces the whole-directory rules junction left by older installs with per-file links. Keep the checkout at its installed path, restart Cursor, and make sure Cursor can resolve `python`.
 Hooks execute local Python code across workspaces covered by the host; read the [security boundary](SECURITY.md)
 before installation. Use `scripts/uninstall-from-cursor.ps1` to remove the integration; restore backups manually.

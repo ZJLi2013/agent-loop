@@ -94,7 +94,8 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
 安装器把每个 rule 与 skill 逐个链接进 `~/.cursor`，harness 与 hooks 用 user-level junction，并将 harness / hooks
-位置上已有的普通目录备份；rule 或 skill 重名时报冲突、不覆盖。rule 是文件符号链接，Windows 需开启开发者模式；
+位置上已有的普通目录备份；rule 或 skill 位置上已有同名的普通文件或目录时报冲突、不覆盖，agent-loop 自己的
+rule 与 skill 会把指向别处的同名旧链接换成新链接（见[安装 skill 包](docs/usage.md#skill-packs)）。rule 是文件符号链接，Windows 需开启开发者模式；
 旧版安装留下的整目录 rules junction 在第一次 sync 时换成逐文件链接。保持仓库路径可用，
 重启 Cursor，并确保它能找到 `python`。hooks 会在宿主覆盖的 workspace 中执行本地代码；安装前
 阅读 [安全边界](SECURITY.md)。卸载使用 `scripts/uninstall-from-cursor.ps1`，备份需自行恢复。

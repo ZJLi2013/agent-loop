@@ -26,7 +26,8 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 安装器把仓库链接进 `%USERPROFILE%\.cursor`，包括各个 rule、各个 skill、harness 与 hooks。harness、hooks
 位置上已有的普通目录会被移到带时间戳的备份，有自定义 hooks 时检查这些备份；rules、skill 目录里已有的同名普通文件或
 目录不动，安装器报冲突并以非零退出，见[安装 skill 包](#skill-packs)。rule 是文件符号链接，Windows 上要开启开发者模式
-或用管理员权限运行；建不了时安装器保留旧的 rules 目录 junction，报错并以非零退出。装完重启 Cursor，并确认 Cursor 看得到的 Python 是 3.11+：
+或用管理员权限运行；建不了时安装器保留旧的 rules 目录 junction，报错并以非零退出。装完后 `~/.cursor/rules` 是普通目录，
+每个 rule 一条文件链接，读出的内容与仓库里的源文件相同。装完重启 Cursor，并确认 Cursor 看得到的 Python 是 3.11+：
 在终端里激活 venv 不一定改变 Cursor 的环境。仓库保持原位，并使用可信版本，见 [Security](../SECURITY.md)。
 
 Windows 自动化任务在隔离 profile 里检查安装器接线，不启动 Cursor，也不保证兼容每个 Cursor 版本。发布前还要跑
@@ -107,8 +108,8 @@ dsh 不读 `.mdc`，脚本把选中的 always-apply rules（agent-loop 与包里
 都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
 已有的手写 `AGENTS.md` 会先复制到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
 
-- `packs.txt`、`pack.toml` 或某个 rule 读不出、旧链接删不掉、写入失败时，`AGENTS.md` 保持上一次的内容。
-- 单个 skill 或 rule 因冲突、依赖或链接失败被跳过时照常生成，只少被跳过的 rule。
+- `packs.txt`、`pack.toml` 或某个 rule 读不出、未选中或已删除条目的旧链接清理失败、写入失败时，`AGENTS.md` 保持上一次的内容。
+- 单个 skill 或 rule 因冲突、依赖或链接失败被跳过时照常生成，只少被跳过的 rule；替换某一项自己的旧链接失败也算这一类。
 - 两种情况都以非零退出。同一个 `DSH_HOME` 一次只跑一个安装（脚本或直接运行 `install-skills.py`），安装器不加锁。
 
 hooks 还没有安装器，需手动把桥接接到 dsh profile `<p>` 上。
