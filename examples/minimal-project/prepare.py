@@ -15,7 +15,7 @@ def prepare(destination: Path) -> None:
     task = (source / "task.md").read_text(encoding="utf-8")
     # The copied task lives one level below the plan.
     (runtime / "task.md").write_text(
-        task.replace("](plan.md)", "](../plan.md)"), encoding="utf-8"
+        task.replace("](plan.md", "](../plan.md"), encoding="utf-8"
     )
     (destination / ".gitignore").write_text(
         ".harness/\n.agent-loop/\n__pycache__/\n", encoding="utf-8"
