@@ -382,6 +382,17 @@ class InstallRulesTest(unittest.TestCase):
                 if case == "two packs":
                     self.assertFalse(os.path.lexists(self.rules / "z.mdc"))
 
+    def test_own_rule_replaces_foreign_link(self) -> None:
+        self.rules.mkdir(parents=True)
+        elsewhere = rule(self.tmp / "moved-checkout" / "rules" / "a.mdc")
+        install.make_link(self.rules / "a.mdc", elsewhere)
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Linked rule: a.mdc", result.stdout)
+        self.assertTrue(self.linked("a.mdc", self.checkout / "rules"))
+        self.assertEqual((self.rules / "a.mdc").read_bytes(), (self.checkout / "rules" / "a.mdc").read_bytes())
+        self.assertTrue(elsewhere.is_file())
+
     def test_rules_need_pack_version_2(self) -> None:
         self.write_pack(version=1)
         result = self.run_installer()

@@ -80,8 +80,9 @@ profiles research,ops
   skill 从 agent-loop 迁到包里后重跑一次即可：指向 agent-loop `skills/` 的旧链接先撤掉，再链包里的那份。
 - **只删自己的链接**：安装器只删除目标位于 agent-loop `skills/`、已登记包或已登记 checkout 之内的链接。
   把包整个从 `packs.txt` 删掉后，它的旧链接在输出里标为 `unmanaged`，手动删除。
-- **rule**：选择、重名与只删自己链接的规则同 skill，名字是文件名，与 skill 名各自独立；rule 没有依赖。dsh 上只要有
-  一个 rule 或清单读不出来，`AGENTS.md` 整个不写，保持上一次的内容。
+- **rule**：选择、重名与只删自己链接的规则同 skill，名字是文件名，与 skill 名各自独立；rule 没有依赖。
+  `~/.cursor/rules` 里已有指向别处的同名链接时，agent-loop 自己的 rule 换成指向本仓库的新链接，包的 rule 跳过。
+  第一次 sync 把旧版安装留下的整目录 junction（指向本仓库 `rules/`）换成逐文件链接，源文件不动。
 - **输出**：末尾 `--- Skills ---` 与 `--- Rules ---` 两节每行写名字、源头与目标；`repo` 来源另写 `behind=N dirty=yes|no`，
   是该 checkout 相对上次 fetch 的上游落后几个提交、该条目有无未提交改动。安装器不 pull 也不 fetch。
 - `pack.toml` 的 `version` 是 1 或 2，其他值整个包被拒绝；`[[rules]]` 要求 version 2，写在 version 1 的包里也整包拒绝。
@@ -104,7 +105,11 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-dsh.ps1 -DshHome $HOME\
 
 dsh 不读 `.mdc`，脚本把选中的 always-apply rules（agent-loop 与包里的）去掉 frontmatter 后按文件名顺序拼成 `$DSH_HOME/AGENTS.md`，所有 profile 的会话
 都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
-已有的手写 `AGENTS.md` 会先移到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
+已有的手写 `AGENTS.md` 会先复制到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
+
+- `packs.txt`、`pack.toml` 或某个 rule 读不出、旧链接删不掉、写入失败时，`AGENTS.md` 保持上一次的内容。
+- 单个 skill 或 rule 因冲突、依赖或链接失败被跳过时照常生成，只少被跳过的 rule。
+- 两种情况都以非零退出。同一个 `DSH_HOME` 一次只跑一个安装（脚本或直接运行 `install-skills.py`），安装器不加锁。
 
 hooks 还没有安装器，需手动把桥接接到 dsh profile `<p>` 上。
 

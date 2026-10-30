@@ -80,11 +80,11 @@ invoke on-demand skills.
 
 - Rules install file by file, and packs can provide rules. `scripts/install-skills.py` links each `.mdc` of
   agent-loop's `rules/` and each selected `[[rules]]` entry of a `pack.toml` version 2 into `~/.cursor/rules`, with
-  the same selection, name-conflict and own-links-only behaviour as skills; `[[rules]]` in a version 1 pack rejects
-  the pack. The first sync replaces the old `~/.cursor/rules` junction into the checkout after checking that file
+  the same selection, name-conflict and own-links-only behaviour as skills: an agent-loop rule replaces a same-named
+  link that points elsewhere, a pack rule is skipped; `[[rules]]` in a version 1 pack rejects the pack. The first sync replaces the old `~/.cursor/rules` junction into the checkout after checking that file
   links can be created (Windows needs Developer Mode or administrator rights); otherwise it keeps the junction and
   exits non-zero. On dsh the installer writes `AGENTS.md` from the selected always-apply rules, and leaves it
-  untouched when any rule or manifest cannot be read. See `docs/usage.md#skill-packs`.
+  untouched when a manifest or rule cannot be read, an old link cannot be removed, or the write fails. See `docs/usage.md#skill-packs`.
 - The plan's `## 脉络` holds one row per stage (`| 阶段 | 问了什么 | 结论 | 带来的改变 |`): a run of tasks answering
   one question, or one Plan Revision. At a task boundary the reviewer extends the current row and opens a new one only
   when the next command changes direction: a new question, a disproved hypothesis that changes the approach, a
