@@ -78,6 +78,12 @@ invoke on-demand skills.
 
 ### Changed
 
+- The plan's `## 脉络` holds one row per stage (`| 阶段 | 问了什么 | 结论 | 带来的改变 |`): a run of tasks answering
+  one question, or one Plan Revision. At a task boundary the reviewer extends the current row and opens a new one only
+  when the next command changes direction: a new question, a disproved hypothesis that changes the approach, a
+  replan, a human correction, or a stop. Cells carry no readings or links; per-task evidence stays in the
+  Experiment Log and its archive. Existing per-task threads stay valid; a project can fold one once by moving its
+  rows verbatim under 「脉络原文」 in `<plan>-archive.md`.
 - Code work that introduces a new abstraction, adds a second implementation of a concept the codebase already has
   (a check, a state reader, a registry), or changes an interface used across modules writes a class-level design
   before its tasks are split: current and target class diagrams, one sequence diagram, one owner per concept, and the
