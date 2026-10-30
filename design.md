@@ -18,7 +18,7 @@ adapter 还是确实需要扩展 kernel。
 `VERIFIED` 后审证据解释与下一步。plan reviewer 只向 human 提供风险意见，不能批准 plan、关闭 task
 或授权执行；human 保留 `approve / revise / stop` 权限。plan review 按 task 审，每个 task 只审一次；
 同一 revision 下新增的 task（含 task reviewer 写的 successor）另审。初始化、resume、pager 与无人值守批准都不能绕过有效记录。task reviewer 继续由 Harness 在 verify
-后调用，并只报告会改变 `continue / ask_human / stop` 或下一条命令的问题。
+后调用，并只报告会改变 `continue / revise / ask_human / stop` 或下一条命令的问题。
 固定时间与文件修改 review 不采用——它们没有稳定的决策边界。
 Codex、Cursor 等宿主的会话与缓存目录不属于项目状态，也不进入 agent-loop 的生命周期。
 上下文与 token 按决策需要花，不按完整性花：常驻面只放路由与当前状态，已关闭记录退出活跃面，
@@ -63,7 +63,7 @@ agent-loop 只维护三类公开保证：
 | task 实例 | task id 按原字符串匹配，大小写不同却共享同一记录文件时拒绝；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
 | 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py` |
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；无人值守自批只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
-| 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
+| 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
 | 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
 | 记录寿命 | closed task 按 task id 归档；`init` 只接受 CLOSE 能归档的设计位置（见 [One plan document](#one-plan-document)） | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或在 `<plan>-archive.md`；scratch 存在或已删；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；plan → `<plan>-archive.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py` |
 
@@ -243,9 +243,11 @@ task 验证通过后，下一步由 reviewer 提议，worker 不给自己的下�
 reviewer 是项目 `.agent-loop/reviewer.json` 里的一条命令，init 时锁进 config；模型与宿主无关，原则上
 强于 worker。`harness verify` 通过后在同一 orchestration 中自动调用 reviewer；决策落盘前，
 runner 与下一 task 初始化都被 guard 拒绝。reviewer 只读落盘证据，更新 plan 的结论与下一步、按需写新 task，
-并写 `continue | ask_human | stop` 决策，可附不阻塞的 `findings`；标 done、把该 task 的 plan 段搬进
+并写 `continue | revise | ask_human | stop` 决策，可附不阻塞的 `findings`；标 done、把该 task 的 plan 段搬进
 `<plan>-archive.md`、改写指向被移走锚点的链接由 Harness 确定性地完成。worker 只能以事实错误异议一次，
 仍分歧即 `ask_human`。
+`revise` 把漏了收口的 task 退回给它自己：Harness 不关闭、不清理 scratch，只放行 runner 与 verify，期间拒绝
+init 与 `clean-task`；重跑 verify 后自动再审。每个 task 只能退回一次，第二次 `revise` 按无效决策处理。
 调研见 [`study/multi_agent.md`](docs/study/planning-review/multi_agent.md)。
 
 ### Human checkpoints on the phone

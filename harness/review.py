@@ -35,7 +35,7 @@ from harness.storage import (
 
 REVIEWER_FILE = "reviewer.json"
 REVIEW_DIR = "review"
-DECISIONS = ("continue", "ask_human", "stop")
+DECISIONS = ("continue", "revise", "ask_human", "stop")
 MAX_REVIEWS = 2
 DEFAULT_REVIEW_TIMEOUT_SECONDS = 1800.0
 
@@ -127,6 +127,8 @@ def _read_decision(path: Path) -> tuple[dict[str, str] | None, str | None]:
         return None, f"decision must be one of {', '.join(DECISIONS)}"
     if decision == "continue" and not (isinstance(next_task, str) and next_task.strip()):
         return None, "continue requires next_task"
+    if decision == "revise" and next_task:
+        return None, "revise sends this task back and takes no next_task"
     if not (isinstance(why, str) and why.strip()):
         return None, "why is required"
     findings, dropped, error = normalize_findings(value.get("findings", []))
@@ -166,6 +168,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             raise HarnessError(_review_in_progress(state))
 
         previous = state.get("review") or {}
+        revised_run = previous.get("revised_run")
         if previous.get("verify_run_id") == state.get("last_run_id"):
             if previous.get("decision") and not objection:
                 raise HarnessError(
@@ -235,8 +238,18 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             if not status or any(marker in status for marker in CLOSED_MARKERS):
                 decision = None
                 error = f"next task {next_task} must be an open task in the task list"
+        if (
+            decision
+            and decision["decision"] == "revise"
+            and revised_run not in (None, previous["verify_run_id"])
+        ):
+            decision = None
+            error = "revise is allowed once per task; choose continue, ask_human or stop"
         cleanup_error = None
-        if decision:
+        if decision and decision["decision"] == "revise":
+            decision.pop("review")
+            revised_run = previous["verify_run_id"]
+        elif decision:
             close_task(
                 root, config.get("plan_doc"), str(state["task_id"]), decision.pop("review")
             )
@@ -251,6 +264,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             "why": None,
             "error": error,
             "cleanup_error": cleanup_error,
+            "revised_run": revised_run,
             "at": utc_now(),
         }
         if decision:
@@ -307,6 +321,13 @@ def review_followup(
             "errors (wrong path or number, already done, cannot run here, over "
             f"budget).{objection} Otherwise initialize the Harness for "
             f"{review['next_task']} and execute it."
+        )
+    if review.get("decision") == "revise":
+        findings = describe(review.get("findings") or [])
+        verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
+        return (
+            f"Reviewer sent {state['task_id']} back: {review['why']}. {findings} "
+            f"Finish this task's CLOSE, then run: {verify_command}"
         )
     if review.get("decision"):
         return None

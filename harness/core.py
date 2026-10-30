@@ -143,6 +143,11 @@ def initialize(
                     raise HarnessError(
                         f"task {old.get('task_id')} is awaiting reviewer decision"
                     )
+                if prior_review["decision"] == "revise":
+                    raise HarnessError(
+                        f"reviewer sent {old.get('task_id')} back; finish its CLOSE and verify "
+                        "before starting another task"
+                    )
                 attended = not plan_doc or plan_metadata(root, plan_doc)[1] == "approved"
                 handoff = (
                     not attended
@@ -276,6 +281,8 @@ def clean_scratch(root: Path) -> dict[str, Any]:
         review.get("verify_run_id") != state.get("last_run_id") or not review.get("decision")
     ):
         raise HarnessError(f"task {task_id} is awaiting reviewer decision")
+    if review.get("decision") == "revise":
+        raise HarnessError(f"reviewer sent {task_id} back; finish its CLOSE and verify")
     return {"task_id": task_id, "scratch": scratch_path(task_id), "error": clean_task(root, task_id)}
 
 
@@ -379,9 +386,10 @@ def run_command(
                     f"task {state['task_id']} is complete; initialize reviewer-selected "
                     f"task {review.get('next_task')} before executing another command"
                 )
-            raise HarnessError(
-                f"reviewer chose {review['decision']}; execution remains blocked"
-            )
+            if review["decision"] != "revise":
+                raise HarnessError(
+                    f"reviewer chose {review['decision']}; execution remains blocked"
+                )
         if _budget_exhausted(config, state):
             if state.get("phase") != Phase.STOPPED.value:
                 _transition(state, Event.BUDGET_EXHAUSTED)
