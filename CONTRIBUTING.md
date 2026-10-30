@@ -10,7 +10,8 @@ Decide first whether agent-loop takes a change, then which layer it goes to. [Th
 `design.md`](design.md#范围) lists the three public guarantees agent-loop maintains and how each kind of request is
 handled. The issue forms and the pull request template ask which guarantee a change maintains.
 
-The maintainer triages new issues every Monday and gives each open issue exactly one label:
+The maintainer triages new issues every Monday, checks whether agent-loop has outside users yet (a fork, or an issue
+or pull request from someone else), and gives each open issue exactly one label:
 
 - `restores-contract`: an existing guarantee is broken, with one reproducible piece of evidence. It is a defect and
   needs no second project to confirm it.
@@ -19,13 +20,15 @@ The maintainer triages new issues every Monday and gives each open issue exactly
 - `out-of-scope`: closed with a comment naming where the request belongs and what would justify reopening it.
 
 Contract changes (identity, admission, authorization, closure semantics, and Policy changes that change a decision)
-merge only on window days: every fourth Monday from 2026-11-02 (2026-11-02, 2026-11-30, 2026-12-28, …).
-`restores-contract` fixes and Adapter compatibility fixes merge at any time.
+merge any time while agent-loop has no outside users. Once it has any, they merge only on window days: every
+fourth Monday from 2026-11-02 (2026-11-02, 2026-11-30, 2026-12-28, …), so users upgrade across a batch of contract
+changes. `restores-contract` fixes and Adapter compatibility fixes merge at any time.
 
-When the same contract is fixed a second time within one four-week cycle, the fix still merges, and a
-`changes-contract` issue reviews that contract, as the [Extension rule](design.md#extension-rule) requires.
+When the same contract is fixed a second time within one four-week cycle (counted from 2026-11-02), the fix still
+merges, and a `changes-contract` issue reviews that contract, as the [Extension rule](design.md#extension-rule)
+requires.
 
-agent-loop counts as stable after two consecutive windows in which no core contract was redefined, no invariant
+agent-loop counts as stable after two consecutive four-week cycles in which no core contract was redefined, no invariant
 received a patch to a patch, no capability entered the core without admission, and independent incidents per 100
 task boundaries fell. This needs at least 3 projects, 2 hosts and 100 task boundaries; below that the result is
 recorded as too few samples. Fewer issues or an unchanged `protocol.py` are not evidence of stability. The first
