@@ -189,6 +189,15 @@ invoke on-demand skills.
   `requires = ["remote-exec"]` then resolves to it unchanged. Core rules and skills no longer route to it:
   `agent-heartbeat` states its own `<log>.exit` launch contract, and the `experiment-design` CLOSE self-audit carries
   the remote asset rules. Fail-fast for detached batches (#107) belongs to that pack.
+- Seven on-demand skills leave agent-loop in the release after the one carrying this notice: `code-review`,
+  `code-to-kernel-diagram`, `code-to-uml-diagram`, `gen-ppt`, `research-to-blog`, `research-to-paper` and
+  `upstream-contribute`. None is part of the task lifecycle, so `design.md#范围` places them in an external pack. They
+  ship and are maintained as before until then. The maintainer's private pack will provide them under the same
+  names; it is not public. To keep using one after removal, copy `skills/<name>` with its resource files from this
+  release into a pack of your own and list that pack in `~/.agent-loop/packs.txt`; rerunning the installer switches
+  the link over. Until removal a pack skill with the same name is skipped as a name conflict. None declares
+  `requires`, and the names stay unchanged, so a `requires` on them resolves to your pack. Before removal, core rules
+  and skills stop naming them; the per-skill list is in `docs/study/skill-migration.md`.
 
 ### Removed
 
