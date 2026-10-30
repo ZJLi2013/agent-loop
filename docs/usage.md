@@ -360,7 +360,8 @@ sync 脚本只把这些 skill 链接进 Cursor。Codex 看不到它们，需要�
 powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
 ```
 
-备份会保留，供手动恢复。重启 Cursor 以卸载 hooks。CLI 另外卸载：
+备份会保留，供手动恢复。`~/.cursor/rules` 里只删指向 agent-loop 或已登记包、checkout 的 rule 链接，目录本身与其中别的
+文件留着；只装过 agent-loop 时它卸载后为空。旧版安装留下的整目录 junction 指向本仓库时一并删除。重启 Cursor 以卸载 hooks。CLI 另外卸载：
 
 ```sh
 python -m pip uninstall agent-loop
