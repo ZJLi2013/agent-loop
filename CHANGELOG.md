@@ -78,6 +78,12 @@ invoke on-demand skills.
 
 ### Changed
 
+- The plan's `## 脉络` holds one row per stage (`| 阶段 | 问了什么 | 结论 | 带来的改变 |`): a run of tasks answering
+  one question, or one Plan Revision. At a task boundary the reviewer extends the current row and opens a new one only
+  when the next command changes direction: a new question, a disproved hypothesis that changes the approach, a
+  replan, a human correction, or a stop. Cells carry no readings or links; per-task evidence stays in the
+  Experiment Log and its archive. Existing per-task threads stay valid; a project can fold one once by moving its
+  rows verbatim under 「脉络原文」 in `<plan>-archive.md`.
 - The task reviewer can choose `revise` when the verified task's own CLOSE is unfinished: a project fact it
   established is only under `.agent-loop/`, or the design's closing step was skipped. Harness keeps the task open
   and its scratch in place, allows only the runner and verify, and refuses init and `clean-task` until the next

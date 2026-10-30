@@ -28,9 +28,12 @@ Plan Review: proposed
 <现在为真的判断；设计中就明确写未验证>
 
 ## 脉络
-| # | 问题 | 结果 / evidence | 所以 |
+逐 task 的 evidence 见 [archive](<plan>-archive.md)。
+
+| 阶段 | 问了什么 | 结论 | 带来的改变 |
 |---|---|---|---|
-<每个关闭的 task、每次 Plan Revision 一行；「所以」写改变的下一条命令，或旧 Goal → 新 Goal 及原因>
+<一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision / Goal 变更；「带来的改变」写改变的下一条命令，
+或旧 Goal → 新 Goal 及原因；格子里不写读数与链接>
 
 ## 系统 / Pipeline
 （确实存在系统路径时才写）
@@ -39,9 +42,12 @@ Plan Review: proposed
 <单次实验的假设、判据、结果与证据>
 ```
 
-「脉络」是 task 之间、Plan Revision 之间因果的唯一归属，下一步动作就是最后一行的「所以」。
+「脉络」是阶段之间、Plan Revision 之间因果的唯一归属，下一步动作就是最后一行的「带来的改变」。
+task 边界上把本 task 并入当前阶段行（task 范围与结论）；下一条命令换方向（新问题、假设被推翻而要换做法、replan、
+human 纠偏、stop）时才开新行。plan review 与批准不单独占行，除非改变了方向。逐 task 的读数与链接写进 Experiment Log，随它进 archive。
 谁做决定谁当场写：task 边界由 reviewer 写（未配置时由 worker），Goal Review 与 human 纠偏由执行 RECONCILE 的
-agent 写 human 的决定。只追加，写错追加更正行；CLOSE、replan 与 Goal 冻结都不归档、不改写它。
+agent 写 human 的决定。已结束的阶段行只追加更正行，不改写；CLOSE、replan 与 Goal 冻结都不归档它。旧的逐 task 行
+原样移进 `<plan>-archive.md` 的「脉络原文」、在脉络里合并成阶段行，不算改写。
 
 单个实验直接追加到 Experiment Log。只有同一 Goal 下出现多个独立实验、详细日志遮蔽稳定头部、
 或需要并行维护时，才拆 linked `sub-exp/<id>.md`；结论与链接始终回填 plan document。
@@ -119,9 +125,9 @@ CLOSE 分两段：
 
 verifier 通过后：
 
-1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」，在脉络追加该 task 一行；
+1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」，把它并入脉络的当前阶段行，换方向时开新行；
 2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，
-   移到 linked archive，由脉络那一行链接；
+   移到 linked archive，由脉络上方的 archive 指针指向；
 3. 通知 `task-state` 归档 closed task 与旧交接快照，通知 `agent-memory` 只保留未来仍会改变选择的
    结论、`disproved / rejected` 与证据指针；
 4. 本 task 的临时文件（kit、workspace、本地 run 目录、job 清单、PR 草稿、task 专用 verifier）都放

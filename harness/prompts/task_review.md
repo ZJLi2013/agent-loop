@@ -24,11 +24,13 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    Goal 要测的东西；有上述检查表时逐条对照。
    plan 里关于 {task_id} 的项目事实（行为与接口、测得的结果、约束、带理由的决策、否定发现）必须链接到项目被跟踪的
    文档，且链接目标含这条事实；只在 `.agent-loop/` 或 `.harness/` 下的，报 `must` 并选 `revise`。证明它的验证读数是
-   evidence，留在脉络，不要求进项目文档。设计写明的收口要求没做（例如 diff 里留着调试输出或一次性脚手架），
+   evidence，留在 Experiment Log，不要求进项目文档。设计写明的收口要求没做（例如 diff 里留着调试输出或一次性脚手架），
    同样报 `must` 并选 `revise`。选 `stop` 前第一点要对整个 Goal 成立；其他已关闭 task 的事实没收口，就写一个
    把结论收口到项目文档的 `📝 proposed` task 并选 `continue`。
-2. 选 `revise` 时跳过这一步：worker 补完收口后重跑 verify，下一轮 review 再做。其余决策：更新 plan 的当前结论，并在「脉络」追加 {task_id} 一行：问题、结果与 evidence、所以（改变的下一条命令）。
-   evidence 写读数与文档链接，不写 `.harness/runs.jsonl` 行号或 `artifacts/` 路径：它们会被截断与删除。
+2. 选 `revise` 时跳过这一步：worker 补完收口后重跑 verify，下一轮 review 再做。其余决策：更新 plan 的当前结论，再更新「脉络」：一个阶段一行（阶段、问了什么、结论、带来的改变）。
+   {task_id} 仍在回答当前阶段的问题时，把它并入最后一行（task 范围与结论），不新开行；下一条命令换方向
+   （新问题、假设被推翻而要换做法、要 replan、human 纠偏、stop）时才追加一行。脉络格子不写读数与链接；{task_id} 的读数与文档链接写进
+   Experiment Log，不写 `.harness/runs.jsonl` 行号或 `artifacts/` 路径：它们会被截断与删除。
    当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写进 `review` 字段。
    标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，你不要做。
    下一个 task 已在列表里、且设计已审过时，不改写它，也不给它加交接或核验步骤；要新 task 时（取自

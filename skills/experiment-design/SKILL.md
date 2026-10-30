@@ -159,7 +159,7 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
 逐项处理：
 
 1. 文档只保留关键事实、会改变选择的分析、结论与 evidence 链接；本 task 确立的项目事实（行为与接口、测得的结果、
-   约束、带理由的决策、否定发现）写进项目被跟踪的文档，plan 的当前结论与脉络只链接过去；
+   约束、带理由的决策、否定发现）写进项目被跟踪的文档，plan 的当前结论只链接过去，脉络只写阶段结论；
 2. 删除设计阶段的过渡内容、被结果覆盖的假设、重复读数、旧 Next Step 与临时 TODO；
 3. 实验脚本按消费者处理：被保留脚本调用、或下一个已批准 task 要用的，留下；跨 Goal 复用的，沉淀为不带
    实验编号的稳定入口并纳入测试；其余是一次性脚本，放 task scratch 随 CLOSE 删除。删除前把复现要用的参数（格子、seed、关键 flag）
@@ -193,7 +193,7 @@ plan document 的 Experiment Log 每轮维护一行摘要：
 `| Exp | 假设 | 状态 | 关键结果 | 所以 / evidence |`，「所以」写这轮改变的下一条命令，没改变写「零信息」。
 
 状态只用 `active / promoted / superseded by Exp-X / rejected / archived`。单轮结束时更新这一行；
-task CLOSE 时由 `work-planning` 把多轮合并为脉络里的一行并移出活跃表。sub-exp 保持不可变，
+task CLOSE 时由 `work-planning` 把多轮合并成 task 结论、并入脉络的当前阶段行，再移出活跃表。sub-exp 保持不可变，
 archive 只保存指针，不复制输出；本地 run 目录随 task scratch 在 CLOSE 时删除（见 `work-planning` 的 CLOSE），
 由文档里的逐 run 表与复现参数替代。
 
