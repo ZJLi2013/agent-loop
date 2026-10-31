@@ -3,37 +3,20 @@
     把本库的 rules、skills、Harness 与 hooks 链接到 Cursor 的全局目录。幂等，可反复跑。
 
 .DESCRIPTION
-    每次增删或重命名 skill 之后重跑一次——失效的 junction 会被清掉，新增的会补上。
+    每次增删或重命名 skill、rule 之后重跑一次——失效的链接会被清掉，新增的会补上。
     无需管理员权限。
 
-    rules 用整目录 junction；skills 由 scripts/install-skills.py 逐个链接：本库的进
+    skills 与 rules 由 scripts/install-skills.py 逐个链接：本库的 skill 进
     skills-cursor/（那里还混着 Cursor 自带的 skill，不能整目录替换），
-    ~/.agent-loop/packs.txt 登记的 skill 包进 skills/。有包 skill 被跳过时以非零退出。
-
-    不要改用硬链接（mklink /H）链 rules：硬链接绑的是文件本身，而 git pull /
-    git checkout 是「删掉重写」，一拉就断，之后仓库改动再也不会反映到 Cursor，
-    且不会有任何报错。
+    ~/.agent-loop/packs.txt 登记的包 skill 进 skills/，两边的 rule 都进 rules/。
+    有条目被跳过时以非零退出。rule 是文件符号链接，Windows 上需要开发者模式。
 #>
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.cursor" | Out-Null
 
-# --- Rules：整目录 junction ---
-$rulesDest = "$env:USERPROFILE\.cursor\rules"
-if (Test-Path $rulesDest) {
-    if ((Get-Item $rulesDest).LinkType) {
-        cmd /c "rmdir `"$rulesDest`"" | Out-Null   # PS 5.1 的 Remove-Item 删 junction 会抛 NullReferenceException
-    } else {
-        $bk = "$rulesDest-backup-$(Get-Date -f yyyyMMdd-HHmmss)"
-        Move-Item $rulesDest $bk          # 保住本地独有、尚未入库的 rule
-        Write-Host "Backed up existing rules to $bk" -ForegroundColor Yellow
-    }
-}
-cmd /c "mklink /J `"$rulesDest`" `"$repo\rules`"" | Out-Null
-Write-Host "Linked rules/ -> $repo\rules" -ForegroundColor Green
-
-# --- Skills ---
+# --- Skills 与 rules ---
 python "$repo\scripts\install-skills.py" --host cursor --home "$env:USERPROFILE\.cursor"
 $skillsExit = $LASTEXITCODE
 
@@ -119,7 +102,6 @@ if (Test-Path $hooksSrc) {
 
 # --- 验证：看链接类型，不是看文件在不在 ---
 Write-Host "`n--- Verify ---" -ForegroundColor Cyan
-"rules/ LinkType = $((Get-Item $rulesDest).LinkType)   (必须是 Junction)"
 "harness/ LinkType = $((Get-Item $harnessDest).LinkType)   (必须是 Junction)"
 # hook 从 ~/.cursor/harness 导入，工作项目里的 CLI 只能靠 pip 安装；在 TEMP 里查，避免当前目录遮蔽。
 Push-Location $env:TEMP

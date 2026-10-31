@@ -53,7 +53,6 @@ if (Test-Path $hooksJson) {
 
 python "$repo\scripts\install-skills.py" --host cursor --home $cursorHome --uninstall
 
-Remove-OwnedJunction "$cursorHome\rules" @("$repo\rules")
 Remove-OwnedJunction "$cursorHome\harness" @("$repo\harness")
 Remove-OwnedJunction "$cursorHome\hooks" @(
     "$repo\adapters\cursor\hooks"

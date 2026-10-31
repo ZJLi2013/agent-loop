@@ -23,9 +23,11 @@ Windows + Cursor 下，在 agent-loop 仓库里运行：
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-cursor.ps1
 ```
 
-安装器把仓库链接进 `%USERPROFILE%\.cursor`，包括 rules 目录、各个 skill、harness 与 hooks。rules、harness、hooks
-位置上已有的普通目录会被移到带时间戳的备份，有自定义 rules / hooks 时检查这些备份；skill 目录里已有的同名普通目录
-不动，安装器报冲突并以非零退出，见[安装 skill 包](#skill-packs)。装完重启 Cursor，并确认 Cursor 看得到的 Python 是 3.11+：
+安装器把仓库链接进 `%USERPROFILE%\.cursor`，包括各个 rule、各个 skill、harness 与 hooks。harness、hooks
+位置上已有的普通目录会被移到带时间戳的备份，有自定义 hooks 时检查这些备份；rules、skill 目录里已有的同名普通文件或
+目录不动，安装器报冲突并以非零退出，见[安装 skill 包](#skill-packs)。rule 是文件符号链接，Windows 上要开启开发者模式
+或用管理员权限运行；建不了时安装器保留旧的 rules 目录 junction，报错并以非零退出。装完后 `~/.cursor/rules` 是普通目录，
+每个 rule 一条文件链接，读出的内容与仓库里的源文件相同。装完重启 Cursor，并确认 Cursor 看得到的 Python 是 3.11+：
 在终端里激活 venv 不一定改变 Cursor 的环境。仓库保持原位，并使用可信版本，见 [Security](../SECURITY.md)。
 
 Windows 自动化任务在隔离 profile 里检查安装器接线，不启动 Cursor，也不保证兼容每个 Cursor 版本。发布前还要跑
@@ -34,10 +36,10 @@ Windows 自动化任务在隔离 profile 里检查安装器接线，不启动 Cu
 <a id="skill-packs"></a>
 ### 安装 agent-loop 以外的 skill 包
 
-个人或团队的 skill 放在自己的包里，由同一个安装器装进每个宿主。**包**是任何带 `pack.toml` 的目录：
+个人或团队的 skill 与 rule 放在自己的包里，由同一个安装器装进每个宿主。**包**是任何带 `pack.toml` 的目录：
 
 ```toml
-version = 1
+version = 2
 name = "my-pack"
 
 [[skills]]
@@ -49,6 +51,9 @@ repo = "some-project"                    # skill 留在它操作的项目里，p
 path = ".cursor/skills/bar"
 profiles = ["ops"]
 requires = ["remote-exec", "experiment-design"]   # 依赖的 skill 名，agent-loop 或任一已登记的包提供
+
+[[rules]]
+path = "rules/my-rule.mdc"               # 一个 .mdc 文件，rule 名是文件名；同样可写 repo 与 profiles，不能写 requires
 ```
 
 本机启用哪些包写在 `~/.agent-loop/packs.txt`，不入任何仓库；以 `#` 开头的行是注释，路径里可以有 `#`：
@@ -59,9 +64,10 @@ repo some-project /path/to/some-project
 profiles research,ops
 ```
 
-`sync-to-cursor.ps1` 与 `sync-to-dsh.ps1` 都调用 `scripts/install-skills.py`：先链 agent-loop 自己的 skill，再链各包里
-选中的 skill。Cursor 上包 skill 进 `~/.cursor/skills`，agent-loop 的仍在 `~/.cursor/skills-cursor`；dsh 上都在
-`$DSH_HOME/skills`。也可以直接运行 `python scripts/install-skills.py --host cursor|dsh`。
+`sync-to-cursor.ps1` 与 `sync-to-dsh.ps1` 都调用 `scripts/install-skills.py`：先链 agent-loop 自己的 skill 与 rule，
+再链各包里选中的。Cursor 上包 skill 进 `~/.cursor/skills`，agent-loop 的仍在 `~/.cursor/skills-cursor`，两边的 rule
+都逐个链进 `~/.cursor/rules`；dsh 上 skill 都在 `$DSH_HOME/skills`，选中的 always-apply rule 拼进 `AGENTS.md`。
+也可以直接运行 `python scripts/install-skills.py --host cursor|dsh`。
 
 - **选择**：skill 不写 `profiles` 时总被选中，否则与 `profiles` 行有交集才选中。每个已装 skill 的 description 都常驻上下文，
   只装当前场景要用的。切换 profile 后重跑，未选中 skill 的链接被撤掉。
@@ -75,10 +81,13 @@ profiles research,ops
   skill 从 agent-loop 迁到包里后重跑一次即可：指向 agent-loop `skills/` 的旧链接先撤掉，再链包里的那份。
 - **只删自己的链接**：安装器只删除目标位于 agent-loop `skills/`、已登记包或已登记 checkout 之内的链接。
   把包整个从 `packs.txt` 删掉后，它的旧链接在输出里标为 `unmanaged`，手动删除。
-- **输出**：末尾 `--- Skills ---` 一节每行写 skill、源头与目标；`repo` 来源另写 `behind=N dirty=yes|no`，
-  是该 checkout 相对上次 fetch 的上游落后几个提交、skill 目录有无未提交改动。安装器不 pull 也不 fetch。
-- 包只提供 skill，不提供 rule。`pack.toml` 的 `version` 不是 1 时整个包被拒绝。清单用 TOML，是因为标准库
-  `tomllib` 就能解析，安装器不引入第三方依赖。
+- **rule**：选择、重名与只删自己链接的规则同 skill，名字是文件名，与 skill 名各自独立；rule 没有依赖。
+  `~/.cursor/rules` 里已有指向别处的同名链接时，agent-loop 自己的 rule 换成指向本仓库的新链接，包的 rule 跳过。
+  第一次 sync 把旧版安装留下的整目录 junction（指向本仓库 `rules/`）换成逐文件链接，源文件不动。
+- **输出**：末尾 `--- Skills ---` 与 `--- Rules ---` 两节每行写名字、源头与目标；`repo` 来源另写 `behind=N dirty=yes|no`，
+  是该 checkout 相对上次 fetch 的上游落后几个提交、该条目有无未提交改动。安装器不 pull 也不 fetch。
+- `pack.toml` 的 `version` 是 1 或 2，其他值整个包被拒绝；`[[rules]]` 要求 version 2，写在 version 1 的包里也整包拒绝。
+  清单用 TOML，是因为标准库 `tomllib` 就能解析，安装器不引入第三方依赖。
 - 包的 `name` 只用于输出与重名报告，不授予权限：旧链接替换只对 agent-loop 自己的 skill 生效，名为 `agent-loop` 的包
   也没有这个例外。
 - agent-loop 的 skill 名是 `requires` 的对外接口；改名或删除先在 CHANGELOG 标弃用，保留一个版本。
@@ -95,9 +104,13 @@ dsh 需要 Node.js 24.2+；DeepSeek Harness Desktop 自带 dsh、Node 与 pnpm�
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-dsh.ps1 -DshHome $HOME\.dsh
 ```
 
-dsh 不读 `.mdc`，脚本把 always-apply 的 rules 去掉 frontmatter 后拼成 `$DSH_HOME/AGENTS.md`，所有 profile 的会话
+dsh 不读 `.mdc`，脚本把选中的 always-apply rules（agent-loop 与包里的）去掉 frontmatter 后按文件名顺序拼成 `$DSH_HOME/AGENTS.md`，所有 profile 的会话
 都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
-已有的手写 `AGENTS.md` 会先移到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
+已有的手写 `AGENTS.md` 会先复制到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
+
+- `packs.txt`、`pack.toml` 或某个 rule 读不出、未选中或已删除条目的旧链接清理失败、写入失败时，`AGENTS.md` 保持上一次的内容。
+- 单个 skill 或 rule 因冲突、依赖或链接失败被跳过时照常生成，只少被跳过的 rule；替换某一项自己的旧链接失败也算这一类。
+- 两种情况都以非零退出。同一个 `DSH_HOME` 一次只跑一个安装（脚本或直接运行 `install-skills.py`），安装器不加锁。
 
 hooks 还没有安装器，需手动把桥接接到 dsh profile `<p>` 上。
 
@@ -142,8 +155,8 @@ dsh 适配器是新加的，实际项目里跑得还少，下面的清单会随�
 - **memory 索引只在会话开始时注入一次。** 桥接不传工具调用的文件路径，读 `task.md` 时不会再注入。
 - **`AGENTS.md` 是生成的副本。** rules 改动后要重跑 `sync-to-dsh.ps1`；skills 是链接，跟着仓库变。
 - **hooks 依赖仓库原位。** `hooks.json` 用的是仓库的绝对路径，仓库移动或切到不含 `adapters/dsh/` 的分支后 hooks 失败。
-- **只在 Windows 上验证过。** 安装脚本是 PowerShell；其他平台的 rules 需手动放到 `$DSH_HOME`，skills 用
-  `python scripts/install-skills.py --host dsh`。
+- **只在 Windows 上验证过。** 安装脚本是 PowerShell；其他平台直接运行 `python scripts/install-skills.py --host dsh`，
+  rules 与 skills 都由它处理。
 - **Desktop GUI 里的 gate 未做端到端验证。** 端到端验证在 dsh headless 上完成；Desktop 用的是同一个桥接与配置方式。
 
 <a id="dsh-models"></a>
@@ -347,7 +360,8 @@ sync 脚本只把这些 skill 链接进 Cursor。Codex 看不到它们，需要�
 powershell -ExecutionPolicy Bypass -File scripts/uninstall-from-cursor.ps1
 ```
 
-备份会保留，供手动恢复。重启 Cursor 以卸载 hooks。CLI 另外卸载：
+备份会保留，供手动恢复。`~/.cursor/rules` 里只删指向 agent-loop 或已登记包、checkout 的 rule 链接，目录本身与其中别的
+文件留着；只装过 agent-loop 时它卸载后为空。旧版安装留下的整目录 junction 指向本仓库时一并删除。重启 Cursor 以卸载 hooks。CLI 另外卸载：
 
 ```sh
 python -m pip uninstall agent-loop
