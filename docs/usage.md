@@ -50,7 +50,7 @@ profiles = ["research"]
 repo = "some-project"                    # skill 留在它操作的项目里，path 相对该项目的 checkout
 path = ".cursor/skills/bar"
 profiles = ["ops"]
-requires = ["remote-exec", "experiment-design"]   # 依赖的 skill 名，agent-loop 或任一已登记的包提供
+requires = ["experiment-design", "agent-heartbeat"]   # 依赖的 skill 名，agent-loop 或任一已登记的包提供
 
 [[rules]]
 path = "rules/my-rule.mdc"               # 一个 .mdc 文件，rule 名是文件名；同样可写 repo 与 profiles，不能写 requires
@@ -337,14 +337,10 @@ pager 是独立的包。Outlook / Graph 见 [tools/pager](../tools/pager/README.
 
 ## 可选的按需 skill
 
-环外的 skill 只在被点名时加载：在 Cursor 对话里输入 `/<skill-name>` 再接请求，或在消息里提到该 skill。列表见
-[Policies](../skills/README.md) 的 *Explicit / cold policies*。例如把一个已关闭的研究 Goal 写成 arXiv 风格论文和短预告片：
-
-```text
-/research-to-paper Write wm_forge's conclusions as an arXiv paper, then make a 10 s teaser.
-```
-
-sync 脚本只把这些 skill 链接进 Cursor。Codex 看不到它们，需要让它去读 agent-loop 仓库里的 `skills/<skill-name>/SKILL.md`。
+agent-loop 只发行环内的 skill。审 PR、写对外文章、做幻灯片这类按需能力由各自的包提供，装法见
+[安装 skill 包](#skill-packs)。包里写了 `disable-model-invocation: true` 的 skill 只在被点名时加载：在 Cursor 对话里输入
+`/<skill-name>` 再接请求，或在消息里提到该 skill。sync 脚本只把 skill 链接进 Cursor 与 dsh；Codex 看不到它们，需要让它去读
+包里的 `skills/<skill-name>/SKILL.md`。
 
 ## 升级与卸载
 

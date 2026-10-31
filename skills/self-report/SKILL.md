@@ -9,7 +9,7 @@ description: >-
 
 # Self Report
 
-**边界**：项目自身的失败归 `when-to-stop` 与 `agent-memory` 的 lessons；他人仓库的 PR / Issue 归 `upstream-contribute`；
+**边界**：项目自身的失败归 `when-to-stop` 与 `agent-memory` 的 lessons；他人仓库的 PR / Issue 不归本 skill；
 披露、脱敏、去私料的规则归 `external-output-boundary`，本 skill 只做发布前的机器检查。
 
 上报不改变当前 task 的状态与失败计数；发布或存稿后回到原来的 task。
