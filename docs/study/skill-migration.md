@@ -7,8 +7,8 @@
 ## 结论
 
 七个 skill（`remote-exec` 与六个按需 skill）和两条通用 rule（`code-hygiene`、`shell-exec`）已从 agent-loop 删除，
-由维护者的私有 pack 以同名提供；重跑安装器后链接一次切到 pack。它们都不声明 `requires`，也没有别的 skill 用
-`requires` 依赖它们。核心不装任何 pack 也能完成 task 生命周期：这些都不在生命周期里，唯一被核心借用的方法
+由维护者的私有 pack 以同名提供；重跑安装器后链接一次切到 pack。它们都不声明 `requires`，核心 skill 也不依赖它们；
+包里的 skill 仍可按公开名 `requires` 它们。核心不装任何 pack 也能完成 task 生命周期：这些都不在生命周期里，唯一被核心借用的方法
 （`experiment-design` 的领域先例查法）写在核心自己的正文里。
 
 `code-to-uml-diagram` 原在清单内，[#125](https://github.com/ZJLi2013/agent-loop/issues/125) 把它接进 `work-planning`
