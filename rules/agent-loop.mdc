@@ -69,9 +69,3 @@ user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时
 - 不问选择题，记录选中理由与放弃项；有显著权衡时标 `⚠️ 待确认`；
 - blocked task 跳过做下一条，全部 blocked 才停；不可逆操作仍跳过；
 - 环境重试上限不变；收工把状态、失败计数、待确认项和明早第一条命令写进被处理项目的 `progress.md` 交接（夜间报告）。
-
-## 环外能力
-
-只有 user 点名才读：审 diff / PR → `code-review`；提上游 → `upstream-contribute`；
-写对外文章 → `research-to-blog`；写 arXiv 稿 / 宣传短片 → `research-to-paper`；
-画 kernel 数据流图 → `code-to-kernel-diagram`。
