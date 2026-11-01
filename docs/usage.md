@@ -226,7 +226,8 @@ plan review 建议。
 agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
 ```
 
-把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令与预算。工作经 `agent-loop-harness exec -- <command>` 执行，
+把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令、命令里指向工作区内文件的内容（含被 gitignore 的路径）与预算；之后改了 verifier 文件，
+`verify` 拒绝运行、已有证据转为 stale，要 disable 后重新 init 才能锁定新版本。工作经 `agent-loop-harness exec -- <command>` 执行，
 然后运行 `agent-loop-harness verify`。宿主的其他工具调用不在 runner 的硬控制边界之内。失败直接进入诊断与自修，
 evidence stale 直接要求重新验证；默认不按动作数或时间暂停。确需固定 attention refresh 时，用
 `--goal-review-actions N` 或 `--goal-review-minutes N` 显式开启。

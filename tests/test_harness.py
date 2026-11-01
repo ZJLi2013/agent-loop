@@ -23,7 +23,7 @@ from harness.core import (
     verify,
     workspace_fingerprint,
 )
-from harness.storage import state_lock
+from harness.storage import config_digest, state_lock
 
 
 def in_background(call, ready) -> "threading.Thread":
@@ -250,6 +250,98 @@ class WorkspaceFingerprintTest(unittest.TestCase):
         ):
             self.assert_scratch_ignored()
 
+
+@unittest.skipUnless(shutil.which("git"), "git is required")
+class VerifierLockTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        (self.root / ".gitignore").write_text(".agent-loop/\n")
+        (self.root / "code.py").write_text("x = 1\n")
+        self.ignored = self.root / ".agent-loop" / "verify_t1.py"
+        self.ignored.parent.mkdir()
+        self.ignored.write_text("print('OK')\n")
+        self.tracked = self.root / "verify_tracked.py"
+        self.tracked.write_text("print('OK')\n")
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.com"]
+        for args in (["init", "-q"], ["add", "."], ["commit", "-q", "-m", "init"]):
+            subprocess.run(git + args, cwd=self.root, check=True, capture_output=True)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def init(self, verifier: Path) -> None:
+        initialize(
+            self.root,
+            task_id="t1",
+            verifier_argv=[sys.executable, "-S", verifier.relative_to(self.root).as_posix()],
+        )
+
+    def test_verifier_file_edit_before_verify_is_refused(self) -> None:
+        self.init(self.ignored)
+        self.ignored.write_text("print('OK')  # loosened\n")
+
+        with self.assertRaisesRegex(HarnessError, "verify_t1.py changed after init"):
+            verify(self.root)
+        _, state = load_runtime(self.root)
+        self.assertEqual(state["phase"], "ready")
+        self.assertEqual(state["verify_attempts"], 0)
+
+    def test_verifier_that_rewrites_itself_does_not_pass(self) -> None:
+        self.ignored.write_text(
+            "import pathlib; pathlib.Path(__file__).write_text(\"print('OK')\\n\"); print('OK')\n"
+        )
+        self.init(self.ignored)
+
+        result = verify(self.root)
+        _, state = load_runtime(self.root)
+
+        self.assertEqual(state["phase"], "failed")
+        self.assertEqual(state["verify_attempts"], 1)
+        self.assertIsNone(state["verified_fingerprint"])
+        self.assertEqual(result["outcome"], "reject")
+
+    def test_verifier_file_edit_after_verify_makes_evidence_stale(self) -> None:
+        self.init(self.ignored)
+        verify(self.root)
+        self.assertIsNone(completion_gate(self.root))
+
+        self.ignored.write_text("print('OK')  # edited after\n")
+        message = completion_gate(self.root) or ""
+
+        self.assertIn("is stale", message)
+        self.assertIn("verify_t1.py", message)
+        self.assertEqual(load_runtime(self.root)[1]["phase"], "failed")
+
+    def test_tracked_verifier_file_edit_is_refused(self) -> None:
+        self.init(self.tracked)
+        self.tracked.write_text("print('OK')  # loosened\n")
+
+        with self.assertRaisesRegex(HarnessError, "verify_tracked.py changed after init"):
+            verify(self.root)
+
+    def test_bare_command_verifier_locks_no_files(self) -> None:
+        initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
+        config, _ = load_runtime(self.root)
+
+        self.assertEqual(config["verifier"].get("files", {}), {})
+        self.assertEqual(verify(self.root)["outcome"], "pass")
+        self.assertIsNone(completion_gate(self.root))
+
+    def test_config_without_verifier_files_verifies_as_before(self) -> None:
+        self.init(self.ignored)
+        config_path = harness_dir(self.root) / "config.json"
+        state_path = harness_dir(self.root) / "state.json"
+        config = json.loads(config_path.read_text())
+        config["verifier"].pop("files", None)
+        config_path.write_text(json.dumps(config))
+        state = json.loads(state_path.read_text())
+        state["config_sha256"] = config_digest(config)
+        state_path.write_text(json.dumps(state))
+        self.ignored.write_text("print('OK')  # written before the lock existed\n")
+
+        self.assertEqual(verify(self.root)["outcome"], "pass")
+        self.assertIsNone(completion_gate(self.root))
 
 
 class LockTest(unittest.TestCase):

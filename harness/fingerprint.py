@@ -58,6 +58,38 @@ def workspace_fingerprint(root: Path) -> str:
         return _fallback_fingerprint(root)
 
 
+def _file_digest(path: Path) -> str | None:
+    try:
+        with path.open("rb") as fh:
+            return hashlib.file_digest(fh, "sha256").hexdigest()
+    except OSError:
+        return None
+
+
+def verifier_files(root: Path, argv: list[str]) -> dict[str, str]:
+    root = root.resolve()
+    files: dict[str, str] = {}
+    for arg in argv:
+        try:
+            path = (root / arg).resolve()
+            relative = path.relative_to(root).as_posix()
+            if not path.is_file():
+                continue
+        except (OSError, ValueError):
+            continue
+        if digest := _file_digest(path):
+            files[relative] = digest
+    return files
+
+
+def verifier_drift(root: Path, config: dict) -> str | None:
+    root = root.resolve()
+    for relative, digest in (config["verifier"].get("files") or {}).items():
+        if _file_digest(root / relative) != digest:
+            return relative
+    return None
+
+
 def _fallback_fingerprint(root: Path) -> str:
     digest = hashlib.sha256()
     for path in sorted(root.rglob("*")):

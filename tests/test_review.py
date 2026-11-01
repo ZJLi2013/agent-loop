@@ -287,6 +287,39 @@ def reviewer_sequence(*decisions: dict[str, object]) -> list[str]:
     return [sys.executable, "-S", "-c", code]
 
 
+class VerifierLockReviewTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        (self.root / ".agent-loop").mkdir()
+        (self.root / ".agent-loop" / "task.md").write_text(
+            REWRITTEN_TASKS.replace("✅ done", "🔬 doing"), encoding="utf-8"
+        )
+        (self.root / ".agent-loop" / "reviewer.json").write_text(json.dumps({
+            "argv": reviewer_writing({"decision": "continue", "next_task": "t2", "why": "next"}),
+            "timeout_seconds": 30,
+        }))
+        self.verifier = self.root / ".harness" / "tasks" / "t1" / "verify.py"
+        self.verifier.parent.mkdir(parents=True)
+        self.verifier.write_text("print('OK')\n")
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_review_refuses_a_changed_verifier(self) -> None:
+        initialize(
+            self.root,
+            task_id="t1",
+            verifier_argv=[sys.executable, "-S", ".harness/tasks/t1/verify.py"],
+        )
+        run_command(self.root, [sys.executable, "-S", ".harness/tasks/t1/verify.py"], kind="verify")
+        self.verifier.write_text("print('OK')  # edited after verify\n")
+
+        with self.assertRaisesRegex(HarnessError, "verify.py changed after init"):
+            run_review(self.root)
+        self.assertIsNone(load_runtime(self.root)[1].get("review"))
+
+
 class ReviseTest(unittest.TestCase):
     setUp = TaskBoundaryReviewTest.setUp
     tearDown = TaskBoundaryReviewTest.tearDown

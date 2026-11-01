@@ -7,7 +7,7 @@ from typing import Any
 
 from harness.errors import HarnessError
 from harness.findings import describe, normalize_findings
-from harness.fingerprint import workspace_fingerprint
+from harness.fingerprint import verifier_drift, workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import pause_request
 from harness.project import (
@@ -168,6 +168,16 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             raise HarnessError(_review_in_progress(state))
 
         previous = state.get("review") or {}
+        decided = (
+            previous.get("verify_run_id") == state.get("last_run_id")
+            and previous.get("decision")
+        )
+        # A landed decision already closed the task and removed .harness/tasks/<id>/.
+        if not decided and (changed := verifier_drift(root, config)):
+            raise HarnessError(
+                f"verifier file {changed} changed after init; verification is stale. "
+                "Disable and init again to lock the new verifier, then verify"
+            )
         revised_run = previous.get("revised_run")
         if previous.get("verify_run_id") == state.get("last_run_id"):
             if previous.get("decision") and not objection:
