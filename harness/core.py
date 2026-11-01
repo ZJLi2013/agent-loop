@@ -690,6 +690,8 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
         runner = Path(__file__).with_name("run.py")
         verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
         review = state.get("review") or {}
+        # Not gated on a decision: an invalid review may already have rewritten task.md, which the
+        # workspace fingerprint would misread as stale evidence. The verifier lock still holds until one lands.
         reviewed = review.get("verify_run_id") == state.get("last_run_id")
         changed = (
             None if reviewed and review.get("decision") else verifier_drift(root, config)
