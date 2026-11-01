@@ -18,8 +18,8 @@ All notable user-facing changes are documented here. This project follows Semant
   exits non-zero. `requires` names a skill of agent-loop or of any registered pack; a missing, unselected, skipped or
   cyclic provider skips its direct and indirect dependents, providers are linked first, and a provider that fails to
   link skips its dependents, keeps their existing links, and does not abort the run. A skill moved from agent-loop into a pack switches over in one
-  run. Only links into registered sources are ever removed. agent-loop skill names are now a public interface: a rename or removal is announced here and kept for one
-  release. See `docs/usage.md#skill-packs`.
+  run. Only links into registered sources are ever removed. agent-loop skill names are now a public interface: a rename or removal states its migration here in the
+  same release. See `docs/usage.md#skill-packs`.
 
 - Harness owns task scratch: `init` creates `.harness/tasks/<task_id>/` for kits, workspaces, local run outputs, job
   lists and PR drafts, and removes it after the reviewer's decision is saved; projects without a reviewer run
@@ -109,9 +109,10 @@ invoke on-demand skills.
   this release has none and behaves as before.
 - Admission: issue forms and the pull request template ask which public guarantee a change maintains, and blank
   issues are off. The maintainer triages each open issue weekly as `restores-contract`, `changes-contract` or
-  `out-of-scope`; contract changes merge any time while agent-loop has no outside users and on window days, every
-  fourth Monday from 2026-11-02, once a fork or an outside issue or pull request appears, and
-  `.github/auto-fix/run.ps1` takes only issues triaged `restores-contract`. See `CONTRIBUTING.md#admission`.
+  `out-of-scope`; admitted contract changes merge at any time, and `.github/auto-fix/run.ps1` takes only issues
+  triaged `restores-contract`. There is no merge window, deprecation window or stability review: a removal or
+  breaking change, including a skill rename, states its migration in the same release's CHANGELOG. See
+  `CONTRIBUTING.md#admission`.
 - A project's facts and conclusions live in its own tracked documents; the plan document holds the active Goal's
   working conclusions and links to them, and memory holds runtime facts, rejected options and pointers. Before the
   locked verifier the worker writes the facts a task established into the project's documents, and the task reviewer

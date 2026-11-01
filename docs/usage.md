@@ -90,7 +90,7 @@ profiles research,ops
   清单用 TOML，是因为标准库 `tomllib` 就能解析，安装器不引入第三方依赖。
 - 包的 `name` 只用于输出与重名报告，不授予权限：旧链接替换只对 agent-loop 自己的 skill 生效，名为 `agent-loop` 的包
   也没有这个例外。
-- agent-loop 的 skill 名是 `requires` 的对外接口；改名或删除先在 CHANGELOG 标弃用，保留一个版本。
+- agent-loop 的 skill 名是 `requires` 的对外接口；改名或删除在同一版本的 CHANGELOG 写明迁移方式。
 
 <a id="dsh-enforced-mode"></a>
 ### dsh enforced 模式

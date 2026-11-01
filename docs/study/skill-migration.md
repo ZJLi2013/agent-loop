@@ -19,9 +19,20 @@
 [范围](../../design.md#范围)只收三类公开保证：task 生命周期、让它在宿主上成立的安装与接线、本仓库自己的发行与贡献。
 这些都是被点名才加载的写作、评审与作图方法，或依赖个人节点池与个人习惯，不参与任何准入、执行或验证，处置是转外部 pack。
 
-目标选维护者的私有 pack，不另拆公开 pack：agent-loop 当前没有外部使用者（没有 fork、外部 issue 或 PR），
-公开拆包没有读者，也不保留弃用窗口。**推翻条件**：出现 fork、外部 issue 或外部 PR 时，按可见性拆出一个公开 pack，
-私有 pack 只留个人内容。
+目标选维护者的私有 pack，不另拆公开 pack：agent-loop 没有外部使用者（没有 fork、外部 issue 或 PR），
+公开拆包没有读者，也不保留弃用窗口。
+
+## 发行承诺与已有做法
+
+agent-loop 的发行承诺只剩一条：删除或破坏契约的改动在同一版本的 CHANGELOG 写明迁移方式；契约改动准入后随时合并，
+不设合并窗口、弃用窗口与稳定复盘（[Admission](../../CONTRIBUTING.md#admission)）。
+
+| 做法 | 它要求什么 | 采用与否 |
+|---|---|---|
+| [SemVer](https://semver.org/) 第 4 条与弃用 FAQ | 0.y.z 是初始开发期，「Anything MAY change at any time」；弃用后保留至少一个 minor 版本再删，针对的是 1.0 之后的 major 删除 | 采用 0.y.z 条款：agent-loop 是 0.1.x，删除不必先过一个弃用版本 |
+| [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) | 按 Added / Changed / Deprecated / Removed 分组；「至少列出弃用、删除与破坏性改动」 | 采用：迁移说明写进 Removed / Changed 条目。`Deprecated` 只在确实要分两个版本删除时使用 |
+| 单人维护项目（[sindresorhus 的贡献说明](https://github.com/sindresorhus/.github/blob/main/contributing.md)） | 大改或破坏性改动先开 issue 讨论；没有合并窗口和稳定性复盘 | 采用：`changes-contract` issue 承担先讨论这一步 |
+| 按固定周期批量合并契约改动、按样本门槛做稳定复盘 | 为让下游一次跨过一批改动、并判断何时可以承诺稳定 | 不采用：没有下游要跨版本升级，样本门槛（3 个项目、2 个宿主）也凑不齐，复盘只会产出「样本不足」 |
 
 ## 逐项清单
 
