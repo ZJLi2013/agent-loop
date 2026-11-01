@@ -223,6 +223,13 @@ invoke on-demand skills.
 
 ### Fixed
 
+- A locked verifier now locks the files it runs, not only its command line (#148). `init` records the SHA-256 of
+  every `argv` element that is a file inside the workspace, including gitignored paths such as
+  `.agent-loop/plans/<topic>/verify_<task>.py` and `.harness/tasks/<id>/`. Until the task reviewer's decision lands,
+  a changed file makes `verify` refuse to start, keeps a run that rewrote its verifier from passing, makes the
+  evidence stale at the completion gate, and stops the task review. Configs written before this change carry no
+  digests and behave as before until the next `init`. Helper modules the verifier imports are not locked.
+
 - Passing Harness verification no longer consumes `max_attempts`, so stale evidence can be verified again.
   Failed verification (including output-contract rejection) still consumes the attempt budget; wall time remains bounded.
 

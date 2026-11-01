@@ -61,7 +61,7 @@ agent-loop 只维护三类公开保证：
 | 维度 | 身份 | 取值 | 谁能改 | 存在哪 | 契约测试 |
 |---|---|---|---|---|---|
 | task 实例 | task id 按原字符串匹配，大小写不同却共享同一记录文件时拒绝；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
-| 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py` |
+| 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `files`（`argv` 指向的工作区内文件的 SHA-256，含被 gitignore 的路径）/ `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py`、`tests/test_review.py` |
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；无人值守自批只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
 | 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
 | 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
@@ -103,8 +103,21 @@ agent-loop 只维护三类公开保证：
 - `config.json` 的摘要等于 init 时记下的 `config_sha256`；
 - attempt / wall budget 尚有余额，用尽后只要求一次 Auto-Stop Report；
 - task reviewer 的决策落盘前，runner 与下一 task 的 init 都被拒绝；
-- verifier 通过且 workspace fingerprint 未变化；
+- verify 开跑前与写入通过前，`verifier.files` 的每个文件摘要等于 init 时的值；
+- verifier 通过且 workspace fingerprint 未变化；task reviewer 的决定落盘前，`verifier.files` 也未变化；
 - 请求的会话不是 `owner` 时，gate 不写状态、不发 followup。
+
+<a id="verifier-file-lock"></a>
+verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprint 分开：
+
+- `verifier_files(root, argv)`：`argv` 中按 root 解析后落在 root 内的普通文件，返回相对 root 的 POSIX 路径到 SHA-256 的映射；
+  `init` 写进 `verifier.files`，由 `config_sha256` 锁住。不追踪 verifier import 的模块与 root 外的文件。
+- `verifier_drift(root, config)`：返回第一个缺失、不可读或摘要不符的路径，没有不符时返回 None；没有 `files` 的旧 config 恒为 None。
+- 有效期从 `init` 到 task reviewer 对这次 verify 的决定落盘：决定落盘的同一步关闭 task 并删除 `.harness/tasks/<id>/`，
+  之后的 `--objection` 不复核。review 的 run id 已匹配、有效决定却未落盘时（reviewer 写出无效决定），`completion_gate`
+  仍复核 verifier 摘要，不符即 stale。这时「已审」判定照旧只看 run id，不改走 workspace fingerprint：无效的 reviewer
+  可能已经改写 task.md，那是允许的工作文档改写，不应判为证据 stale。
+- 只在开跑前与写入通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
 
 ## Architecture
 

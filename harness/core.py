@@ -16,6 +16,8 @@ from harness.errors import HarnessError
 from harness.fingerprint import (  # noqa: F401
     FOREIGN_RUNTIME_DIRS,
     _fallback_fingerprint,
+    verifier_drift,
+    verifier_files,
     workspace_fingerprint,
 )
 from harness.journal import (
@@ -206,6 +208,7 @@ def initialize(
         "plan_doc": plan_doc,
         "verifier": {
             "argv": verifier_argv,
+            "files": verifier_files(root, verifier_argv),
             "timeout_seconds": float(timeout_seconds),
             "expect_regex": expect_regex,
             "forbid_regex": forbid_regex,
@@ -403,6 +406,11 @@ def run_command(
             state["updated_at"] = utc_now()
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
             raise HarnessError(f"runner is paused: {attention_reason}")
+        if kind == "verify" and (changed := verifier_drift(root, config)):
+            raise HarnessError(
+                f"verifier file {changed} changed after init; "
+                "disable and init again to lock the new verifier"
+            )
 
         requested = (
             float(timeout_seconds)
@@ -467,9 +475,13 @@ def run_command(
             _transition(state, Event.PAUSE_REQUESTED)
             state["verified_fingerprint"] = None
         elif kind == "verify":
+            changed = verifier_drift(root, config)
+            if changed:
+                result["verifier_changed"] = changed
             contract_passed = (
                 result["outcome"] == "pass"
                 and _matches_contract(config, run_dir)
+                and changed is None
             )
             result["verification_passed"] = contract_passed
             if contract_passed:
@@ -677,10 +689,14 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
         phase = Phase(str(state["phase"]))
         runner = Path(__file__).with_name("run.py")
         verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
-        reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
-            "last_run_id"
+        review = state.get("review") or {}
+        # Not gated on a decision: an invalid review may already have rewritten task.md, which the
+        # workspace fingerprint would misread as stale evidence. The verifier lock still holds until one lands.
+        reviewed = review.get("verify_run_id") == state.get("last_run_id")
+        changed = (
+            None if reviewed and review.get("decision") else verifier_drift(root, config)
         )
-        if phase == Phase.VERIFIED and reviewed:
+        if phase == Phase.VERIFIED and reviewed and not changed:
             return review_followup(
                 root, config, state, state_path
             ) or page_followup(root, config, state)
@@ -702,7 +718,10 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             )
 
         if phase == Phase.VERIFIED:
-            if state.get("verified_fingerprint") == workspace_fingerprint(root):
+            if (
+                not changed
+                and state.get("verified_fingerprint") == workspace_fingerprint(root)
+            ):
                 return review_followup(
                     root, config, state, state_path
                 ) or page_followup(root, config, state)
@@ -711,6 +730,12 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             state["last_outcome"] = "stale"
             state["updated_at"] = utc_now()
             atomic_write_json(state_path, state)
+            if changed:
+                return (
+                    f"Harness verification for {state['task_id']} is stale because the "
+                    f"verifier file {changed} changed after init. Disable and init again "
+                    "to lock the new verifier, then verify."
+                )
             return (
                 f"Harness verification for {state['task_id']} is stale because the "
                 f"workspace changed. Run the locked verifier again: {verify_command}"
