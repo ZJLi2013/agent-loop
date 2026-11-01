@@ -20,6 +20,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 - [业界实践与能力边界](industry-practices.md)：独立 radar、项目验证与 RSI 的范围判断。
 - [Research / RSI 工作追踪](research-rsi-track.md)：持续更新的 research agent 与自改进工作清单，及每项对本库的影响。
 - [skill 依赖解析](skill-dependency-resolution.md)：安装器跨来源解析 `requires` 时取 graphlib、不取 pip resolver 的理由。
+- [范围判据回放](scope-replay.md)：只读范围一节的 reviewer 对六条历史输入判对五条，#77 暴露的处置表缺口。
 - [按需 skill 与通用 rule 的迁出清单](skill-migration.md)：七个 skill 与两条 rule 为什么迁到私有 pack、各自的依赖，以及核心里删掉的点名。
 
 初次阅读：设计沿革 → 业界实践 → 按 feature 进入。需要修改当前实现时，先读 `design.md` 与对应 owner，
