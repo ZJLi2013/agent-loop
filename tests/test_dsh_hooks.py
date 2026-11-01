@@ -26,7 +26,8 @@ class DshHooksTest(unittest.TestCase):
         self.task.write_text("# Tasks\n| P1 | g1 | — | probe | ok | 🔬 doing | 0 |\n", encoding="utf-8")
         markers = Path(self.tmp.name) / "markers"
         markers.mkdir()
-        self.env = {**os.environ, "TEMP": str(markers), "TMP": str(markers), "TMPDIR": str(markers),
+        inherited = {k: v for k, v in os.environ.items() if k != "AGENT_LOOP_SHARED_MEMORY"}
+        self.env = {**inherited, "TEMP": str(markers), "TMP": str(markers), "TMPDIR": str(markers),
                     "PYTHONIOENCODING": "cp1252"}
 
     def hook(self, name: str, payload: dict[str, object]) -> dict[str, object]:
