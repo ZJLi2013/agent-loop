@@ -211,25 +211,13 @@ invoke on-demand skills.
 - Usage recommends an editable CLI install for Cursor enforced mode, so the CLI and the linked hooks run the
   same checkout. `sync-to-cursor.ps1` warns when the CLI is not installed from that checkout.
 
-### Deprecated
-
-- `remote-exec` leaves agent-loop in the next release: it depends on a personal node pool, which `design.md#范围`
-  places in a private pack, and the maintainer's private pack will provide it under the same name. To keep using it,
-  copy `skills/remote-exec` from this release into a pack of your own and list that pack in `~/.agent-loop/packs.txt`;
-  `requires = ["remote-exec"]` then resolves to it unchanged. Core rules and skills no longer route to it:
-  `agent-heartbeat` states its own `<log>.exit` launch contract, and the `experiment-design` CLOSE self-audit carries
-  the remote asset rules. Fail-fast for detached batches (#107) belongs to that pack.
-- Six on-demand skills leave agent-loop in the release after the one carrying this notice: `code-review`,
-  `code-to-kernel-diagram`, `gen-ppt`, `research-to-blog`, `research-to-paper` and `upstream-contribute`. None is part of the task lifecycle, so `design.md#范围` places them in an external pack. They
-  ship and are maintained as before until then. The maintainer's private pack will provide them under the same
-  names; it is not public. To keep using one after removal, copy `skills/<name>` with its resource files from this
-  release into a pack of your own and list that pack in `~/.agent-loop/packs.txt`; rerunning the installer switches
-  the link over. Until removal a pack skill with the same name is skipped as a name conflict. None declares
-  `requires`, and the names stay unchanged, so a `requires` on them resolves to your pack. Before removal, core rules
-  and skills stop naming them; the per-skill list is in `docs/study/skill-migration.md`.
-
 ### Removed
 
+- `remote-exec`, `code-review`, `code-to-kernel-diagram`, `gen-ppt`, `research-to-blog`, `research-to-paper`,
+  `upstream-contribute` and the `code-hygiene` and `shell-exec` rules. They are outside the task lifecycle
+  (`design.md#范围`) and now ship from the maintainer's private pack under the same names. To keep using one, copy
+  it from the previous release into a pack of your own, list that pack in `~/.agent-loop/packs.txt` and rerun the
+  installer; `requires` on these names resolves to the pack unchanged.
 - `case_study/`. Problems found while running agent-loop are reported as issues instead.
 
 ### Fixed

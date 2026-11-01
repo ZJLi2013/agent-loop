@@ -29,10 +29,10 @@ profiles = ["research"]
 repo = "some-project"
 path = ".cursor/skills/bar"
 profiles = ["ops"]
-requires = ["remote-exec", "experiment-design"]
+requires = ["agent-heartbeat", "experiment-design"]
 
 [[skills]]
-path = "skills/gen-ppt"
+path = "skills/code-to-uml-diagram"
 profiles = ["ops"]
 
 [[skills]]
@@ -61,10 +61,10 @@ class InstallSkillsTest(unittest.TestCase):
         self.checkout = self.tmp / "agent-loop"
         (self.checkout / "scripts").mkdir(parents=True)
         shutil.copy(SCRIPT, self.checkout / "scripts")
-        for name in ("work-planning", "remote-exec", "experiment-design", "gen-ppt"):
+        for name in ("work-planning", "agent-heartbeat", "experiment-design", "code-to-uml-diagram"):
             skill(self.checkout / "skills" / name)
         self.pack = self.tmp / "my-pack"
-        for name in ("foo", "gen-ppt", "needs-missing"):
+        for name in ("foo", "code-to-uml-diagram", "needs-missing"):
             skill(self.pack / "skills" / name)
         self.write_pack()
         self.project = self.tmp / "some-project"
@@ -96,10 +96,10 @@ class InstallSkillsTest(unittest.TestCase):
     def test_inv1_name_owned_by_agent_loop_is_skipped(self) -> None:
         result = self.run_installer()
         self.assertEqual(result.returncode, 1)
-        self.assertRegex(result.stdout, r"gen-ppt\s+my-pack\s+SKIPPED: name also owned by agent-loop")
-        self.assertFalse(os.path.lexists(self.pack_dest / "gen-ppt"))
-        self.assertEqual(self.target(self.home / "skills-cursor" / "gen-ppt"),
-                         install.norm(self.checkout / "skills" / "gen-ppt"))
+        self.assertRegex(result.stdout, r"code-to-uml-diagram\s+my-pack\s+SKIPPED: name also owned by agent-loop")
+        self.assertFalse(os.path.lexists(self.pack_dest / "code-to-uml-diagram"))
+        self.assertEqual(self.target(self.home / "skills-cursor" / "code-to-uml-diagram"),
+                         install.norm(self.checkout / "skills" / "code-to-uml-diagram"))
         self.assertEqual(self.target(self.pack_dest / "bar"), install.norm(self.bar))
 
     def test_inv1_plain_directory_and_foreign_link_are_kept(self) -> None:
@@ -223,16 +223,16 @@ class InstallSkillsTest(unittest.TestCase):
     def test_no_packs_file_links_own_skills_and_reports_a_plain_copy(self) -> None:
         self.packs = self.tmp / "absent.txt"
         own = self.home / "skills-cursor"
-        (own / "gen-ppt").mkdir(parents=True)
-        (own / "gen-ppt" / "copy.md").write_text("old copy", encoding="utf-8")
+        (own / "code-to-uml-diagram").mkdir(parents=True)
+        (own / "code-to-uml-diagram" / "copy.md").write_text("old copy", encoding="utf-8")
         stale = skill(self.tmp / "moved-checkout" / "work-planning")
         install.make_link(own / "work-planning", stale)
         result = self.run_installer()
         self.assertEqual(result.returncode, 1)
-        self.assertRegex(result.stdout, r"gen-ppt\s+agent-loop\s+SKIPPED: .* is a plain directory")
-        self.assertEqual((own / "gen-ppt" / "copy.md").read_text(encoding="utf-8"), "old copy")
+        self.assertRegex(result.stdout, r"code-to-uml-diagram\s+agent-loop\s+SKIPPED: .* is a plain directory")
+        self.assertEqual((own / "code-to-uml-diagram" / "copy.md").read_text(encoding="utf-8"), "old copy")
         self.assertEqual(list(self.home.glob("skills-backup-*")), [])
-        for name in ("work-planning", "remote-exec", "experiment-design"):
+        for name in ("work-planning", "agent-heartbeat", "experiment-design"):
             self.assertEqual(self.target(own / name), install.norm(self.checkout / "skills" / name))
         self.assertEqual(self.run_installer().stdout.count("Linked skill"), 0)
 

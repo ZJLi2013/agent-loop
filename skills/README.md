@@ -23,16 +23,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 
 状态、事件和 guard 归 `harness/protocol.py`；常驻 `agent-loop` rule 只把状态路由到上表。
 
-## Explicit / cold policies
-
-只在 user 点名时加载：
-
-- `code-review`：本地 diff / PR review 标准。
-- `code-to-kernel-diagram`：模块到 kernel 数据流。
-- `upstream-contribute`：上游 PR / Issue 判断与正文。
-- `research-to-blog`：调研到对外文章。
-- `research-to-paper`：实验到 arXiv 稿，可选 10–15 s 短片（agent 做片用 onetake，人录界面演示用录屏工具）。
-- `gen-ppt`：16:9 PPT 生成 / 改版（`python-pptx`）。用户已有配色时跟用户的，否则用默认样式。
+领域或个人的 skill 不在本仓库，放进自己的包，见[安装 skill 包](../docs/usage.md#skill-packs)。
 
 ## Ownership
 
