@@ -114,7 +114,9 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
   `init` 写进 `verifier.files`，由 `config_sha256` 锁住。不追踪 verifier import 的模块与 root 外的文件。
 - `verifier_drift(root, config)`：返回第一个缺失、不可读或摘要不符的路径，没有不符时返回 None；没有 `files` 的旧 config 恒为 None。
 - 有效期从 `init` 到 task reviewer 对这次 verify 的决定落盘：决定落盘的同一步关闭 task 并删除 `.harness/tasks/<id>/`，
-  之后的 `--objection` 不复核。
+  之后的 `--objection` 不复核。review 的 run id 已匹配、有效决定却未落盘时（reviewer 写出无效决定），`completion_gate`
+  仍复核 verifier 摘要，不符即 stale。这时「已审」判定照旧只看 run id，不改走 workspace fingerprint：无效的 reviewer
+  可能已经改写 task.md，那是允许的工作文档改写，不应判为证据 stale。
 - 只在开跑前与写入通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
 
 ## Architecture
