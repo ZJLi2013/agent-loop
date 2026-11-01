@@ -18,8 +18,8 @@ All notable user-facing changes are documented here. This project follows Semant
   exits non-zero. `requires` names a skill of agent-loop or of any registered pack; a missing, unselected, skipped or
   cyclic provider skips its direct and indirect dependents, providers are linked first, and a provider that fails to
   link skips its dependents, keeps their existing links, and does not abort the run. A skill moved from agent-loop into a pack switches over in one
-  run. Only links into registered sources are ever removed. agent-loop skill names are now a public interface: a rename or removal is announced here and kept for one
-  release. See `docs/usage.md#skill-packs`.
+  run. Only links into registered sources are ever removed. agent-loop skill names are now a public interface: a rename or removal states its migration here in the
+  same release. See `docs/usage.md#skill-packs`.
 
 - Harness owns task scratch: `init` creates `.harness/tasks/<task_id>/` for kits, workspaces, local run outputs, job
   lists and PR drafts, and removes it after the reviewer's decision is saved; projects without a reviewer run
