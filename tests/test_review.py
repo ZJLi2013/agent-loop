@@ -319,6 +319,26 @@ class VerifierLockReviewTest(unittest.TestCase):
             run_review(self.root)
         self.assertIsNone(load_runtime(self.root)[1].get("review"))
 
+    def test_gate_rechecks_the_verifier_after_an_invalid_review(self) -> None:
+        (self.root / ".agent-loop" / "reviewer.json").write_text(json.dumps({
+            "argv": reviewer_writing({"decision": "continue", "why": "no task"}),
+            "timeout_seconds": 30,
+        }))
+        initialize(
+            self.root,
+            task_id="t1",
+            verifier_argv=[sys.executable, "-S", ".harness/tasks/t1/verify.py"],
+        )
+        run_command(self.root, [sys.executable, "-S", ".harness/tasks/t1/verify.py"], kind="verify")
+        self.assertIsNone(run_review(self.root)["review"]["decision"])
+        self.verifier.write_text("print('OK')  # edited after an invalid review\n")
+
+        message = completion_gate(self.root) or ""
+
+        self.assertIn("stale", message)
+        self.assertIn("verify.py", message)
+        self.assertEqual(load_runtime(self.root)[1]["phase"], "failed")
+
 
 class ReviseTest(unittest.TestCase):
     setUp = TaskBoundaryReviewTest.setUp

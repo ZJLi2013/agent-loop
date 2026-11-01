@@ -689,10 +689,12 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
         phase = Phase(str(state["phase"]))
         runner = Path(__file__).with_name("run.py")
         verify_command = f'python "{runner}" --root "{root.resolve()}" verify'
-        reviewed = (state.get("review") or {}).get("verify_run_id") == state.get(
-            "last_run_id"
+        review = state.get("review") or {}
+        reviewed = review.get("verify_run_id") == state.get("last_run_id")
+        changed = (
+            None if reviewed and review.get("decision") else verifier_drift(root, config)
         )
-        if phase == Phase.VERIFIED and reviewed:
+        if phase == Phase.VERIFIED and reviewed and not changed:
             return review_followup(
                 root, config, state, state_path
             ) or page_followup(root, config, state)
@@ -714,7 +716,6 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             )
 
         if phase == Phase.VERIFIED:
-            changed = verifier_drift(root, config)
             if (
                 not changed
                 and state.get("verified_fingerprint") == workspace_fingerprint(root)
