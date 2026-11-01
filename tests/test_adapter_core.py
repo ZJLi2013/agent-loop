@@ -32,13 +32,15 @@ class AdapterCoreTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            response = handle(
-                HookRequest(
-                    event=HookEvent.TOOL_USED,
-                    workspace_roots=(Path(directory),),
-                    tool_input={"path": str(task)},
+            env = {k: v for k, v in os.environ.items() if k != SHARED_MEMORY_ENV}
+            with mock.patch.dict(os.environ, env, clear=True):
+                response = handle(
+                    HookRequest(
+                        event=HookEvent.TOOL_USED,
+                        workspace_roots=(Path(directory),),
+                        tool_input={"path": str(task)},
+                    )
                 )
-            )
 
         self.assertEqual(response.action, HookAction.CONTEXT)
         self.assertIn("canonical events", response.message or "")
