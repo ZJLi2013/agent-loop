@@ -2,13 +2,10 @@
 
 The roadmap describes direction, not delivery dates. Concrete work belongs in GitHub Issues and Milestones.
 
-## Now: contract review and stability
+## Now: contract review
 
-The scope and state model in [`design.md`](design.md) change only through a `changes-contract` issue. Such changes
-merge any time while agent-loop has no outside users; once a fork, or an issue or pull request from someone else,
-appears, they merge on window days, every fourth Monday from 2026-11-02. Fixes that restore an existing contract
-merge at any time. See [Admission](CONTRIBUTING.md#admission). Stability is reviewed on 2026-12-28, after two
-four-week cycles, by the criterion in the same section, and the result is recorded here.
+The scope and state model in [`design.md`](design.md) change only through a `changes-contract` issue. Admitted
+changes and fixes that restore an existing contract merge at any time; see [Admission](CONTRIBUTING.md#admission).
 
 ## Now: v0.2 exploration mode
 
