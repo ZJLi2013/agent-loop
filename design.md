@@ -107,6 +107,16 @@ agent-loop 只维护三类公开保证：
 - verifier 通过且 workspace fingerprint 未变化；task reviewer 的决定落盘前，`verifier.files` 也未变化；
 - 请求的会话不是 `owner` 时，gate 不写状态、不发 followup。
 
+<a id="verifier-file-lock"></a>
+verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprint 分开：
+
+- `verifier_files(root, argv)`：`argv` 中按 root 解析后落在 root 内的普通文件，返回相对 root 的 POSIX 路径到 SHA-256 的映射；
+  `init` 写进 `verifier.files`，由 `config_sha256` 锁住。不追踪 verifier import 的模块与 root 外的文件。
+- `verifier_drift(root, config)`：返回第一个缺失、不可读或摘要不符的路径，没有不符时返回 None；没有 `files` 的旧 config 恒为 None。
+- 有效期从 `init` 到 task reviewer 对这次 verify 的决定落盘：决定落盘的同一步关闭 task 并删除 `.harness/tasks/<id>/`，
+  之后的 `--objection` 不复核。
+- 只在开跑前与写入通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
+
 ## Architecture
 
 ```text
