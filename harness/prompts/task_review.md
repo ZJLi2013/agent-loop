@@ -40,6 +40,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    新 task 的 `rev` 沿用当前 plan revision。
    结果为否定或意外、或下一个 task 要换方向时，先核对 plan 是否已对照领域结论与业界已有解法；
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
+   {task_id} 是关于同一组件或方法内部、连续第二个被推翻的假设时，这次调研对照的是组件 / 方法类别在社区标准基准上的
+   表现与现成替代，不是下一个局部假设。
 3. 选择 decision：
    - `continue`：Goal 与 scope 不变，下一个 task 已在列表里；
    - `revise`：{task_id} 自己的收口没做完（见第 1 步），worker 补完后重跑 verify 就能交接；不写 `next_task`。
