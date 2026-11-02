@@ -42,6 +42,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
    {task_id} 是关于同一组件或方法内部、连续第二个被推翻的假设时，这次调研对照的是组件 / 方法类别在社区标准基准上的
    表现与现成替代，不是下一个局部假设。
+   {task_id} 结束的阶段与之前一个阶段的结论都是排除了 Goal 未达成的一个原因、而 Goal 退出条件仍未动时，选 `ask_human`，
+   `next_task` 是对照 Goal 与做同一件事的公开工作的调研 task；只搭建前置能力、不声称排除失败原因的阶段不算，照常推进。
 3. 选择 decision：
    - `continue`：Goal 与 scope 不变，下一个 task 已在列表里；
    - `revise`：{task_id} 自己的收口没做完（见第 1 步），worker 补完后重跑 verify 就能交接；不写 `next_task`。

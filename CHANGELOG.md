@@ -85,6 +85,10 @@ invoke on-demand skills.
   write a third local hypothesis. The `when-to-stop` row for a refuted hypothesis points there, and the task reviewer
   writes that research task instead of the next local one (#141).
 
+- The task reviewer asks the human when two stages in a row each removed a cause of the Goal not being met and the
+  Goal exit condition did not move: it chooses `ask_human` with a `next_task` that compares the Goal with public work
+  doing the same thing. Stages that only build prerequisites do not count (#141).
+
 - Rules install file by file, and packs can provide rules. `scripts/install-skills.py` links each `.mdc` of
   agent-loop's `rules/` and each selected `[[rules]]` entry of a `pack.toml` version 2 into `~/.cursor/rules`, with
   the same selection, name-conflict and own-links-only behaviour as skills: an agent-loop rule replaces a same-named
