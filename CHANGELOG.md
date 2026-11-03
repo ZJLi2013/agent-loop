@@ -97,6 +97,13 @@ invoke on-demand skills.
   that deepens such an output (measurement and criteria, robustness, drills, a second layer of abstraction) while the
   current conclusions record no use (#153).
 
+- The Human Review Gate shows the design and the conclusions, not the execution steps. The `work-planning` plan
+  template gains a `设计` section after the Goal (one-line strategy, the hand-written output sample, two to four key
+  choices and what each replaced, what is not done, how acceptance is judged) and a separator before the system,
+  task sections and Experiment Log, marked as detail the human need not read. The Gate question leads with `设计` and
+  `当前结论`, then the per-task review items; task steps stay out of it. A frozen plan keeps `设计` in its header
+  (#154).
+
 - Rules install file by file, and packs can provide rules. `scripts/install-skills.py` links each `.mdc` of
   agent-loop's `rules/` and each selected `[[rules]]` entry of a `pack.toml` version 2 into `~/.cursor/rules`, with
   the same selection, name-conflict and own-links-only behaviour as skills: an agent-loop rule replaces a same-named
