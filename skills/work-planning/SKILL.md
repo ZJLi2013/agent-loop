@@ -22,10 +22,14 @@ Plan Revision: 1
 Plan Review: proposed
 
 ## Goal
-<一句话：human 要解决什么问题>
+<一句话：human 要解决什么问题；产出给人读或给下游用时写明读者>
+
+## 设计
+<一句话策略；手写的最终产出样例（不是结果）；2–4 个关键选择，各写替换了什么；不做什么；
+验收怎么判、不靠 human 的领域判断。机制有多步时附一张示意图>
 
 ## 当前结论
-<现在为真的判断；设计中就明确写未验证>
+<现在为真的判断，每条对应它证实或推翻的设计要素；设计中就明确写未验证>
 
 ## 脉络
 逐 task 的 evidence 见 [archive](<plan>-archive.md)。
@@ -35,8 +39,14 @@ Plan Review: proposed
 <一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision / Goal 变更；「带来的改变」写改变的下一条命令，
 或旧 Goal → 新 Goal 及原因；格子里不写读数与链接>
 
+---
+以下是执行细节，human 不用读。
+
 ## 系统 / Pipeline
 （确实存在系统路径时才写）
+
+## <task id> <标题>
+<task 设计>
 
 ## Experiment Log
 <单次实验的假设、判据、结果与证据>
@@ -54,8 +64,8 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
 
 ## PLAN → REVIEW → READY
 
-1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。产出给人读或给下游用时，Goal 写明读者
-   并附一份手写的最终产出样例；输入、schema 与筛选标准从样例倒推。产出供读者在之后的工作里
+1. 先写 Goal / 边界，再从它拆 task；不能先列实现步骤再反推 Goal。产出给人读或给下游用时，Goal 写明读者，
+   「设计」里附一份手写的最终产出样例；输入、schema 与筛选标准从样例倒推。产出供读者在之后的工作里
    反复取用（知识库、工具、数据、服务）时，第一个退出条件写一次可观察的使用：读者在真实工作里用上了产出（例：
    某个真实项目的 plan 引用了它，某次真实运行用了它的输出），不写「机制正确」或「判据能算出数」；使用发生后记进
    当前结论并链接证据。回答一个问题的 Goal（判定、对比、复现、修 bug）退出条件仍是那个结论。human 提出的实现方案默认采用，
@@ -83,7 +93,8 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
 5. 逐条回应 `must`：照改后 `plan-review --respond <task> --item N=applied`；只在与事实不符时
    `--item N=reject --reason "<事实>"`，只驳一次。`suggest` 酌情改或跳过，不必回应。不回审。
-   再用平台的结构化提问能力给 human：`approve / revise / continue automatically`，附上逐 task 意见与回应。
+   再用平台的结构化提问能力给 human：`approve / revise / continue automatically`。问题里先给 plan 的「设计」与
+   「当前结论」，再附逐 task 意见与回应；task 的执行步骤不进问题。
    带 `human: true` 的 must 由 human 选，用 human 原话 `plan-review --approve <task> --reason` 记下；
    human 要求重审用 `--again`。reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
 6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
@@ -153,7 +164,7 @@ verifier 通过后：
 - 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
   开支线要 human 批准。
 
-Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、当前结论、边界、脉络与
+Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、设计、当前结论、边界、脉络与
 archive index。sub-exp 不删，但不再默认加载。删除只被本 Goal 文档引用的一次性脚本，判据归
 `experiment-design`；暂停中的 Goal 的脚本等它关闭再处理。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
