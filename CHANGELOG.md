@@ -89,6 +89,14 @@ invoke on-demand skills.
   Goal exit condition did not move: it chooses `ask_human` with a `next_task` that compares the Goal with public work
   doing the same thing. Stages that only build prerequisites do not count (#141).
 
+- An output that readers keep drawing on (a knowledge base, tool, dataset or service) is used once before it is
+  deepened. `work-planning` step 1 makes the first exit condition of such a Goal an observable use in real work,
+  not "the mechanism is correct"; a Goal that answers a question (a verdict, comparison, reproduction or bug fix)
+  still exits on that answer. Step 2 says that until the first use, the next task only gets it used: wire it into a
+  real project, change how it is read, or remove the step in the way. The plan reviewer reports a `must` on a task
+  that deepens such an output (measurement and criteria, robustness, drills, a second layer of abstraction) while the
+  current conclusions record no use (#153).
+
 - Rules install file by file, and packs can provide rules. `scripts/install-skills.py` links each `.mdc` of
   agent-loop's `rules/` and each selected `[[rules]]` entry of a `pack.toml` version 2 into `~/.cursor/rules`, with
   the same selection, name-conflict and own-links-only behaviour as skills: an agent-loop rule replaces a same-named

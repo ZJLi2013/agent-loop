@@ -23,6 +23,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 - [设计文档的内容分流](design-document-routing.md)：planning 与 plan reviewer 怎样把内容分到设计文档、CHANGELOG 与 plan，业界做法，以及两处分流规则为何都撤回。
 - [范围判据回放](scope-replay.md)：只读范围一节的 reviewer 对六条历史输入判对五条，#77 暴露的处置表缺口。
 - [改假设时换一层](layer-shift-replay.md)：同一组件内第二个假设被推翻时上移到组件 / 方法类别对照，两个阶段不动 Goal 时交 human；改动前后的回放，以及三处改动前已成立而不加的措辞。
+- [先用上再加深](use-first-replay.md)：供读者反复取用的产出，第一个退出条件是一次真实使用，用上之前不加深；改动前后的回放，以及触发条件为什么不写「给人读」。
 - [按需 skill 与通用 rule 的迁出清单](skill-migration.md)：七个 skill 与两条 rule 为什么迁到私有 pack、各自的依赖，以及核心里删掉的点名。
 
 初次阅读：设计沿革 → 业界实践 → 按 feature 进入。需要修改当前实现时，先读 `design.md` 与对应 owner，
