@@ -78,6 +78,11 @@ invoke on-demand skills.
 
 ### Changed
 
+- Agent-loop state stays out of git by default. `init` and `plan-review` write `/.agent-loop/` next to `/.harness/`
+  in `.git/info/exclude`. Files already tracked under `.agent-loop/` stay tracked; track new ones with `git add -f`.
+  In a project that neither ignored nor tracked `.agent-loop/`, its files leave `git status` and the workspace
+  fingerprint (#157).
+
 - A second refuted hypothesis about the same component moves the comparison up a layer. `experiment-design` Phase 3
   says that when two hypotheses about the internals of one component or method are refuted in a row, the next step
   only researches how that component or method class does on community benchmarks and what ready alternatives exist,

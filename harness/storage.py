@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from harness.errors import HarnessError
+from harness.project import RUNTIME_DIR
 
 HARNESS_DIR = ".harness"
 CONFIG_FILE = "config.json"
@@ -28,6 +29,21 @@ def utc_now() -> str:
 
 def harness_dir(root: Path) -> Path:
     return root.resolve() / HARNESS_DIR
+
+
+def exclude_runtime_from_git(root: Path) -> None:
+    git_dir = root.resolve() / ".git"
+    if not git_dir.is_dir():
+        return
+    exclude = git_dir / "info" / "exclude"
+    exclude.parent.mkdir(parents=True, exist_ok=True)
+    current = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+    lines = current.splitlines()
+    missing = [entry for entry in (f"/{HARNESS_DIR}/", f"/{RUNTIME_DIR}/") if entry not in lines]
+    if missing:
+        separator = "" if not current or current.endswith("\n") else "\n"
+        with exclude.open("a", encoding="utf-8") as fh:
+            fh.write(separator + "".join(f"{entry}\n" for entry in missing))
 
 
 def read_json(path: Path) -> dict[str, Any]:

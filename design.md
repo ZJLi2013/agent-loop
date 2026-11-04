@@ -351,8 +351,9 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | 共享 memory 的注入记录 | `~/.agent-loop/shared-memory-arrivals.jsonl`（只追加，不参与判定，没有退役规则） |
 | 状态与转移是否合法 | `harness/protocol.py` |
 
-plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实的家：它们常被 ignore、不进 upstream，
-接手人 clone 项目时拿不到。
+plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实的家：`init` 与 `plan-review` 把 `/.agent-loop/`、
+`/.harness/` 写进 `.git/info/exclude`，它们默认不进版本库，接手人 clone 项目时拿不到。已跟踪的文件照旧跟踪；
+要版本化新的 agent 状态时用 `git add -f`。
 
 `.cursor/task.md` 与 `.cursor/memory/` 只作为旧项目读取兼容，不再写入。`.harness/state.json`
 不复制 backlog；memory 不复制 stdout；README 不复制本设计。

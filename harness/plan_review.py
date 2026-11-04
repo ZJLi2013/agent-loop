@@ -15,6 +15,7 @@ from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
     atomic_write_json,
+    exclude_runtime_from_git,
     harness_dir,
     pid_alive,
     read_json,
@@ -204,6 +205,7 @@ def run_plan_review(
     if not reviewer:
         raise HarnessError("no reviewer configured")
     _, relative = _plan_path(root, plan_doc)
+    exclude_runtime_from_git(root)
 
     with state_lock(root):
         pending = [
