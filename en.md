@@ -22,6 +22,8 @@ flowchart LR
   Rv --> S[stop]
 ```
 
+Who does each step and which command it runs: [the stages of a task](docs/usage.md#task-stages) (Chinese).
+
 ## How it relates to the host agent
 
 ```mermaid

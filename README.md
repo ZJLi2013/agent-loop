@@ -19,6 +19,8 @@ flowchart LR
   Rv --> S[stop]
 ```
 
+每一步谁来做、对应哪条命令，见[一个 task 经过哪些阶段](docs/usage.md#task-stages)。
+
 ## 和宿主 agent 的关系
 
 ```mermaid
