@@ -293,7 +293,7 @@ class LeftoversTest(unittest.TestCase):
         real_write = records._atomic_write
 
         def fail_on_progress(path: Path, text: str) -> None:
-            if path == progress:
+            if path.name == progress.name:
                 raise PermissionError(13, "locked")
             real_write(path, text)
 
