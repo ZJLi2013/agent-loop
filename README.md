@@ -11,13 +11,7 @@
 
 agent-loop 为现有 agent 提供项目级控制环。适合多轮实验、需要验证的工程改造，以及需要跨上下文接续的长任务。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer 核对证据、提出下一步，方向变化时交回 human。
 
-```mermaid
-flowchart LR
-  Goal --> Plan --> HR[Human Review] --> Ex[Execute] --> V[Verify] --> Rv[Review]
-  Rv -->|approved next task| Ex
-  Rv --> Hu[human]
-  Rv --> S[stop]
-```
+![一个 task 的生命周期](docs/images/task-stages.svg)
 
 ## 和宿主 agent 的关系
 

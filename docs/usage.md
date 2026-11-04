@@ -205,6 +205,11 @@ dsh 适配器是新加的，实际项目里跑得还少，下面的清单会随�
 [配置模型指南](https://github.com/deepseek-ai/deepseek-harness/blob/main/docs/user/guide/providers.zh.md)。
 reviewer 换另一个模型时，见下文「可选的独立 reviewer」里的 overlay 写法。
 
+<a id="task-stages"></a>
+## 一个 task 经过哪些阶段
+
+![一个 task 的生命周期](images/task-stages.svg)
+
 ## 创建并评审计划
 
 在工作项目里写一份 plan document，说明 Goal、范围、当前结论、下一个决策与验收判据，文件名不限。包含：
