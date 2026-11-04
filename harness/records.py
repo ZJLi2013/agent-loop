@@ -2,13 +2,26 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 
-from harness.project import runtime_dir, task_file
+from harness.project import RUNTIME_DIR, runtime_dir, task_file
 
 ARCHIVE_DIR = "archive"
 TASK_ARCHIVE = "tasks.md"
+PROGRESS_FILE = "progress.md"
+# Records with their own retirement rules; leftovers never reports them.
+RETIRED_ELSEWHERE = {
+    "task.md",
+    PROGRESS_FILE,
+    "memory",
+    ARCHIVE_DIR,
+    "reviewer.json",
+    "pager.json",
+    "review-checklist.md",
+    "reports",
+}
 CLOSED_MARKERS = ("✅ done", "❌ dropped")
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _FENCE = re.compile(r"^ {0,3}(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
@@ -397,3 +410,145 @@ def archive_closed_tasks(root: Path) -> list[str]:
         active = f"{active}\n\nClosed: [archive/tasks.md](archive/tasks.md)"
     _atomic_write(active_path, f"{active}\n")
     return [task_id for line in closed_rows if (task_id := _task_id(line))]
+
+
+def _handoff_starts(lines: list[str]) -> list[int]:
+    structural = _structural_lines(lines)
+    return [i for i, line in enumerate(lines) if structural[i] and line.startswith("## ")]
+
+
+def _newest_handoff(text: str) -> str:
+    lines = text.splitlines()
+    starts = _handoff_starts(lines)
+    return "\n".join(lines[: starts[1]]) if len(starts) > 1 else text
+
+
+def archive_progress(root: Path, now: datetime | None = None) -> tuple[int, str | None]:
+    """Keep the newest handoff in progress.md and append the rest to this month's archive."""
+    path = runtime_dir(root) / PROGRESS_FILE
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        starts = _handoff_starts(lines)
+        if len(starts) < 2:
+            return 0, None
+        bounds = [*starts[1:], len(lines)]
+        sections = ["\n".join(lines[a:b]) for a, b in zip(bounds, bounds[1:])]
+        archive = path.parent / ARCHIVE_DIR / f"progress-{(now or datetime.now()):%Y-%m}.md"
+        existing = archive.read_text(encoding="utf-8").rstrip() if archive.exists() else ""
+        # A failed replace leaves sections that are already archived; append each once.
+        new = [section for section in sections if section.strip() not in existing]
+        if new:
+            appended = "\n".join(new).rstrip()
+            _atomic_write(archive, f"{existing}\n\n{appended}\n" if existing else f"{appended}\n")
+        _atomic_write(path, "\n".join(lines[: starts[1]]).rstrip() + "\n")
+    except OSError as exc:
+        return 0, f"cannot archive {PROGRESS_FILE}: {exc}"
+    return len(sections), None
+
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _linked_files(text: str, base: Path) -> set[Path]:
+    found = set()
+    for match in _TARGET.finditer(text):
+        parts = _local(match.group(2))
+        if parts and parts[0] and (target := (base / unquote(parts[0])).resolve()).is_file():
+            found.add(target)
+    return found
+
+
+def leftovers(root: Path) -> list[dict[str, str]]:
+    """List .agent-loop files tied to closed tasks or Goals that no current document mentions."""
+    base = runtime_dir(root)
+    if base.name != RUNTIME_DIR or not base.is_dir():
+        return []
+    tasks = task_file(root)
+    task_text = _read(tasks)
+    closed = {i.lower() for i in archived_task_ids(root)} - {i.lower() for i in open_task_ids(root)}
+
+    done_plans: set[Path] = set()
+    live_plans: set[Path] = set()
+    section = _MAINLINE.search(task_text)
+    for line in (section.group(1) if section else "").splitlines():
+        cells = _cells(line)
+        if cells and len(cells) >= 5:
+            plans = _linked_files(" | ".join(cells), tasks.parent)
+            done = any(cell.startswith("✅") for cell in cells)
+            (done_plans if done else live_plans).update(plans)
+    for line in task_text.splitlines():
+        cells = _cells(line)
+        if cells and len(cells) >= 6 and not _closed(line):
+            live_plans |= _linked_files(" | ".join(cells), tasks.parent)
+    live_plans -= done_plans
+    # Only a plan's own directory under .agent-loop/ scopes its Goal; a plan at the top or outside scopes nothing.
+    plan_dirs = {plan.parent: plan for plan in live_plans if base in plan.parent.parents}
+    plan_dirs.update(
+        {
+            plan.parent: plan
+            for plan in done_plans
+            if base in plan.parent.parents and plan.parent not in plan_dirs
+        }
+    )
+
+    current = "\n".join(
+        [
+            task_text,
+            _newest_handoff(_read(base / PROGRESS_FILE)),
+            *(_read(path) for path in sorted((base / "memory").glob("*.md"))),
+            *(_read(path) for path in sorted(base.glob("*.json"))),
+            *(_read(path) for path in sorted(live_plans)),
+        ]
+    )
+
+    files = [
+        path
+        for path in base.rglob("*")
+        if path.is_file() and path.relative_to(base).parts[0] not in RETIRED_ELSEWHERE
+    ]
+    plan_docs = done_plans | live_plans
+    reasons: dict[Path, list[str]] = {}
+    for path in files:
+        relative = path.relative_to(base)
+        resolved = path.resolve()
+        if (
+            resolved in plan_docs
+            or path.stem.endswith("-archive")
+            or {"sub-exp", ARCHIVE_DIR} & set(relative.parts[:-1])
+        ):
+            continue
+        why = [
+            f"closed task {task_id}"
+            for task_id in sorted(closed)
+            if re.search(rf"(?<![a-z]){re.escape(task_id)}(?![a-z0-9])", path.stem.lower())
+        ]
+        owner = next((plan_dirs[d] for d in resolved.parents if d in plan_dirs), None)
+        if owner in done_plans:
+            why.append(f"closed Goal plan {owner.relative_to(base).as_posix()}")
+        if why and path.name not in current and relative.as_posix() not in current:
+            reasons[path] = why
+
+    totals: dict[Path, list[int]] = {}
+    for path in files:
+        for parent in path.parents:
+            if parent == base:
+                break
+            counts = totals.setdefault(parent, [0, 0])
+            counts[0] += 1
+            counts[1] += path in reasons
+    stale = {d for d, (total, hits) in totals.items() if total == hits}
+
+    report: dict[str, set[str]] = {}
+    for path, why in reasons.items():
+        top = next((d for d in reversed(path.parents) if d in stale), None)
+        key = (
+            f"{RUNTIME_DIR}/{top.relative_to(base).as_posix()}/"
+            if top
+            else f"{RUNTIME_DIR}/{path.relative_to(base).as_posix()}"
+        )
+        report.setdefault(key, set()).update(why)
+    return [{"path": key, "why": ", ".join(sorted(whys))} for key, whys in sorted(report.items())]

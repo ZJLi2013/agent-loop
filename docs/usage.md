@@ -331,7 +331,23 @@ agent-loop-harness goal-review --decision continue --evidence "The failed test i
 active task 时注入检索上下文，dsh 适配器在会话开始时注入。设计理由见 [Memory](study/memory/memory.md)，各策略的 owner 见
 [Policies](../skills/README.md)。
 
-关闭的 task 与旧交接笔记移到 `.agent-loop/archive/`。运行时证据在 `.harness/`，日志与产物有上限。必须比运行时保留期更久的
+关闭的 task 移到 `.agent-loop/archive/`。新交接写在 `progress.md` 顶部；task CLOSE 时（reviewer 决定落盘后，或
+`clean-task`）Harness 只留第一段，其余原样追加到 `archive/progress-YYYY-MM.md`，段数记在 `progress_archived`。
+关闭 task 的 `verify`、`review`、`clean-task` 输出与任何时候的 `status` 都带 `leftovers`：`.agent-loop/` 里认领到已关闭
+task 或已完成 Goal、又没被现行文档提到的文件，每项带 `path` 与 `why`：
+
+```json
+"leftovers": [
+  {"path": ".agent-loop/verify_t3.py", "why": "closed task t3"},
+  {"path": ".agent-loop/plans/g2/__pycache__/", "why": "closed Goal plan plans/g2/plan.md, closed task m4"}
+]
+```
+
+Harness 不删它们，completion gate 也不检查。worker 在同一次 CLOSE 里处理：要留的证据移进项目被跟踪的文档或链接进
+plan 归档，其余删除；还在用的长期工具在 `memory/facts.md` 提一句，下次就不再报。判定规则见
+[记录寿命](../design.md#leftovers)。
+
+运行时证据在 `.harness/`，日志与产物有上限。必须比运行时保留期更久的
 证据（读数、退出码、输出摘录）抄进实验文档的逐 run 表，见 `experiment-design` 的 CLOSE self-audit。
 heartbeat 策略观察 detach 的作业，见 [Heartbeat](study/harness/heartbeat.md)。
 

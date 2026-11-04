@@ -3,16 +3,21 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
+from unittest import mock
 
+from harness import records
 from harness.core import initialize
 from harness.errors import HarnessError
 from harness.records import (
     _task_sections,
     archive_closed_tasks,
+    archive_progress,
     archived_task_ids,
     close_task,
     design_location_error,
+    leftovers,
 )
 
 
@@ -192,6 +197,120 @@ class DesignLocationTest(unittest.TestCase):
         archive = (self.runtime / "plans" / "x" / "plan-archive.md").read_text(encoding="utf-8")
         self.assertNotIn("id design", plan)
         self.assertIn("id design", archive)
+
+
+LEFTOVER_TASKS = """# Tasks
+
+## 主线
+
+Mainline Review: approved
+
+| Goal | 问题 | 退出条件 | 状态 | plan |
+|---|---|---|---|---|
+| A | a | a | ✅ done | [plan](plans/a/plan.md) |
+| B | b | b | ▶ next | [plan](plans/b/plan.md) |
+
+## Goal
+
+| P | id | rev | task | check | status | fail |
+|---|---|---|---|---|---|---|
+| P0 | t11 | r1 | [设计](plans/b/plan.md#t11) | check | 🔬 doing | 0 |
+| P0 | t4 | r1 | reopened | check | ⬜ todo | 0 |
+"""
+
+ARCHIVED = """| P | id | rev | task | check | status | fail |
+|---|---|---|---|---|---|---|
+| P0 | t1 | r1 | a | check | ✅ done | 0 |
+| P0 | t3 | r1 | a | check | ✅ done | 0 |
+| P0 | t4 | r1 | a | check | ✅ done | 0 |
+| P0 | p2 | r1 | a | check | ✅ done | 0 |
+"""
+
+PROGRESS = """# Progress
+
+## 11-04 newest
+`keep_t3.py` is still in use.
+
+## 11-03 older
+```text
+## not a heading
+```
+`verify_t3.py` passed.
+
+## 11-02 oldest
+done
+"""
+
+
+class LeftoversTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.runtime = self.root / ".agent-loop"
+        files = {
+            "task.md": LEFTOVER_TASKS,
+            "archive/tasks.md": ARCHIVED,
+            "progress.md": PROGRESS,
+            "memory/facts.md": "facts\n",
+            "memory/verify_t3_notes.md": "notes\n",
+            "verify_t3.py": "",
+            "keep_t3.py": "",
+            "verify_g7p2.py": "",
+            "verify_t11.py": "",
+            "verify_t4.py": "",
+            "verify_t1.py": "",
+            "plans/a/plan.md": "`verify_t1.py`\n",
+            "plans/a/plan-archive.md": "",
+            "plans/a/sub-exp/t3.md": "",
+            "plans/a/replay.json": "",
+            "plans/a/cache/x_t3.pyc": "",
+            "plans/a/cache/y.pyc": "",
+            "plans/b/plan.md": "copy `verify_t1.py` for t11\n",
+        }
+        for name, text in files.items():
+            path = self.runtime / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_reports_closed_entries_that_no_current_document_mentions(self) -> None:
+        self.assertEqual(
+            leftovers(self.root),
+            [
+                {"path": ".agent-loop/plans/a/cache/", "why": "closed Goal plan plans/a/plan.md, closed task t3"},
+                {"path": ".agent-loop/plans/a/replay.json", "why": "closed Goal plan plans/a/plan.md"},
+                {"path": ".agent-loop/verify_g7p2.py", "why": "closed task p2"},
+                {"path": ".agent-loop/verify_t3.py", "why": "closed task t3"},
+            ],
+        )
+
+    def test_progress_keeps_the_newest_handoff_and_archives_the_rest_once(self) -> None:
+        progress = self.runtime / "progress.md"
+        archive = self.runtime / "archive" / "progress-2026-11.md"
+        now = datetime(2026, 11, 4)
+        real_write = records._atomic_write
+
+        def fail_on_progress(path: Path, text: str) -> None:
+            if path == progress:
+                raise PermissionError(13, "locked")
+            real_write(path, text)
+
+        with mock.patch("harness.records._atomic_write", side_effect=fail_on_progress):
+            moved, error = archive_progress(self.root, now)
+        self.assertEqual((moved, progress.read_text(encoding="utf-8")), (0, PROGRESS))
+        self.assertIn("cannot archive progress.md", error or "")
+
+        self.assertEqual(archive_progress(self.root, now), (2, None))
+        self.assertEqual(
+            progress.read_text(encoding="utf-8"),
+            "# Progress\n\n## 11-04 newest\n`keep_t3.py` is still in use.\n",
+        )
+        archived = archive.read_text(encoding="utf-8")
+        self.assertEqual(archived.count("## 11-03 older"), 1)
+        self.assertIn("## not a heading\n```\n`verify_t3.py` passed.\n\n## 11-02 oldest\ndone\n", archived)
+        self.assertEqual(archive_progress(self.root, now), (0, None))
 
 
 if __name__ == "__main__":

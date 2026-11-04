@@ -8,7 +8,9 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from harness import records
 from harness.core import (
     HarnessError,
     clean_scratch,
@@ -113,6 +115,32 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("t2", followup)
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
+
+    def test_closing_review_archives_old_handoffs_and_reports_failures(self) -> None:
+        real_write = records._atomic_write
+        for blocked in (False, True):
+            with self.subTest(blocked=blocked):
+                if blocked:
+                    self.tearDown()
+                    self.setUp()
+                progress = self.root / ".agent-loop" / "progress.md"
+                progress.write_text("## new\nnow\n\n## old\nthen\n", encoding="utf-8")
+                self.init(reviewer_writing({"decision": "continue", "next_task": "t2", "why": "next"}))
+
+                def write(path: Path, text: str) -> None:
+                    if blocked and path.name == "progress.md":
+                        raise PermissionError(13, "locked")
+                    real_write(path, text)
+
+                with mock.patch("harness.records._atomic_write", side_effect=write):
+                    review = run_review(self.root)["review"]
+
+                self.assertEqual(review["decision"], "continue")
+                self.assertEqual(review["progress_archived"], 0 if blocked else 1)
+                self.assertEqual("cannot archive progress.md" in (review["cleanup_error"] or ""), blocked)
+                self.assertEqual("## old" in progress.read_text(encoding="utf-8"), blocked)
+                self.assertNotIn("| t1 |", (self.root / ".agent-loop" / "task.md").read_text(encoding="utf-8"))
+                self.assertFalse((self.root / ".harness" / "tasks" / "t1").exists())
 
     def test_gate_reports_a_running_task_review(self) -> None:
         slow = reviewer_writing({"decision": "stop", "why": "done"})

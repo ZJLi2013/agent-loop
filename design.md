@@ -65,7 +65,7 @@ agent-loop 只维护三类公开保证：
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；无人值守自批只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
 | 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
 | 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
-| 记录寿命 | closed task 按 task id 归档；`init` 只接受 CLOSE 能归档的设计位置（见 [One plan document](#one-plan-document)） | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或在 `<plan>-archive.md`；scratch 存在或已删；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；plan → `<plan>-archive.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py` |
+| 记录寿命 | closed task 按 task id 归档；`init` 只接受 CLOSE 能归档的设计位置（见 [One plan document](#one-plan-document)）；`.agent-loop/` 的其余文件按名字里的已关闭 task id 或所在的已关闭 Goal plan 目录认领 | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或在 `<plan>-archive.md`；scratch 存在或已删；`progress.md` 的交接段数；[`leftovers`](#leftovers)（认领到已关闭记录、且没被现行文档提到，只报不删）；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）移走第一段以外的交接段；worker 处理 `leftovers`；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；plan → `<plan>-archive.md`；`progress.md` → `archive/progress-YYYY-MM.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py`、`tests/test_review.py` |
 
 已知与实现不符：task 设计段只在标题首词是 task id 时退役，写在主题标题下的设计不退役（[#123](https://github.com/ZJLi2013/agent-loop/issues/123)）。
 
@@ -118,6 +118,28 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
   仍复核 verifier 摘要，不符即 stale。这时「已审」判定照旧只看 run id，不改走 workspace fingerprint：无效的 reviewer
   可能已经改写 task.md，那是允许的工作文档改写，不应判为证据 stale。
 - 只在开跑前与写入通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
+
+<a id="leftovers"></a>
+`.agent-loop/` 的退役由 `harness/records.py` 拥有，在 task CLOSE 的同一步运行（reviewer 决定落盘、`close_task` 之后，
+或 `clean-task`）：
+
+- `archive_progress(root)`：`progress.md` 只留第一个 `## ` 段与段前的前言（新交接写在顶部），其余段按原文行区间追加到
+  `archive/progress-YYYY-MM.md`（CLOSE 时刻的月份）。先写 archive 再原子替换 `progress.md`；任一步失败返回错误，并入
+  `cleanup_error` / `clean-task` 的 `error`，`progress.md` 保持原样、task 照常关闭。archive 已追加而 `progress.md` 未替换时，
+  重跑按段内容去重，不重复追加。围栏代码块里的 `## ` 不算段首。
+- `leftovers(root)`：无状态，每次调用重算，只报不删。一个文件被报出当且仅当它认领到已关闭记录、且没被现行文档提到：
+  - 认领：文件名（不含扩展名，不分大小写）含已关闭 task id，id 前不是字母、后不是字母数字（`verify_g7p2` 认领 `p2`，
+    `verify_t11` 不认领 `t1`）；或它最近的 plan 目录属于主线表里 `✅ done` 的 Goal。已关闭 task id 是 `archive/tasks.md`
+    的 id 减去 `task.md` 仍开着的 id，因为 id 跨 Goal 复用。plan 所在目录须是 `.agent-loop/` 的子目录；直接放在
+    `.agent-loop/` 下或它之外的 plan 不认领任何文件。
+  - 现行文档：`task.md`、`progress.md` 第一段、`memory/*.md`、`.agent-loop/*.json`、开着的 task 行与未完成主线行链接的
+    plan。「提到」是文件名或 `.agent-loop/` 相对路径原样出现：引用多数写成反引号里的文件名，不是链接。已关闭 Goal 的
+    plan、`*-archive.md` 与 `archive/` 是历史，其中的提及不算。
+  - 永不报出：`task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、`review-checklist.md`、
+    `reports/`（各有自己的退役规则），以及开着的 task 行与主线行链接的 plan 文档、`*-archive.md`、`sub-exp/` 与任意 `archive/` 下的文件。
+  - 一个目录下的文件全部被报出时，只报该目录一行。
+- 只报不删、不进 completion gate：Harness 分不清长期工具与一次性脚本，报出的条目挡不住完成。没被现行文档提到、
+  但不带已关闭标识的条目（例如迁到别的工作副本的支线目录）不报：按名字之外的线索认领会把没写进文档的长期工具也报出来。
 
 ## Architecture
 

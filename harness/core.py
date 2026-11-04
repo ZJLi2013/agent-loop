@@ -37,7 +37,12 @@ from harness.plan import (
 from harness.page import load_pager, page_followup
 from harness.plan_review import plan_review_ready, run_plan_review
 from harness.protocol import Event, Phase, TransitionError, apply_event
-from harness.records import active_task_status, design_location_error, mainline_handoff
+from harness.records import (
+    active_task_status,
+    archive_progress,
+    design_location_error,
+    mainline_handoff,
+)
 from harness.review import load_reviewer, review_followup, run_review
 from harness.runner import execute_process
 from harness.scratch import clean_task, scratch_path, task_dir
@@ -286,7 +291,14 @@ def clean_scratch(root: Path) -> dict[str, Any]:
         raise HarnessError(f"task {task_id} is awaiting reviewer decision")
     if review.get("decision") == "revise":
         raise HarnessError(f"reviewer sent {task_id} back; finish its CLOSE and verify")
-    return {"task_id": task_id, "scratch": scratch_path(task_id), "error": clean_task(root, task_id)}
+    progress_archived, progress_error = archive_progress(root)
+    errors = [clean_task(root, task_id), progress_error]
+    return {
+        "task_id": task_id,
+        "scratch": scratch_path(task_id),
+        "progress_archived": progress_archived,
+        "error": "; ".join(error for error in errors if error) or None,
+    }
 
 
 def _remaining_wall(config: dict[str, Any], state: dict[str, Any]) -> float:
