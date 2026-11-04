@@ -208,25 +208,7 @@ reviewer 换另一个模型时，见下文「可选的独立 reviewer」里的 o
 <a id="task-stages"></a>
 ## 一个 task 经过哪些阶段
 
-human 只在第 3 步批准（含 reviewer 标给 human 的项，用 `plan-review --approve`），以及在 reviewer 选 `ask_human`
-时回答；其余由 worker 调 `agent-loop-harness` 完成。
-括号里是 `agent-loop-harness status` 显示的 phase。
-
-| 阶段 | 谁做 | 命令 | 结果 |
-|---|---|---|---|
-| 1. 写计划 | worker | 无，写 plan document 与 `.agent-loop/task.md` | plan 为 `Plan Review: proposed`，task 为 `📝 proposed` |
-| 2. 计划评审（配置 reviewer 时） | reviewer | `plan-review --plan-doc plan.md` | 每个新 task 一份建议，存在 `.harness/plan-review/`；worker 用 `--respond` 回应其中的 `must`。reviewer 不能批准 |
-| 3. 批准 | human | 无，把 plan 改成 `approved`、task 改成 `🔬 doing` | 方向定下，执行交给 worker |
-| 4. 锁定判据 | worker | `init --task t1 --plan-doc plan.md -- <verifier>` | 锁定 verifier 命令、它读的文件与预算（`ready`） |
-| 5. 执行 | worker | `exec -- <command>` | 每次运行记进 `.harness/runs.jsonl` 与 `artifacts/`（`running`，结束回到 `ready`，失败为 `failed`） |
-| 6. 验证 | worker 调用，Harness 执行 | `verify` | 跑锁定的 verifier（`verified` 或 `failed`）；之后工作区再变，证据作废（`failed`），要重新 `verify` |
-| 7. 评审与关闭 | reviewer | 验证通过后自动运行 | 选 `continue` / `revise` / `ask_human` / `stop`；决策落盘后 task 归档进 `.agent-loop/archive/`，`.harness/tasks/<id>/` 删除。没有 reviewer 时用 `clean-task` 关闭 |
-
-- 已批准的下一个 task 从第 4 步重新 `init`；新提出的 task 从第 1 步开始。reviewer 选 `revise` 时同一 task 回到第 5 步补完再验证，每个 task 最多一次。
-- 第 2、3 步可以晚于第 4 步：plan 还是 `proposed` 时，`init` 照常锁定判据但暂停（`paused`），配置了 reviewer 就先跑计划评审；
-  human 批准后 `resume`。
-- Goal 或范围变了：`pause --require-revision` 回到第 1 步，见下文「纠偏与 Goal Review」。
-- 预算用完或 `disable` 后进入 `stopped`。
+![一个 task 的生命周期](images/task-stages.svg)
 
 ## 创建并评审计划
 
