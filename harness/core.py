@@ -43,10 +43,10 @@ from harness.runner import execute_process
 from harness.scratch import clean_task, scratch_path, task_dir
 from harness.storage import (
     CONFIG_FILE,
-    HARNESS_DIR,
     STATE_FILE,
     atomic_write_json,
     config_digest,
+    exclude_runtime_from_git,
     harness_dir,
     load_runtime,
     pid_alive,
@@ -268,7 +268,7 @@ def initialize(
         _transition(state, Event.PAUSE_REQUESTED)
         state["updated_at"] = utc_now()
         atomic_write_json(state_path, state)
-    _exclude_runtime_from_git(root)
+    exclude_runtime_from_git(root)
     return config, state
 
 
@@ -287,20 +287,6 @@ def clean_scratch(root: Path) -> dict[str, Any]:
     if review.get("decision") == "revise":
         raise HarnessError(f"reviewer sent {task_id} back; finish its CLOSE and verify")
     return {"task_id": task_id, "scratch": scratch_path(task_id), "error": clean_task(root, task_id)}
-
-
-def _exclude_runtime_from_git(root: Path) -> None:
-    git_dir = root.resolve() / ".git"
-    if not git_dir.is_dir():
-        return
-    exclude = git_dir / "info" / "exclude"
-    exclude.parent.mkdir(parents=True, exist_ok=True)
-    current = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
-    entry = f"/{HARNESS_DIR}/"
-    if entry not in current.splitlines():
-        separator = "" if not current or current.endswith("\n") else "\n"
-        with exclude.open("a", encoding="utf-8") as fh:
-            fh.write(f"{separator}{entry}\n")
 
 
 def _remaining_wall(config: dict[str, Any], state: dict[str, Any]) -> float:

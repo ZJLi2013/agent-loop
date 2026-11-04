@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -325,6 +326,33 @@ class PlanReviewTest(unittest.TestCase):
 
         self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md")[0])
         self.assertEqual(task_record(self.root, "t1")["reviews"][0]["findings"][0]["level"], "suggest")
+
+    @unittest.skipUnless(shutil.which("git"), "git is required")
+    def test_agent_state_stays_out_of_git_unless_already_tracked(self) -> None:
+        def git(*args: str) -> str:
+            return subprocess.run(
+                ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+                cwd=self.root, capture_output=True, text=True,
+            ).stdout
+
+        tracked = self.root / ".agent-loop" / "memory" / "facts.md"
+        tracked.parent.mkdir()
+        tracked.write_text("a\n", encoding="utf-8")
+        git("init", "-q")
+        git("add", "plan.md", ".agent-loop/memory/facts.md")
+        git("commit", "-q", "-m", "init")
+        self.configure(reviewer_writing({"t1": []}))
+
+        self.review()
+        ignored = git("check-ignore", ".agent-loop/task.md", ".harness/state.json").split()
+        tracked.write_text("b\n", encoding="utf-8")
+        status = git("status", "--porcelain")
+        self.init()
+        entries = (self.root / ".git" / "info" / "exclude").read_text(encoding="utf-8").splitlines()
+
+        self.assertEqual(ignored, [".agent-loop/task.md", ".harness/state.json"])
+        self.assertEqual(status.split(), ["M", ".agent-loop/memory/facts.md"])
+        self.assertEqual([entries.count("/.harness/"), entries.count("/.agent-loop/")], [1, 1])
 
 if __name__ == "__main__":
     unittest.main()
