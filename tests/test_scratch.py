@@ -43,16 +43,25 @@ class TaskScratchTest(unittest.TestCase):
 
         self.assertEqual(status["scratch"], ".harness/tasks/t1")
         self.assertEqual(status["strays"], ["t1_kit", "tasks/t0"])
+        self.assertEqual(status["leftovers"], [])
 
     def test_clean_task_waits_for_the_verifier_then_removes_scratch(self) -> None:
         self.init()
+        progress = self.root / ".agent-loop" / "progress.md"
+        progress.parent.mkdir()
+        progress.write_text("## new\nnow\n\n## old\nthen\n", encoding="utf-8")
         (self.scratch / "kit.py").write_text("print(1)\n", encoding="utf-8")
         with self.assertRaisesRegex(HarnessError, "after the locked verifier passes"):
             clean_scratch(self.root)
 
         verify(self.root)
 
-        self.assertIsNone(clean_scratch(self.root)["error"])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(run.main(["--root", str(self.root), "clean-task"]), 0)
+        outcome = json.loads(out.getvalue())
+        self.assertEqual((outcome["progress_archived"], outcome["leftovers"]), (1, []))
+        self.assertEqual(progress.read_text(encoding="utf-8"), "## new\nnow\n")
         self.assertFalse(self.scratch.exists())
         self.assertIsNone(clean_scratch(self.root)["error"])
 

@@ -133,7 +133,8 @@ Mainline Review: approved
 | `.agent-loop/progress.md` | 当前唯一接手点、下一步第一条命令 | **覆盖** | 本 skill |
 | `.agent-loop/archive/progress-YYYY-MM.md` | 已失效的接手点 | **追加**，仅按需读取 | 本 skill |
 
-写新交接前把旧快照追加到当月 archive，再覆盖 `progress.md`。旧的“下一步第一条命令”不能和
+新交接写在 `progress.md` 顶部，一段一个 `## ` 标题。task CLOSE 时 Harness 只留第一段（连同段前的前言），
+其余原样追加到当月 archive；两次 CLOSE 之间写新段时，删掉旧段里已失效的“下一步第一条命令”，它不能和
 当前命令同时出现在活跃文件。**具体值仍不要只写进交接笔记**；它们归可验证、可覆盖的 facts。
 Auto-Stop Report、夜间报告与 `⚠️ 待确认` 项也写进交接笔记，不进 `task.md`；待确认项解决前，每次覆盖都带上。
 

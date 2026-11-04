@@ -25,6 +25,14 @@ All notable user-facing changes are documented here. This project follows Semant
   lists and PR drafts, and removes it after the reviewer's decision is saved; projects without a reviewer run
   `clean-task` at CLOSE. A removal failure is reported, not raised. `init` and `status` list `strays`: `.harness/`
   entries Harness does not own and scratch directories of other tasks.
+- Harness retires `.agent-loop/` leftovers at CLOSE (#161): after the reviewer's decision is saved, or in
+  `clean-task`, it keeps the first `## ` section of `progress.md` and appends the others unchanged to
+  `archive/progress-YYYY-MM.md` (`progress_archived`; a write failure joins `cleanup_error` / `error` and leaves
+  `progress.md` as it was). The closing `verify`, `review` and `clean-task` output and `status` list `leftovers`:
+  `.agent-loop/` files whose name carries a closed task id or that sit in a `✅ done` Goal's plan directory, and that
+  no current document (`task.md`, the newest handoff, `memory/`, `.agent-loop/*.json`, plans of open tasks and
+  unfinished Goals) mentions. Harness never deletes them and the completion gate does not check them. Migration: write
+  new handoffs at the top of `progress.md`; existing leftovers show up on the next `status`.
 - `task.md` holds the whole backlog: besides the next 1–2 tasks, an optional `## Candidates` table (priority,
   title, entry condition) and a `## Triggered` list ("when <event>: <action>"). The plan document keeps only the
   Goal, boundaries, current conclusion and its evidence.

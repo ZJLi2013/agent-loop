@@ -149,12 +149,14 @@ verifier 通过后：
 1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」，把它并入脉络的当前阶段行，换方向时开新行；
 2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，
    移到 linked archive，由脉络上方的 archive 指针指向；
-3. 通知 `task-state` 归档 closed task 与旧交接快照，通知 `agent-memory` 只保留未来仍会改变选择的
-   结论、`disproved / rejected` 与证据指针；
+3. 通知 `task-state` 归档 closed task（`progress.md` 的旧交接段由 Harness 在 CLOSE 时移进 archive），通知
+   `agent-memory` 只保留未来仍会改变选择的结论、`disproved / rejected` 与证据指针；
 4. 本 task 的临时文件（kit、workspace、本地 run 目录、job 清单、PR 草稿、task 专用 verifier）都放
    `.harness/tasks/<task_id>/`，要留的在 locked verifier 前移出。配置 reviewer 时 Harness 在决定落盘后删除它，
    未配置时 CLOSE 末尾运行 `clean-task`；`status` 的 `strays` 列出 `.harness/` 里不归 Harness 的条目，逐条移走或删除。
-   逐 run 表的要求归 `experiment-design`。
+   关闭 task 的 `verify` / `review` / `clean-task` 输出与 `status` 的 `leftovers` 列出 `.agent-loop/` 里名字带已关闭
+   task id、或在已关闭 Goal 的 plan 目录、又没被现行文档提到的文件：要留的证据移进项目被跟踪的文档或链接进
+   plan 归档，其余删除；被误报的长期工具在 `memory/facts.md` 提一句即不再报。逐 run 表的要求归 `experiment-design`。
 
 ### 主线交接
 
@@ -165,8 +167,8 @@ verifier 通过后：
   开支线要 human 批准。
 
 Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、设计、当前结论、边界、脉络与
-archive index。sub-exp 不删，但不再默认加载。删除只被本 Goal 文档引用的一次性脚本，判据归
-`experiment-design`；暂停中的 Goal 的脚本等它关闭再处理。具体格式分别归
+archive index。sub-exp 不删，但不再默认加载。主线行改 `✅ done` 后，本 Goal plan 目录里的其余文件进入
+`leftovers`，按 CLOSE 第 4 步处理；暂停中的 Goal 不进。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
 
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。

@@ -35,6 +35,7 @@ from harness.plan_review import (  # noqa: E402
     respond_task,
     run_plan_review,
 )
+from harness.records import leftovers  # noqa: E402
 from harness.review import run_review  # noqa: E402
 from harness.scratch import scratch_path, strays  # noqa: E402
 
@@ -205,13 +206,6 @@ def main(argv: list[str] | None = None) -> int:
         if args.action == "verify":
             result = verify(root)
             config, state = load_runtime(root)
-            print(
-                json.dumps(
-                    {"result": result, "state": state},
-                    ensure_ascii=False,
-                    indent=2,
-                )
-            )
             review = state.get("review") or {}
             review_passed = (
                 not config.get("reviewer")
@@ -220,9 +214,15 @@ def main(argv: list[str] | None = None) -> int:
                     and bool(review.get("decision"))
                 )
             )
+            payload = {"result": result, "state": state}
+            if config.get("reviewer") and review_passed and review["decision"] != "revise":
+                payload["leftovers"] = leftovers(root)
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0 if state["phase"] == "verified" and review_passed else 1
         if args.action == "review":
             outcome = run_review(root, objection=args.objection)
+            if outcome["review"]["decision"] not in (None, "revise"):
+                outcome["leftovers"] = leftovers(root)
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 0 if outcome["review"]["decision"] else 1
         if args.action == "plan-review":
@@ -275,6 +275,7 @@ def main(argv: list[str] | None = None) -> int:
                         "pause": pause_request(root),
                         "scratch": scratch_path(state["task_id"]),
                         "strays": strays(root, state["task_id"]),
+                        "leftovers": leftovers(root),
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -283,6 +284,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.action == "clean-task":
             outcome = clean_scratch(root)
+            outcome["leftovers"] = leftovers(root)
             print(json.dumps(outcome, ensure_ascii=False, indent=2))
             return 1 if outcome["error"] else 0
         state = disable(root)

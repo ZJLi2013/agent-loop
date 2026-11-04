@@ -18,7 +18,7 @@ from harness.project import (
     task_file,
 )
 from harness.protocol import Phase
-from harness.records import CLOSED_MARKERS, active_task_status, close_task
+from harness.records import CLOSED_MARKERS, active_task_status, archive_progress, close_task
 from harness.runner import execute_process
 from harness.scratch import clean_task
 from harness.storage import (
@@ -256,6 +256,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             decision = None
             error = "revise is allowed once per task; choose continue, ask_human or stop"
         cleanup_error = None
+        progress_archived = 0
         if decision and decision["decision"] == "revise":
             decision.pop("review")
             revised_run = previous["verify_run_id"]
@@ -263,7 +264,9 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             close_task(
                 root, config.get("plan_doc"), str(state["task_id"]), decision.pop("review")
             )
-            cleanup_error = clean_task(root, str(state["task_id"]))
+            progress_archived, progress_error = archive_progress(root)
+            errors = [clean_task(root, str(state["task_id"])), progress_error]
+            cleanup_error = "; ".join(error for error in errors if error) or None
 
         review = {
             "verify_run_id": previous["verify_run_id"],
@@ -274,6 +277,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             "why": None,
             "error": error,
             "cleanup_error": cleanup_error,
+            "progress_archived": progress_archived,
             "revised_run": revised_run,
             "at": utc_now(),
         }
