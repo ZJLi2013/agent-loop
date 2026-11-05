@@ -90,9 +90,20 @@ invoke on-demand skills.
   reviewer can decide (no `human: true` item, not irreversible, no change to the human's Goal or scope) is carried
   out without asking: at the plan Gate the worker answers the `must` items and writes `Plan Review: unreviewed`, so
   later inits take only the task the reviewer names. The human is asked only for `human: true` choices, irreversible
-  operations and an unclear Goal, and the question carries the reviewer's verdict. Designs raised outside the
+  operations and an unclear Goal, and the question carries the reviewer's verdict. The reviewer sees each
+  recommendation once and must return a choice: one option, or a `human: true` item that names the option it
+  recommends. There is no second round. `human: true` is kept for value trade-offs the human owns (Goal, scope or
+  priority, budget beyond the plan, irreversible loss that cannot be mitigated, external or public commitments); when
+  one option is clearly better, its downside can be removed by the agent's own judgment or a backup step, or the
+  choice is reversible, the reviewer picks it. The hard-stop list now stops only for irreversible operations that
+  cannot first be backed up or otherwise mitigated. The task reviewer sends a product that does not match its design
+  to the human only when fixing versus changing direction meets that bar, otherwise it writes the fix task and
+  continues; an `ask_human` decision names the option it recommends in `why`. Unattended self-approval at the Gate
+  now applies only when the independent review is unreachable, and is marked `⚠️ 待确认`. Designs raised outside the
   plan/task flow, such as one proposed in an issue, go to the same reviewer first. Without a configured reviewer the
-  Gate still asks the human and says the question was not reviewed. The rule lives in `when-to-stop`; the unattended
+  agent gets one independent review from a different model itself (for example gpt-6-astra through Codex CLI) and
+  acts on it the same way; only when that reviewer is unreachable does it ask the human and say the question was not
+  reviewed. The rule lives in `when-to-stop`; the unattended
   section of `agent-loop` keeps only what differs. Migration: none; Harness already accepts `unreviewed` once every
   `must` is answered and no human item is pending.
 

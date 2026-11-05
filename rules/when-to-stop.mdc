@@ -42,11 +42,16 @@ alwaysApply: true
 不只 plan Gate 与 task review：issue 里提的设计、经调度窗口转给 human 的方案，同样先把选项与依据交项目的
 reviewer 审一次。
 
-- reviewer 能定：没有 `human: true`、不是不可逆操作、不改 human 给的 Goal / scope。按它的意见执行并记下它的结论；
-  plan Gate 写 `Plan Review: unreviewed`（未经 human 点击），之后只 init reviewer 指名的 task。
-- 只有这几类交 human：reviewer 标 `human: true` 的选型、要改 Goal / scope（含 task reviewer 的 `ask_human`）、
-  不可逆操作、Goal 说不清。问题里带上 reviewer 的结论与理由。
-- 未配置 reviewer 时照旧问 human，问题注明「未经独立评审」。
+- 只审一轮，reviewer 必须给出选择：选定一个选项，或标 `human: true` 并写它推荐哪个；agent 照选择执行或转交 human，
+  不回审（同 `work-planning` 第 5 步），不进 revise 循环。
+- `human: true` 只给 human 拥有的价值取舍：Goal / scope / 优先级、超出 plan 的预算、无法缓解的不可逆损失、
+  对外或公开的承诺。一个选项明显更好、坏处能由 agent 自己的判断或备份消掉（例：清理 worktree 前自己判断哪些
+  ignored 文件值得留并先移走）、或选择可逆时，reviewer 自己选，不标。两份 reviewer prompt 的 `human: true` 一行是本条的摘录。
+- 没标 `human: true` 的按 reviewer 的选择执行并记下结论；plan Gate 写 `Plan Review: unreviewed`（未经 human 点击），
+  之后的 init 按 `design.md` 里 `unreviewed` 的调度规则。交 human 的只有 `human: true` 项（含 task reviewer 的 `ask_human`）与
+  Goal 说不清，问题里带上 reviewer 的推荐与理由。
+- 未配置 reviewer 时自己找一次与 worker 不同模型的独立评审（例：Codex CLI 上的 gpt-6-astra）并按上面处置，
+  评审调不通时才在问题里注明「未经独立评审」后问 human。
 
 ## 选项不能全是同一类
 
@@ -85,6 +90,6 @@ reviewer 审一次。
 4. 超预算（轮数或机时）
 5. Phase 0 假设可能不成立，主线 Goal 其实没被这个问题卡住，或支线超出预算（主线一节见 `task-state`）
 
-另有三类与实验轮次无关、无论何时都要停下等人：**不可逆操作**（删数据、覆盖 checkpoint、
+另有三类与实验轮次无关、无论何时都要停下等人：**无法先备份或自行缓解的不可逆操作**（删数据、覆盖 checkpoint、
 强推分支、长时间独占 GPU）、**Goal 说不清**（写不出一句话的「要解决什么问题」）、
 **reviewer 标给 human 的方案选型**（见「问 human 之前先过 reviewer」）。
