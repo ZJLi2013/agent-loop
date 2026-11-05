@@ -50,8 +50,8 @@ reviewer 审一次。
 - 没标 `human: true` 的按 reviewer 的选择执行并记下结论；plan Gate 写 `Plan Review: unreviewed`（未经 human 点击），
   之后的 init 按 `design.md` 里 `unreviewed` 的调度规则。交 human 的只有 `human: true` 项（含 task reviewer 的 `ask_human`）与
   Goal 说不清，问题里带上 reviewer 的推荐与理由。
-- 未配置 reviewer 时自己找一次与 worker 不同模型的独立评审（例：Codex CLI 上的 gpt-6-astra）并按上面处置，
-  评审调不通时才在问题里注明「未经独立评审」后问 human。
+- reviewer 是项目 `.agent-loop/reviewer.json` 的命令；未配置时用 WSL 里的 Codex CLI 跑 gpt-6-astra（同 `docs/usage.md`
+  的 WSL reviewer 示例）。调不通是环境错误，按「先自修，再中止」处理；未经评审的推荐或选项不交 human。
 
 ## 选项不能全是同一类
 

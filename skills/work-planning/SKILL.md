@@ -98,7 +98,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    「当前结论」，再附逐 task 意见与回应；task 的执行步骤不进问题。
    带 `human: true` 的 must 由 human 选，用 human 原话 `plan-review --approve <task> --reason` 记下；
    human 要求重审用 `--again`。reviewer 报告缺失或失败、交给 human 的问题未批准时，不实验、不改实现。
-6. human 批准后 `Plan Review: approved`，reviewer 能定或无人值守自批准时写 `Plan Review: unreviewed`；
+6. human 批准后 `Plan Review: approved`，reviewer 能定时写 `Plan Review: unreviewed`；
    最高优先级行转 doing，其余转 todo。
 7. 项目有多个 Goal 时，第一个 Goal 的 Gate 同时对齐 `task.md` 的主线一节（格式见 `task-state`），
    human 批准后写 `Mainline Review: approved`。

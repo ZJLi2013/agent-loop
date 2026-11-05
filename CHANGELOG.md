@@ -98,12 +98,11 @@ invoke on-demand skills.
   choice is reversible, the reviewer picks it. The hard-stop list now stops only for irreversible operations that
   cannot first be backed up or otherwise mitigated. The task reviewer sends a product that does not match its design
   to the human only when fixing versus changing direction meets that bar, otherwise it writes the fix task and
-  continues; an `ask_human` decision names the option it recommends in `why`. Unattended self-approval at the Gate
-  now applies only when the independent review is unreachable, and is marked `⚠️ 待确认`. Designs raised outside the
-  plan/task flow, such as one proposed in an issue, go to the same reviewer first. Without a configured reviewer the
-  agent gets one independent review from a different model itself (for example gpt-6-astra through Codex CLI) and
-  acts on it the same way; only when that reviewer is unreachable does it ask the human and say the question was not
-  reviewed. The rule lives in `when-to-stop`; the unattended
+  continues; an `ask_human` decision names the option it recommends in `why`. Designs raised outside the
+  plan/task flow, such as one proposed in an issue, go to the same reviewer first. Without a configured
+  `.agent-loop/reviewer.json` the reviewer is gpt-6-astra on Codex CLI in WSL, as in the usage guide's WSL example. A
+  reviewer that cannot be reached is an environment error under `when-to-stop`'s self-repair limits; an unreviewed
+  recommendation never goes to the human. Unattended mode no longer self-approves the Gate. The rule lives in `when-to-stop`; the unattended
   section of `agent-loop` keeps only what differs. Migration: none; Harness already accepts `unreviewed` once every
   `must` is answered and no human item is pending.
 
