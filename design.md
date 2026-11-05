@@ -138,6 +138,8 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
     plan、`*-archive.md` 与 `archive/` 是历史，其中的提及不算。
   - 永不报出：`task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、`review-checklist.md`、
     `reports/`（各有自己的退役规则），以及开着的 task 行与主线行链接的 plan 文档、`*-archive.md`、`sub-exp/` 与任意 `archive/` 下的文件。
+    Harness 仍 active 时，config 锁定的 verifier 文件也不报：删掉它会让 completion gate 判证据 stale；`disable` 或下一次
+    `init` 后照常认领。它仍计入所在目录的文件数。`load_runtime` 读不出 config / state 时锁定集合未知，返回空列表。
   - 一个目录下的文件全部被报出时，只报该目录一行。
 - 只报不删、不进 completion gate：Harness 分不清长期工具与一次性脚本，报出的条目挡不住完成。没被现行文档提到、
   但不带已关闭标识的条目（例如迁到别的工作副本的支线目录）不报：按名字之外的线索认领会把没写进文档的长期工具也报出来。

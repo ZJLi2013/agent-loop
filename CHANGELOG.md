@@ -282,6 +282,10 @@ invoke on-demand skills.
 
 ### Fixed
 
+- `leftovers` no longer lists the verifier files an active Harness has locked (#164). In a project without a
+  reviewer, deleting a reported verifier after `clean-task` made the completion gate call the evidence stale; the
+  file is now claimed only after `disable` or the next `init`. When `.harness/` cannot be read, `leftovers` is empty.
+
 - A locked verifier now locks the files it runs, not only its command line (#148). `init` records the SHA-256 of
   every `argv` element that is a file inside the workspace, including gitignored paths such as
   `.agent-loop/plans/<topic>/verify_<task>.py` and `.harness/tasks/<id>/`. Until the task reviewer's decision lands,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -19,6 +20,7 @@ from harness.records import (
     design_location_error,
     leftovers,
 )
+from harness.storage import config_digest
 
 
 TASKS = """# Tasks
@@ -285,6 +287,25 @@ class LeftoversTest(unittest.TestCase):
                 {"path": ".agent-loop/verify_t3.py", "why": "closed task t3"},
             ],
         )
+
+    def test_active_harness_keeps_its_locked_verifier_out(self) -> None:
+        config = {"verifier": {"files": {".agent-loop/plans/a/cache/y.pyc": "digest"}}}
+        reported = {
+            True: {".agent-loop/plans/a/cache/x_t3.pyc"},
+            False: {".agent-loop/plans/a/cache/"},
+        }
+        base = self.root / ".harness"
+        base.mkdir()
+        (base / "config.json").write_text(json.dumps(config), encoding="utf-8")
+        for active, expected in reported.items():
+            with self.subTest(active=active):
+                state = {"active": active, "config_sha256": config_digest(config)}
+                (base / "state.json").write_text(json.dumps(state), encoding="utf-8")
+                paths = {item["path"] for item in leftovers(self.root)}
+                self.assertEqual(paths & {*reported[True], *reported[False]}, expected)
+        with self.subTest("config changed after init"):
+            (base / "state.json").write_text(json.dumps({"active": True}), encoding="utf-8")
+            self.assertEqual(leftovers(self.root), [])
 
     def test_progress_keeps_the_newest_handoff_and_archives_the_rest_once(self) -> None:
         progress = self.runtime / "progress.md"
