@@ -105,7 +105,9 @@ agent-loop 只维护三类公开保证：
 - attempt / wall budget 尚有余额，用尽后只要求一次 Auto-Stop Report；
 - task reviewer 的决策落盘前，runner 与下一 task 的 init 都被拒绝；
 - verify 开跑前与写入通过前，`verifier.files` 的每个文件摘要等于 init 时的值；
-- verifier 通过且 workspace fingerprint 未变化；task reviewer 的决定落盘前，`verifier.files` 也未变化；
+- verifier 通过且 workspace fingerprint 未变化；task reviewer 的决定落盘前，`verifier.files` 也未变化。git 项目的
+  fingerprint 不含被忽略的文件，`init` 把 `/.agent-loop/`、`/.harness/` 写进 `.git/info/exclude`，CLOSE 改 `.agent-loop/`
+  不使证据 stale；不是 git 仓库或还没有提交时回退为 `.harness/`、`.git` 之外全部文件的哈希，CLOSE 改 `task.md` 也会使证据 stale；
 - 请求的会话不是 `owner` 时，gate 不写状态、不发 followup。
 
 <a id="verifier-file-lock"></a>
@@ -139,7 +141,8 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
   - 永不报出：`task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、`review-checklist.md`、
     `reports/`（各有自己的退役规则），以及开着的 task 行与主线行链接的 plan 文档、`*-archive.md`、`sub-exp/` 与任意 `archive/` 下的文件。
     Harness 仍 active 时，config 锁定的 verifier 文件也不报：删掉它会让 completion gate 判证据 stale；`disable` 或下一次
-    `init` 后照常认领。它仍计入所在目录的文件数。`load_runtime` 读不出 config / state 时锁定集合未知，返回空列表。
+    `init` 后照常认领。它仍计入所在目录的文件数。锁定集合经 `harness.storage.load_runtime` 读：没有 `.harness/state.json`
+    时为空；读不出或 `config_sha256` 不符时锁定集合未知，返回空列表。`status` 在调用前已 `load_runtime`，state 损坏时照旧失败。
   - 一个目录下的文件全部被报出时，只报该目录一行。
 - 只报不删、不进 completion gate：Harness 分不清长期工具与一次性脚本，报出的条目挡不住完成。没被现行文档提到、
   但不带已关闭标识的条目（例如迁到别的工作副本的支线目录）不报：按名字之外的线索认领会把没写进文档的长期工具也报出来。
