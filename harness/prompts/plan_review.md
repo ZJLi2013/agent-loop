@@ -43,7 +43,8 @@
    加深（测量与判据、健壮性、演练、第二层抽象）而不是让它被用上，报 must。
 10. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
 
-你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。最终决定属于 human。
+你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。没有 `human: true` 项时 executor 回应 `must`
+后直接开工，不问 human；有时由 human 决定。
 不要修改 plan、task 或代码。
 
 ## 意见门槛

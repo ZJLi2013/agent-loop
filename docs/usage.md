@@ -296,7 +296,8 @@ harness 不捆绑这些工具。凭据与模型选择由该工具负责。review
 agent-loop-harness plan-review --plan-doc plan.md
 ```
 
-读报告，批准或修改计划，激活 task，再按上文初始化。plan reviewer 只给建议，不能批准计划。某个 revision 的每个 open task
+读报告，批准或修改计划，激活 task，再按上文初始化。plan reviewer 只给建议，不能批准计划；报告里没有
+`human: true` 项时 worker 不问你，回应 `must` 后写 `Plan Review: unreviewed` 开工。某个 revision 的每个 open task
 都已通过更早的 plan review 时，human 可以不再评审直接批准：`agent-loop-harness plan-review --plan-doc plan.md
 --waive --reason "<human 的原话>"`，然后标记为 `approved`。连续 3 次 revise 结论，或连续 3 个 revision 没有实验时，
 `plan-review` 拒绝再次运行 reviewer，直到 human 选择：用 `--continue --reason "<human 的原话>"` 再评审一次、带注记批准

@@ -36,6 +36,18 @@ alwaysApply: true
 读数、候选集、solver 清单都不是产出，它们指向的那条「下一步命令变了」才是。
 报不出来就明说这是零信息轮。
 
+## 问 human 之前先过 reviewer
+
+**交给 human 的推荐或选项，先经独立 reviewer 审；reviewer 能定的按它做，不问 human。** 任何模式都成立，
+不只 plan Gate 与 task review：issue 里提的设计、经调度窗口转给 human 的方案，同样先把选项与依据交项目的
+reviewer 审一次。
+
+- reviewer 能定：没有 `human: true`、不是不可逆操作、不改 human 给的 Goal / scope。按它的意见执行并记下它的结论；
+  plan Gate 写 `Plan Review: unreviewed`（未经 human 点击），之后只 init reviewer 指名的 task。
+- 只有这几类交 human：reviewer 标 `human: true` 的选型、要改 Goal / scope（含 task reviewer 的 `ask_human`）、
+  不可逆操作、Goal 说不清。问题里带上 reviewer 的结论与理由。
+- 未配置 reviewer 时照旧问 human，问题注明「未经独立评审」。
+
 ## 选项不能全是同一类
 
 给用户的选择题里，若三个选项都是当前路径的不同变体，那就是把偏离包装成了选择。
@@ -75,4 +87,4 @@ alwaysApply: true
 
 另有三类与实验轮次无关、无论何时都要停下等人：**不可逆操作**（删数据、覆盖 checkpoint、
 强推分支、长时间独占 GPU）、**Goal 说不清**（写不出一句话的「要解决什么问题」）、
-**需要用户在有显著权衡的方案间选型**。
+**reviewer 标给 human 的方案选型**（见「问 human 之前先过 reviewer」）。

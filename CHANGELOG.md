@@ -86,6 +86,16 @@ invoke on-demand skills.
 
 ### Changed
 
+- A recommendation or option set reaches the human only after the independent reviewer, in every mode. What the
+  reviewer can decide (no `human: true` item, not irreversible, no change to the human's Goal or scope) is carried
+  out without asking: at the plan Gate the worker answers the `must` items and writes `Plan Review: unreviewed`, so
+  later inits take only the task the reviewer names. The human is asked only for `human: true` choices, irreversible
+  operations and an unclear Goal, and the question carries the reviewer's verdict. Designs raised outside the
+  plan/task flow, such as one proposed in an issue, go to the same reviewer first. Without a configured reviewer the
+  Gate still asks the human and says the question was not reviewed. The rule lives in `when-to-stop`; the unattended
+  section of `agent-loop` keeps only what differs. Migration: none; Harness already accepts `unreviewed` once every
+  `must` is answered and no human item is pending.
+
 - Agent-loop state stays out of git by default. `init` and `plan-review` write `/.agent-loop/` next to `/.harness/`
   in `.git/info/exclude`. Files already tracked under `.agent-loop/` stay tracked; track new ones with `git add -f`.
   In a project that neither ignored nor tracked `.agent-loop/`, its files leave `git status` and the workspace
