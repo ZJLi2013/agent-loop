@@ -322,6 +322,11 @@ CLI `init` 把会话 id（依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATI
 gate 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
 没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 preCompact 只检查这些项目，
 不扫描 workspace 里的其它项目；dsh 会话只看 payload `cwd` 这一个项目，与 CLI 默认 `--root` 一致。
+<a id="session-scope"></a>
+绑定归 `adapters/cursor/session_scope.py`：被读的 `<dir>/.agent-loop/task.md`（或旧 `.cursor/task.md`）让 `<dir>` 成为候选，
+`<dir>` 须在 workspace 内。候选自身没有 `.git`（目录，或 worktree / submodule 的文件），且它与 workspace 根之间（含根）
+有目录自己的 `task.md` 存在时，它是那个项目的数据（测试 fixture、示例），不绑定；scope 文件里已有的这类条目也不再返回。
+有 `.git` 的嵌套目录照旧绑定：clone 在项目里的仓库是独立项目，只按嵌套跳过会让它的门禁静默失效。
 同一会话同一条 followup 只发一次（`adapters/followup.py`），因为 dsh 桥接的 `stop_hook_active` 恒为 false。
 
 宿主与模型解耦：agent-loop 只区分「角色（worker / reviewer）× 宿主（Cursor、dsh、Codex CLI…）」，模型是宿主自己的
