@@ -63,7 +63,7 @@ for publication status. Configuration and state formats may evolve; changes are 
 
 - **Incremental planning:** one unverified hypothesis at a time; revision-bound tasks prevent stale plans from driving execution.
 - **Execution and verification:** explicit commands run with timeouts, budgets, and logs; a locked project verifier checks results, and workspace changes invalidate verification evidence.
-- **Boundary reviews:** an optional reviewer advises on submitted plans and interprets verified task results. The human retains control of Goals and plan approval.
+- **Boundary reviews:** an optional reviewer advises on submitted plans and interprets verified task results. What it can decide is carried out; the human decides Goals, irreversible operations and the trade-offs the reviewer hands back.
 - **Continuity:** project memory, handoffs, and archived records make prior conclusions available to later contexts.
 - **Long-task observation and human checkpoints:** heartbeat policies and an optional phone pager.
 

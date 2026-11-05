@@ -43,7 +43,8 @@
    加深（测量与判据、健壮性、演练、第二层抽象）而不是让它被用上，报 must。
 10. 只报告会改变 human 批准、task 拆分或第一条执行命令的问题。
 
-你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。最终决定属于 human。
+你不能批准 plan、改变 task 状态、关闭 task 或选择 successor。没有 `human: true` 项时 executor 回应 `must`
+后直接开工，不问 human；有时由 human 决定。
 不要修改 plan、task 或代码。
 
 ## 意见门槛
@@ -54,7 +55,9 @@
   （文件:行或事实），缺一个就会被当作 `suggest`。补齐后下一条命令不变的，不是 `must`。
 - `suggest`：边界条件、证据格式、措辞、多一次验证等严谨性建议，executor 可以跳过。不要求补证、不加核验步骤、
   不要求另起 task。
-- `human: true`：只用于 must，表示要 human 在有显著权衡的方案间选。
+- `human: true`：只用于 must，且只给 human 拥有的价值取舍：Goal / scope / 优先级、超出 plan 的预算、无法缓解的
+  不可逆损失、对外或公开的承诺；`change` 写你推荐哪个。一个选项明显更好、坏处能由 executor 的判断或备份消掉、
+  或选择可逆时，你自己选，不标。
 - 各最多 3 条，按严重度排序；超出的会被丢弃。没有值得写的就给空列表。
 
 ## 输出

@@ -93,12 +93,13 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
 5. 逐条回应 `must`：照改后 `plan-review --respond <task> --item N=applied`；只在与事实不符时
    `--item N=reject --reason "<事实>"`，只驳一次。`suggest` 酌情改或跳过，不必回应。不回审。
-   再用平台的结构化提问能力给 human：`approve / revise / continue automatically`。问题里先给 plan 的「设计」与
+   reviewer 能定时（判据见 `when-to-stop` 的「问 human 之前先过 reviewer」）不问 human，直接进第 6 步；
+   否则用平台的结构化提问能力给 human：`approve / revise / continue automatically`。问题里先给 plan 的「设计」与
    「当前结论」，再附逐 task 意见与回应；task 的执行步骤不进问题。
    带 `human: true` 的 must 由 human 选，用 human 原话 `plan-review --approve <task> --reason` 记下；
-   human 要求重审用 `--again`。reviewer 报告缺失或失败、human 未批准时，不实验、不改实现。
-6. 批准后 `Plan Review: approved`，最高优先级行转 doing，其余转 todo；无人值守自批准写
-   `Plan Review: unreviewed`，但配置 reviewer 时仍须完成独立 plan review。
+   human 要求重审用 `--again`。reviewer 报告缺失或失败、交给 human 的问题未批准时，不实验、不改实现。
+6. human 批准后 `Plan Review: approved`，reviewer 能定时写 `Plan Review: unreviewed`；
+   最高优先级行转 doing，其余转 todo。
 7. 项目有多个 Goal 时，第一个 Goal 的 Gate 同时对齐 `task.md` 的主线一节（格式见 `task-state`），
    human 批准后写 `Mainline Review: approved`。
 
@@ -129,7 +130,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
 3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
    标注集）在 plan 里逐项标 keep / revise / drop，human 提出的按第 1 步处理；旧标注能否作证据见
    `experiment-design` 的验收门。新 task 绑定新 `rN`；
-4. 独立 plan review 与 human review 后恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
+4. 独立 plan review 后按 Gate 第 5 步恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
    而 human 决定开新 task 时，human 把它批为 `🔬 doing` 后直接 `init`，不用 `disable`。
 
 对话里的「明白」不算 RECONCILE；四步落盘后才继续。

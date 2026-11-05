@@ -86,6 +86,26 @@ invoke on-demand skills.
 
 ### Changed
 
+- A recommendation or option set reaches the human only after the independent reviewer, in every mode. What the
+  reviewer can decide (no `human: true` item, not irreversible, no change to the human's Goal or scope) is carried
+  out without asking: at the plan Gate the worker answers the `must` items and writes `Plan Review: unreviewed`, so
+  later inits take only the task the reviewer names. The human is asked only for `human: true` choices, irreversible
+  operations and an unclear Goal, and the question carries the reviewer's verdict. The reviewer sees each
+  recommendation once and must return a choice: one option, or a `human: true` item that names the option it
+  recommends. There is no second round. `human: true` is kept for value trade-offs the human owns (Goal, scope or
+  priority, budget beyond the plan, irreversible loss that cannot be mitigated, external or public commitments); when
+  one option is clearly better, its downside can be removed by the agent's own judgment or a backup step, or the
+  choice is reversible, the reviewer picks it. The hard-stop list now stops only for irreversible operations that
+  cannot first be backed up or otherwise mitigated. The task reviewer sends a product that does not match its design
+  to the human only when fixing versus changing direction meets that bar, otherwise it writes the fix task and
+  continues; an `ask_human` decision names the option it recommends in `why`. Designs raised outside the
+  plan/task flow, such as one proposed in an issue, go to the same reviewer first. Without a configured
+  `.agent-loop/reviewer.json` the reviewer is gpt-6-astra on Codex CLI in WSL, as in the usage guide's WSL example. A
+  reviewer that cannot be reached is an environment error under `when-to-stop`'s self-repair limits; an unreviewed
+  recommendation never goes to the human. Unattended mode no longer self-approves the Gate. The rule lives in `when-to-stop`; the unattended
+  section of `agent-loop` keeps only what differs. Migration: none; Harness already accepts `unreviewed` once every
+  `must` is answered and no human item is pending.
+
 - Agent-loop state stays out of git by default. `init` and `plan-review` write `/.agent-loop/` next to `/.harness/`
   in `.git/info/exclude`. Files already tracked under `.agent-loop/` stay tracked; track new ones with `git add -f`.
   In a project that neither ignored nor tracked `.agent-loop/`, its files leave `git status` and the workspace

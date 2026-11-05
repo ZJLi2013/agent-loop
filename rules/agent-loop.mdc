@@ -27,7 +27,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 | 改代码的设计引入新抽象、已有概念的第二份实现或跨模块接口 | `work-planning` 第 2 步的类级设计，图用 `code-to-uml-diagram` |
 | 选择 task、写检查点、维护状态 | `task-state` |
 | 已批准 task 要跑实验 / 验证 | `experiment-design` |
-| 失败、重试、预算或停机判断 | `when-to-stop` |
+| 失败、重试、预算或停机判断，要给 human 推荐或选项 | `when-to-stop` |
 | 具体值、旧结论、否决项可能相关 | `agent-memory` |
 | detach 的远端任务，或单条命令预计超过 30 分钟 | `agent-heartbeat` |
 | Harness 命令报错或 guard 拒绝合法的一步、两条 agent-loop 规则指令相反、human 纠偏追到 agent-loop 措辞 | `self-report` |
@@ -61,11 +61,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 
 user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时，直到 user 再次说话：
 
-- Human Review Gate 选择最简单可逆方案自批准，plan document 标 `Plan Review: unreviewed`；
-- 自批准只替代 human 点击，不跳过独立 reviewer；按 reviewer 的一次建议继续：只 init reviewer 指名、
-  `must` 已回应、无 `human` 项的 task；遇 `human` 项、`stop`、失败上限或预算用尽即停；不写远端串联脚本；
-- 例外：reviewer 对主线 Goal 选 `stop`、且 `Mainline Review: approved` 时，按 `work-planning` 的主线交接
-  开始 `▶ next` 的 Goal；`human` 项、失败上限、预算等其他停机条件不变；
+- 遇 reviewer 的 `human` 项、`stop`（`work-planning` 的主线交接除外）、失败上限或预算用尽即停；不写远端串联脚本；
 - 不问选择题，记录选中理由与放弃项；有显著权衡时标 `⚠️ 待确认`；
 - blocked task 跳过做下一条，全部 blocked 才停；不可逆操作仍跳过；
 - 环境重试上限不变；收工把状态、失败计数、待确认项和明早第一条命令写进被处理项目的 `progress.md` 交接（夜间报告）。
