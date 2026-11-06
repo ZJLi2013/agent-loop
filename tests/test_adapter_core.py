@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from adapters.core import handle
 from adapters.protocol import HookAction, HookEvent, HookRequest
+from harness.project import memory_dir
 
 
 class AdapterCoreTest(unittest.TestCase):
@@ -39,6 +41,38 @@ class AdapterCoreTest(unittest.TestCase):
 
         self.assertEqual(response.action, HookAction.CONTEXT)
         self.assertIn("canonical events", response.message or "")
+
+    def test_linked_worktree_reads_the_main_worktree_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            main = Path(directory) / "main"
+            linked = Path(directory) / "linked"
+            main.mkdir()
+
+            def git(*args: str) -> None:
+                subprocess.run(["git", *args], cwd=main, check=True, capture_output=True)
+
+            git("init", "-q")
+            git("-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "--allow-empty", "-m", "init")
+            git("worktree", "add", "-q", str(linked))
+            memory = main / ".agent-loop" / "memory"
+            memory.mkdir(parents=True)
+            (memory / "INDEX.md").write_text("- shared fact\n", encoding="utf-8")
+            (linked / ".agent-loop" / "memory").mkdir(parents=True)
+            task = linked / ".agent-loop" / "task.md"
+            task.write_text("## Goal\ng\n", encoding="utf-8")
+
+            self.assertEqual(memory_dir(main), memory.resolve())
+            self.assertEqual(memory_dir(linked), memory.resolve())
+            response = handle(
+                HookRequest(
+                    event=HookEvent.TOOL_USED,
+                    workspace_roots=(linked,),
+                    tool_input={"path": str(task)},
+                )
+            )
+
+        self.assertIn("shared fact", response.message or "")
+        self.assertIn("不再被读取", response.message or "")
 
     def test_active_workspace_without_harness_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

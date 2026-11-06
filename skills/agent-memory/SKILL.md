@@ -36,6 +36,9 @@ procedural memory 就是 `skills/` 本身，不在这里重复索引。
 
 初始化：把 [templates/](templates/) 四个文件拷过去，删掉示例行。hook 按 cwd 解析这个路径，
 所以在哪个项目跑就读那个项目的记忆；本库自身不需要有（除非你也在长周期地开发它）。
+**一个仓库只有一份**：linked worktree（`git worktree add` 出来的）读写主工作树的 `.agent-loop/memory/`，
+hook 注入时写出它的路径；主工作树的 git 目录不叫 `.git`（bare 仓库、`--separate-git-dir`）时各工作树仍用自己的。
+多个工作树共用时，改前先重读、只做局部修改。
 旧 `.cursor/memory/` 只读兼容；下一次维护 memory 时把四个文件整体迁到 `.agent-loop/memory/`
 并删除旧目录，不能双写或分文件留在两处。
 

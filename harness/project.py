@@ -41,8 +41,18 @@ def review_checklist(root: Path) -> Path | None:
     return path if path.is_file() else None
 
 
+def _main_worktree(root: Path) -> Path:
+    # A linked worktree's .git file names its gitdir, whose commondir leads to the main worktree's .git.
+    try:
+        gitdir = (root / ".git").read_text(encoding="utf-8").strip().removeprefix("gitdir:").strip()
+        common = ((root / gitdir) / (root / gitdir / "commondir").read_text(encoding="utf-8").strip()).resolve()
+    except OSError:
+        return root
+    return common.parent if common.name == ".git" else root
+
+
 def memory_dir(root: Path) -> Path:
-    root = root.resolve()
+    root = _main_worktree(root.resolve())
     current = root / RUNTIME_DIR / "memory"
     legacy = root / LEGACY_RUNTIME_DIR / "memory"
     if current.exists() or not legacy.exists():

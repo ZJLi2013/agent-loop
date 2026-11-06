@@ -79,7 +79,11 @@ def _prompt(
     inputs.append(f"- 执行记录：`{HARNESS_DIR}/runs.jsonl`")
     index = memory_dir(root) / "INDEX.md"
     if index.exists():
-        inputs.append(f"- 项目记忆索引：`{_relative(root, index)}`")
+        try:
+            where = Path(os.path.relpath(index, root.resolve())).as_posix()
+        except ValueError:
+            where = index.as_posix()
+        inputs.append(f"- 项目记忆索引：`{where}`")
     checklist = review_checklist(root)
     if checklist is not None:
         inputs.append(f"- repo 检查表：`{_relative(root, checklist)}`")

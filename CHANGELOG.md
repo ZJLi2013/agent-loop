@@ -81,6 +81,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- Project memory is one per repository: a linked worktree reads and writes the main worktree's `.agent-loop/memory/`,
+  and the hook, the task reviewer prompt and `leftovers` all resolve it the same way. The hook names that path, and
+  warns when the worktree still has its own `memory/`, which is no longer read; merge what is still useful and delete
+  it. Repositories whose git directory is not named `.git` (bare, `--separate-git-dir`) keep one memory per worktree.
 - A recommendation or option set reaches the human only after the independent reviewer, in every mode. What the
   reviewer can decide (no `human: true` item, not irreversible, no change to the human's Goal or scope) is carried
   out without asking: at the plan Gate the worker answers the `must` items and writes `Plan Review: unreviewed`, so

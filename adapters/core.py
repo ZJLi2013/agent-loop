@@ -105,17 +105,26 @@ def memory_context(task_path: Path) -> str | None:
         or task_path.parent.name not in {RUNTIME_DIR, LEGACY_RUNTIME_DIR}
     ):
         return None
-    memory = memory_dir(task_path.parent.parent)
+    project = task_path.parent.parent.resolve()
+    memory = memory_dir(project)
+    shared = project not in memory.parents
+    where = f"`{memory}`（本仓库各工作树共用）" if shared else "`.agent-loop/memory/`"
+    stray = ""
+    if shared and (project / RUNTIME_DIR / "memory").is_dir():
+        stray = f"⚠️ 本工作树的 `.agent-loop/memory/` 不再被读取：把仍有用的条目合并进 `{memory}` 后删除它。"
     if not memory.is_dir():
-        return (
-            "## Memory\n\n本项目还没有 `.agent-loop/memory/`。"
+        missing = (
+            f"## Memory\n\n本项目还没有 {where}。"
             "**先按 `agent-memory` 建起来再往下做**"
             "——没有它，「这件事是不是已经做过」无从判断。"
         )
+        return "\n\n".join(part for part in (missing, stray) if part)
 
     index = _read(memory / "INDEX.md").strip()
-    parts = ["## Memory（由 hook 注入，非可选）"]
+    parts = [f"## Memory（{where}，由 hook 注入，非可选）" if shared else "## Memory（由 hook 注入，非可选）"]
     parts.append(index if index else "⚠️ `INDEX.md` 缺失或为空——索引坏了，不代表没有记忆。")
+    if stray:
+        parts.append(stray)
 
     line_count = len([line for line in index.splitlines() if line.strip()])
     if line_count > INDEX_MAX_LINES:

@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from harness.errors import HarnessError
-from harness.project import RUNTIME_DIR, runtime_dir, task_file
+from harness.project import RUNTIME_DIR, memory_dir, runtime_dir, task_file
 from harness.storage import STATE_FILE, harness_dir, load_runtime
 
 ARCHIVE_DIR = "archive"
@@ -510,7 +510,7 @@ def leftovers(root: Path) -> list[dict[str, str]]:
         [
             task_text,
             _newest_handoff(_read(base / PROGRESS_FILE)),
-            *(_read(path) for path in sorted((base / "memory").glob("*.md"))),
+            *(_read(path) for path in sorted(memory_dir(root).glob("*.md"))),
             *(_read(path) for path in sorted(base.glob("*.json"))),
             *(_read(path) for path in sorted(live_plans)),
         ]
