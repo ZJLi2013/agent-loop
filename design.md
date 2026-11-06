@@ -381,7 +381,6 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | task 临时文件 | `.harness/tasks/<task_id>/`（task 关闭时删除） |
 | 运行环境事实、否决项与指向项目文档的指针 | `.agent-loop/memory/` |
 | 会话绑定的项目与已发的 followup | 系统 temp 的 `agent-loop-cursor-sessions/`、`agent-loop-followups/` |
-| 共享 memory 的注入记录 | `~/.agent-loop/shared-memory-arrivals.jsonl`（只追加，不参与判定，没有退役规则） |
 | 状态与转移是否合法 | `harness/protocol.py` |
 
 plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实的家：`init` 与 `plan-review` 把 `/.agent-loop/`、

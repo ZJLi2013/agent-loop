@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 HOOK_PATH = (
     Path(__file__).resolve().parents[1]
@@ -32,15 +30,13 @@ class MemoryHookTest(unittest.TestCase):
             task.write_text("## Goal\ncodec boundary\n", encoding="utf-8")
             (memory / "INDEX.md").write_text("- codec decision\n", encoding="utf-8")
 
-            env = {k: v for k, v in os.environ.items() if k != "AGENT_LOOP_SHARED_MEMORY"}
-            with mock.patch.dict(os.environ, env, clear=True):
-                context = HOOK.context_for(
-                    {
-                        "workspace_roots": [directory],
-                        "tool_name": "Read",
-                        "tool_input": {"path": str(task)},
-                    }
-                )
+            context = HOOK.context_for(
+                {
+                    "workspace_roots": [directory],
+                    "tool_name": "Read",
+                    "tool_input": {"path": str(task)},
+                }
+            )
 
         self.assertIn("codec decision", context or "")
 
