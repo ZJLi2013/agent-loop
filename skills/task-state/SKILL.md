@@ -13,7 +13,7 @@ description: >-
 
 ## `task.md` 是任务状态的唯一真相源
 
-一个项目一份，放在 **`.agent-loop/task.md`**——和 `.agent-loop/memory/`、`.agent-loop/progress.md` 同一个
+一个项目一份，放在 **`.agent-loop/task.md`**——和 `.agent-loop/progress.md` 同一个
 home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执行状态；closed history 放
 `.agent-loop/archive/tasks.md`，并从活跃文件链接过去。archive 是历史，不是第二份 backlog。
 
@@ -90,7 +90,7 @@ Mainline Review: approved
 （原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下问人。**
 
 **具体的值不写进 `task.md`。** 远端节点、容器名、checkpoint 路径这类跨会话还要用的常量，
-归 `agent-memory` 的 `.agent-loop/memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
+归 `agent-memory` 的 `memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
 
 ## 验收检查点：必须同时写 pass 和 fail
 
@@ -128,7 +128,7 @@ Mainline Review: approved
 
 | 文件 | 内容 | 写法 | 归属 |
 |---|---|---|---|
-| `.agent-loop/memory/facts.md` | 现在该用哪个节点 / 容器 / 路径 | **覆盖**，只有当前值 | `agent-memory` |
+| `memory/facts.md` | 现在该用哪个节点 / 容器 / 路径 | **覆盖**，只有当前值 | `agent-memory` |
 | `task.md` | 做到哪了、哪条被挡住 | 改状态列 | 本 skill |
 | `.agent-loop/progress.md` | 当前唯一接手点、下一步第一条命令 | **覆盖** | 本 skill |
 | `.agent-loop/archive/progress-YYYY-MM.md` | 已失效的接手点 | **追加**，仅按需读取 | 本 skill |
@@ -159,7 +159,7 @@ Human 纠偏的 pause → revision → RECONCILE → resume 事务归 `work-plan
 
 ## 新 session 开工
 
-读 `task.md` → 读 `.agent-loop/memory/facts.md` 并**验证接下来要用到的那几条**（见 `agent-memory`）
+读 `task.md` → 读 `memory/facts.md` 并**验证接下来要用到的那几条**（见 `agent-memory`）
 → `git status` 与近期 `git log` → 交接笔记的「下一步第一条命令」→ 跑一次 runbook 里最小的 smoke。
 
 **五步都做完再动手改代码。** 跳过验证与 smoke 是「环境早就坏了但前两小时都在改逻辑」的

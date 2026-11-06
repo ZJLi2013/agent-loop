@@ -42,7 +42,7 @@ class AdapterCoreTest(unittest.TestCase):
         self.assertEqual(response.action, HookAction.CONTEXT)
         self.assertIn("canonical events", response.message or "")
 
-    def test_linked_worktree_reads_the_main_worktree_memory(self) -> None:
+    def test_every_worktree_of_a_clone_reads_one_memory_in_the_git_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             main = Path(directory) / "main"
             linked = Path(directory) / "linked"
@@ -51,28 +51,34 @@ class AdapterCoreTest(unittest.TestCase):
             def git(*args: str) -> None:
                 subprocess.run(["git", *args], cwd=main, check=True, capture_output=True)
 
+            def read_task(root: Path) -> str:
+                task = root / ".agent-loop" / "task.md"
+                task.parent.mkdir(parents=True, exist_ok=True)
+                task.write_text("## Goal\ng\n", encoding="utf-8")
+                response = handle(
+                    HookRequest(event=HookEvent.TOOL_USED, workspace_roots=(root,), tool_input={"path": str(task)})
+                )
+                return response.message or ""
+
             git("init", "-q")
             git("-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "--allow-empty", "-m", "init")
             git("worktree", "add", "-q", str(linked))
-            memory = main / ".agent-loop" / "memory"
+            memory = (main / ".git" / "agent-loop" / "memory").resolve()
             memory.mkdir(parents=True)
             (memory / "INDEX.md").write_text("- shared fact\n", encoding="utf-8")
             (linked / ".agent-loop" / "memory").mkdir(parents=True)
-            task = linked / ".agent-loop" / "task.md"
-            task.write_text("## Goal\ng\n", encoding="utf-8")
 
-            self.assertEqual(memory_dir(main), memory.resolve())
-            self.assertEqual(memory_dir(linked), memory.resolve())
-            response = handle(
-                HookRequest(
-                    event=HookEvent.TOOL_USED,
-                    workspace_roots=(linked,),
-                    tool_input={"path": str(task)},
-                )
-            )
+            self.assertEqual(memory_dir(main), memory)
+            self.assertEqual(memory_dir(linked), memory)
+            message = read_task(linked)
+            self.assertIn("shared fact", message)
+            self.assertIn(str(memory), message)
+            self.assertIn("不再被读取", message)
 
-        self.assertIn("shared fact", response.message or "")
-        self.assertIn("不再被读取", response.message or "")
+            broken = Path(directory) / "broken"
+            broken.mkdir()
+            (broken / ".git").write_text("gitdir: missing/worktree\n", encoding="utf-8")
+            self.assertIn("找不到本项目的 memory", read_task(broken))
 
     def test_active_workspace_without_harness_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

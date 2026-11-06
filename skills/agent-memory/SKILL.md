@@ -1,7 +1,7 @@
 ---
 name: agent-memory
 description: >-
-  项目记忆：`.agent-loop/memory/` 下 INDEX / facts / episodes / lessons 四个文件，
+  项目记忆：每个 git clone 一份（`.git/agent-loop/memory/`）的 INDEX / facts / episodes / lessons 四个文件，
   索引常驻、内容定向读取，写入挂在每个有意义的转换上。hook 在读 task.md 时强制注入索引。
   Use when setting up project memory, recording an outcome or a disproved hypothesis,
   looking up whether something was already tried, or when a remembered value turns out stale.
@@ -21,26 +21,22 @@ procedural memory 就是 `skills/` 本身，不在这里重复索引。
 
 ## 四个文件
 
-**记忆属于被开发的那个项目，不属于本库。** agent 的持久状态统一在 `.agent-loop/` 下：
+**记忆属于被开发的那个项目，不属于本库。** 一个 git clone 只有一份，放在工作树之外的 git 目录里，
+这个 clone 的所有工作树（`git worktree add` 出来的也算）共用；不是 git 仓库的项目放在 `.agent-loop/memory/`：
 
 ```text
-<项目>/.agent-loop/
-  task.md        # 任务状态（归 task-state）
-  progress.md    # 交接笔记（归 task-state）
-  memory/
-    INDEX.md     # 「有什么」的目录，带 anchor。上限 30 行，常驻
-    facts.md     # 当前为真的具体值。覆盖，~10 行
-    episodes.md  # 跑过什么、被推翻了什么、排除了什么。追加
-    lessons.md   # 下次该怎么做。追加，上限 15 条
+<项目>/.git/agent-loop/memory/   # linked worktree 也解析到这里；不是 git 仓库时为 <项目>/.agent-loop/memory/
+  INDEX.md     # 「有什么」的目录，带 anchor。上限 30 行，常驻
+  facts.md     # 当前为真的具体值。覆盖，~10 行
+  episodes.md  # 跑过什么、被推翻了什么、排除了什么。追加
+  lessons.md   # 下次该怎么做。追加，上限 15 条
 ```
 
-初始化：把 [templates/](templates/) 四个文件拷过去，删掉示例行。hook 按 cwd 解析这个路径，
-所以在哪个项目跑就读那个项目的记忆；本库自身不需要有（除非你也在长周期地开发它）。
-**一个仓库只有一份**：linked worktree（`git worktree add` 出来的）读写主工作树的 `.agent-loop/memory/`，
-hook 注入时写出它的路径；主工作树的 git 目录不叫 `.git`（bare 仓库、`--separate-git-dir`）时各工作树仍用自己的。
-多个工作树共用时，改前先重读、只做局部修改。
-旧 `.cursor/memory/` 只读兼容；下一次维护 memory 时把四个文件整体迁到 `.agent-loop/memory/`
-并删除旧目录，不能双写或分文件留在两处。
+初始化：把 [templates/](templates/) 四个文件拷过去，删掉示例行。hook 按 cwd 解析这个路径，注入时写出它；
+在哪个项目跑就读那个项目的记忆；本库自身不需要有（除非你也在长周期地开发它）。
+共用同一份的工作树可能属于不同分支或工作项：只对其中一个成立的事实写明范围，改前先重读、只做局部修改。
+工作树里的 `.agent-loop/memory/` 与旧 `.cursor/memory/` 在 git 项目里不再被读，hook 会告警：把仍有用的条目合并进
+上面那份后删除，不能双写或分文件留在两处。
 
 **`INDEX.md` 是这里最要紧的一个文件。** 它不放内容，只放「有什么 + 在哪」——
 没法让 agent 去搜一个它不知道存在的东西，但可以永远把目录摆在它眼前。

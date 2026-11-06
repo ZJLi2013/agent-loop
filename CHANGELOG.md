@@ -81,10 +81,13 @@ invoke on-demand skills.
 
 ### Changed
 
-- Project memory is one per repository: a linked worktree reads and writes the main worktree's `.agent-loop/memory/`,
-  and the hook, the task reviewer prompt and `leftovers` all resolve it the same way. The hook names that path, and
-  warns when the worktree still has its own `memory/`, which is no longer read; merge what is still useful and delete
-  it. Repositories whose git directory is not named `.git` (bare, `--separate-git-dir`) keep one memory per worktree.
+- Project memory is one per git clone, in the git directory outside every worktree: `<git-common-dir>/agent-loop/memory/`
+  (`.git/agent-loop/memory/` in a plain clone). All worktrees of the clone, linked ones included, read and write it,
+  and the hook, the task reviewer prompt and `leftovers` resolve it the same way. Projects outside git keep
+  `.agent-loop/memory/`. **Migration:** in a git project, move `.agent-loop/memory/` (or `.cursor/memory/`) to
+  `.git/agent-loop/memory/`; when several worktrees have their own copy, merge them. Until then the hook names the
+  new path and warns that the old copy is no longer read. A `.git` file whose git directory cannot be read is reported
+  instead of silently falling back to a per-worktree memory.
 - A recommendation or option set reaches the human only after the independent reviewer, in every mode. What the
   reviewer can decide (no `human: true` item, not irreversible, no change to the human's Goal or scope) is carried
   out without asking: at the plan Gate the worker answers the `must` items and writes `Plan Review: unreviewed`, so
