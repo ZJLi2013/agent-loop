@@ -6,7 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 
+from harness.errors import HarnessError
 from harness.project import RUNTIME_DIR, runtime_dir, task_file
+from harness.storage import STATE_FILE, harness_dir, load_runtime
 
 ARCHIVE_DIR = "archive"
 TASK_ARCHIVE = "tasks.md"
@@ -467,6 +469,15 @@ def leftovers(root: Path) -> list[dict[str, str]]:
     base = runtime_dir(root)
     if base.name != RUNTIME_DIR or not base.is_dir():
         return []
+    locked: set[Path] = set()
+    if (harness_dir(root) / STATE_FILE).exists():
+        try:
+            config, state = load_runtime(root)
+        except HarnessError:
+            # Which verifier is locked is unknown; a deleted locked verifier turns the evidence stale.
+            return []
+        if state.get("active"):
+            locked = {(root / name).resolve() for name in config["verifier"].get("files") or {}}
     tasks = task_file(root)
     task_text = _read(tasks)
     closed = {i.lower() for i in archived_task_ids(root)} - {i.lower() for i in open_task_ids(root)}
@@ -517,6 +528,7 @@ def leftovers(root: Path) -> list[dict[str, str]]:
         resolved = path.resolve()
         if (
             resolved in plan_docs
+            or resolved in locked
             or path.stem.endswith("-archive")
             or {"sub-exp", ARCHIVE_DIR} & set(relative.parts[:-1])
         ):
