@@ -6,6 +6,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Codex reviewer entry point: `.agent-loop/reviewer.json` can be `{"argv": ["python", "-m", "adapters.codex_review"]}`
+  in every project, with no paths. It runs `codex exec` from the project root (through WSL on Windows) with the
+  generated prompt on stdin and extra arguments from `AGENT_LOOP_CODEX_ARGS`; `--prompt` / `--out` run a free-form
+  prompt read-only. See the usage guide's reviewer section.
+
 - Skill packs: any directory with a `pack.toml` can be listed in a machine-local `~/.agent-loop/packs.txt` together
   with the repository checkouts it refers to and the active profiles. `scripts/install-skills.py`, called by both
   `sync-to-cursor.ps1` and `sync-to-dsh.ps1`, links agent-loop's skills and the selected pack skills (Cursor:
