@@ -45,5 +45,29 @@ class CursorSessionScopeTest(unittest.TestCase):
 
         self.assertEqual(bound, (first.resolve(), second.resolve()))
 
+    def test_a_directory_nested_in_a_project_joins_only_as_its_own_repository(self) -> None:
+        for git, joins in ((None, False), ("dir", True), ("file", True)):
+            with self.subTest(git=git), tempfile.TemporaryDirectory() as directory:
+                project = Path(directory) / "project"
+                self._task(project)
+                nested = project / "tests" / "fixtures" / "x"
+                nested_task = self._task(nested)
+                if git == "dir":
+                    (nested / ".git").mkdir()
+                elif git == "file":
+                    (nested / ".git").write_text("gitdir: ../.git/worktrees/x\n", encoding="utf-8")
+                cache = Path(directory) / "cache"
+                with patch.object(session_scope, "_SCOPES", cache):
+                    session_scope.bind(self._payload("one", project, nested_task))
+                    bound = session_scope.roots(self._payload("one", project))
+                    self.assertEqual(bound, (nested.resolve(),) if joins else ())
+                    # A scope file written before the nested check stops binding the fixture too.
+                    cache.mkdir(exist_ok=True)
+                    session_scope._scope_file(self._payload("one", project)).write_text(
+                        f"{nested.resolve()}\n", encoding="utf-8"
+                    )
+                    bound = session_scope.roots(self._payload("one", project))
+                    self.assertEqual(bound, (nested.resolve(),) if joins else ())
+
 if __name__ == "__main__":
     unittest.main()

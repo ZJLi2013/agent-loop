@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from adapters.core import workspace_roots
-from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR
+from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, task_file
 
 _SCOPES = Path(tempfile.gettempdir()) / "agent-loop-cursor-sessions"
 
@@ -49,6 +49,15 @@ def _inside(root: Path, workspaces: tuple[Path, ...]) -> bool:
     )
 
 
+def _nested(root: Path, workspaces: tuple[Path, ...]) -> bool:
+    # Test fixtures and examples inside a project are its data; a nested repository is a project of its own.
+    if (root / ".git").exists():
+        return False
+    return any(
+        task_file(parent).is_file() for parent in root.parents if _inside(parent, workspaces)
+    )
+
+
 def _scope_lines(scope: Path) -> list[str]:
     try:
         text = scope.read_text(encoding="utf-8")
@@ -77,7 +86,7 @@ def bind(payload: dict[str, object]) -> Path | None:
         ),
         None,
     )
-    if root is None:
+    if root is None or _nested(root, workspaces):
         return None
 
     lines = _scope_lines(scope)
@@ -99,6 +108,6 @@ def roots(payload: dict[str, object]) -> tuple[Path, ...]:
     found: list[Path] = []
     for line in _scope_lines(scope):
         root = Path(line).resolve()
-        if _inside(root, workspaces) and root not in found:
+        if _inside(root, workspaces) and not _nested(root, workspaces) and root not in found:
             found.append(root)
     return tuple(found)

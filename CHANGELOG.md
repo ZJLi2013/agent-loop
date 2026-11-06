@@ -286,6 +286,11 @@ invoke on-demand skills.
   reviewer, deleting a reported verifier after `clean-task` made the completion gate call the evidence stale; the
   file is now claimed only after `disable` or the next `init`. When `.harness/` cannot be read, `leftovers` is empty.
 
+- A Cursor session no longer binds a `task.md` that sits inside another project, such as a test fixture (#160).
+  Reading it made the stop hook demand Harness state for the fixture. A directory nested in a workspace project joins
+  the session only when it has its own `.git` (directory or worktree / submodule file); session scope files that
+  already list such a fixture stop returning it.
+
 - A locked verifier now locks the files it runs, not only its command line (#148). `init` records the SHA-256 of
   every `argv` element that is a file inside the workspace, including gitignored paths such as
   `.agent-loop/plans/<topic>/verify_<task>.py` and `.harness/tasks/<id>/`. Until the task reviewer's decision lands,
