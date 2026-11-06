@@ -250,15 +250,20 @@ evidence stale 直接要求重新验证；默认不按动作数或时间暂停�
 ```
 
 两个占位符都要换成真实的 argv 数组，上面这条不能直接运行。命令必须非交互运行、读取生成的 prompt，并写出它要求的
-报告 / 决策。Windows worker 使用 WSL 里已有 reviewer CLI 的配置示例：
+报告 / 决策。用 Codex CLI 时，每个项目放同一份配置，不含路径：
 
 ```json
 {
-  "argv": ["wsl.exe", "--", "bash", "-lc",
-    "codex exec -s workspace-write 'Read .harness/review/prompt.md and follow it exactly.'"],
+  "argv": ["python", "-m", "adapters.codex_review"],
   "timeout_seconds": 1800
 }
 ```
+
+`adapters.codex_review` 随 `pip install -e .` 安装，以项目根为 cwd 把 `.harness/review/prompt.md` 经 stdin 交给
+`codex exec -s workspace-write`；Windows 上经 `wsl.exe` 在 WSL 里跑。模型、provider 等参数写在环境变量
+`AGENT_LOOP_CODEX_ARGS` 里，按 shell 语法拆分（例：`-m <model> -c 'model_reasoning_effort="high"'`），设在运行 Harness
+的那一侧。plan 之外的自由格式评审用同一入口：`python -m adapters.codex_review --prompt <prompt.md> --out <reply.md>`
+以只读沙箱运行，最终回复写进 `--out`。
 
 dsh 也可以做 reviewer 宿主，并用与 worker 不同的模型。headless 应用在参数为 `-` 时从 stdin 读任务；reviewer 模型放在
 单独的 overlay 里，worker 的 profile 不用动：
