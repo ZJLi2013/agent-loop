@@ -379,7 +379,7 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | runtime phase、budget、当前 run | `.harness/state.json` |
 | 原始执行证据 | `.harness/runs.jsonl` + `artifacts/`（有界） |
 | task 临时文件 | `.harness/tasks/<task_id>/`（task 关闭时删除） |
-| 运行环境事实、否决项与指向项目文档的指针 | `.agent-loop/memory/` |
+| 运行环境事实、否决项与指向项目文档的指针 | git 目录下的 `agent-loop/memory/`，同一 clone 的工作树共用；不是 git 仓库时为 `.agent-loop/memory/` |
 | 会话绑定的项目与已发的 followup | 系统 temp 的 `agent-loop-cursor-sessions/`、`agent-loop-followups/` |
 | 状态与转移是否合法 | `harness/protocol.py` |
 

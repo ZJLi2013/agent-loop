@@ -7,7 +7,7 @@ from typing import Any
 
 from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
 from harness.core import HarnessError, completion_gate, owned_by_other
-from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file
+from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file, worktree_memory
 from harness.protocol import Phase
 from harness.storage import STATE_FILE, harness_dir, read_json
 
@@ -105,17 +105,28 @@ def memory_context(task_path: Path) -> str | None:
         or task_path.parent.name not in {RUNTIME_DIR, LEGACY_RUNTIME_DIR}
     ):
         return None
-    memory = memory_dir(task_path.parent.parent)
+    project = task_path.parent.parent
+    try:
+        memory = memory_dir(project)
+    except HarnessError as error:
+        return f"## Memory\n\n⚠️ 找不到本项目的 memory：{error}"
+    local = worktree_memory(project)
+    stray = ""
+    if local != memory and local.is_dir():
+        stray = f"⚠️ `{local}` 不再被读取：把仍有用的条目合并进 `{memory}` 后删除它。"
     if not memory.is_dir():
-        return (
-            "## Memory\n\n本项目还没有 `.agent-loop/memory/`。"
+        missing = (
+            f"## Memory\n\n本项目还没有 `{memory}`。"
             "**先按 `agent-memory` 建起来再往下做**"
             "——没有它，「这件事是不是已经做过」无从判断。"
         )
+        return "\n\n".join(part for part in (missing, stray) if part)
 
     index = _read(memory / "INDEX.md").strip()
-    parts = ["## Memory（由 hook 注入，非可选）"]
+    parts = [f"## Memory（`{memory}`，由 hook 注入，非可选）"]
     parts.append(index if index else "⚠️ `INDEX.md` 缺失或为空——索引坏了，不代表没有记忆。")
+    if stray:
+        parts.append(stray)
 
     line_count = len([line for line in index.splitlines() if line.strip()])
     if line_count > INDEX_MAX_LINES:

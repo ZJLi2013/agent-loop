@@ -328,7 +328,8 @@ agent-loop-harness goal-review --decision continue --evidence "The failed test i
 ## Memory 与长任务观察
 
 把 agent-loop 仓库 `skills/agent-memory/templates/` 下的四个 Markdown 模板复制到
-`<working-project>/.agent-loop/memory/`。每个项目拥有自己的 facts、episodes、lessons 与有上限的索引。Cursor 适配器在读取
+`<working-project>/.git/agent-loop/memory/`（不是 git 仓库时为 `.agent-loop/memory/`）；同一 clone 的所有工作树共用这一份，
+hook 注入时写出它的路径。每个项目拥有自己的 facts、episodes、lessons 与有上限的索引。Cursor 适配器在读取
 active task 时注入检索上下文，dsh 适配器在会话开始时注入。设计理由见 [Memory](study/memory/memory.md)，各策略的 owner 见
 [Policies](../skills/README.md)。
 
