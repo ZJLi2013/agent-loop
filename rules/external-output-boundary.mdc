@@ -1,6 +1,6 @@
 ---
-description: 跨出仓库边界的产出（他人仓库 PR / Issue、对外博客、公众号）三道检查：AI 披露、GPU 型号脱敏、去私料
-alwaysApply: true
+description: 要在他人仓库发 PR / Issue / 评论，或写对外博客、公众号之前读：AI 披露、GPU 型号脱敏、去私料三道检查
+alwaysApply: false
 ---
 
 # 对外产出的边界检查
