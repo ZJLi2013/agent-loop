@@ -31,6 +31,7 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 | 具体值、旧结论、否决项可能相关 | `agent-memory` |
 | detach 的远端任务，或单条命令预计超过 30 分钟 | `agent-heartbeat` |
 | Harness 命令报错或 guard 拒绝合法的一步、两条 agent-loop 规则指令相反、human 纠偏追到 agent-loop 措辞 | `self-report` |
+| 要在他人仓库发 PR / Issue / 评论，或写对外博客、公众号 | `external-output-boundary` rule |
 
 ## 硬不变量
 

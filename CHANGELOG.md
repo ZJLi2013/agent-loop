@@ -86,6 +86,10 @@ invoke on-demand skills.
 
 ### Changed
 
+- `external-output-boundary` loads on demand (`alwaysApply: false`): Cursor keeps only its description, which names
+  the moment it applies (a PR, issue or comment in someone else's repository, a public post), and the `agent-loop`
+  routing table points to it. **Migration:** dsh's generated `AGENTS.md` takes only always-apply rules, so it no
+  longer contains these checks; on dsh, run them by hand before publishing.
 - Project memory is one per git clone, in the git directory outside every worktree: `<git-common-dir>/agent-loop/memory/`
   (`.git/agent-loop/memory/` in a plain clone). All worktrees of the clone, linked ones included, read and write it,
   and the hook, the task reviewer prompt and `leftovers` resolve it the same way. Projects outside git keep
