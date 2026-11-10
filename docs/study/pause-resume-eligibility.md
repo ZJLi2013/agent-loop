@@ -1,11 +1,17 @@
 # 暂停与恢复共用一份 task 判定
 
-**推荐：`pause` 与 `resume` 调用 `harness/plan.py` 里同一个判定，适用条件跟 `init` 按计划核对 task 行一致：只在 Harness 绑定了
-计划时要求当前 task 在 `task.md` 中且未关闭。** 这样 `pause` 接受过的暂停，`resume` 在 task 状态未变时一定能清掉；
-`--require-revision` 不走这个判定。
+**`pause` 与 `resume` 调用 `harness/plan.py` 里同一个判定 `_task_eligibility_error`：只在 Harness 绑定了计划时要求当前 task 在
+`task.md` 中且未关闭。** 这样 `pause` 接受过的暂停，`resume` 在 task 状态未变时一定能清掉；`--require-revision` 不走这个判定。
+最终行为见 [纠偏与 Goal Review](../usage.md#纠偏与-goal-review)。
 
-#177 的首个修复（PR #183）在 `request_pause` 里加了第二份检查，条件与 `resume` 不同，留下两种 `pause` 拒绝而 `resume` 本可
-通过的情形，见 [纠偏与 Goal Review](../usage.md#纠偏与-goal-review)。本文给出对照依据与补充修正方案。
+PR #183 分两轮交付：
+
+- 首轮（head [`29f61af`](https://github.com/ZJLi2013/agent-loop/commit/29f61afa682cc765c6a69019600e97b4e62fce79)）只在
+  `request_pause` 里加了第二份检查，条件是「有计划或有 `task.md`」，与 `resume` 不同。已关闭但仍在表里的 task 会被 `pause`
+  拒绝而 `resume` 放行；有 `task.md`、没有计划、task 不在表里时 `pause` 被拒，而 #177 之前这种情形两条命令都成功。
+- 补充修正（head [`5a256af`](https://github.com/ZJLi2013/agent-loop/commit/5a256af72cb24e35c27a6482956f3c146532f107)，
+  修复提交 [`3d67028`](https://github.com/ZJLi2013/agent-loop/commit/3d67028bd4255415bbe2045b89a21786149bfcb2)）按下面的推荐把两份
+  合成一份，去掉了无计划项目的兼容变化。
 
 ## 两种公开实现
 
@@ -59,3 +65,6 @@
 - 修复后核对 `harness/plan.py` 里只有一处判定被两条命令调用，并把 [纠偏与 Goal Review](../usage.md#纠偏与-goal-review) 与
   CHANGELOG 改成最终行为。
 - 预算：human 2026-11-10 批准追加一次，主动工作最多 60 分钟；不通过则保留现场交 human，不再追加。
+- 结果（2026-11-10，一次通过）：提交前的本地门里，新测试在撤回修复的代码上失败、修复后通过；CI 在测试提交
+  [`5b726b5`](https://github.com/ZJLi2013/agent-loop/commit/5b726b5ec9e3d9b47d2a66a02963660a94f6e8e4) 上失败于新测试，
+  修复与撤测两个提交全绿。`resume` 在启动 reviewer 前与锁内重读后各调用一次同一判定，`plan.py` 里 `open_task_ids` 只在判定内出现一次。

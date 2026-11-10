@@ -87,6 +87,18 @@ def pause_request(root: Path) -> dict[str, Any] | None:
     return read_json(path)
 
 
+def _task_eligibility_error(root: Path, state: dict[str, Any]) -> str | None:
+    if (
+        state.get("plan_revision") is not None
+        and str(state["task_id"]) not in open_task_ids(root)
+    ):
+        return (
+            f"task {state['task_id']} is closed or missing from the task list; "
+            "init its successor task"
+        )
+    return None
+
+
 def request_pause(
     root: Path,
     *,
@@ -103,14 +115,9 @@ def request_pause(
     state = read_json(state_path)
     if not state.get("active"):
         raise HarnessError("harness is disabled")
-    if (
-        not require_revision
-        and (state.get("plan_revision") is not None or task_file(root).exists())
-        and str(state["task_id"]) not in open_task_ids(root)
-    ):
-        raise HarnessError(
-            f"cannot pause: task {state['task_id']} is closed or missing from the task list"
-        )
+    if not require_revision:
+        if error := _task_eligibility_error(root, state):
+            raise HarnessError(error)
     path = base / PAUSE_FILE
     existing = read_json(path) if path.exists() else {}
     if existing and kind == "goal_review":
@@ -168,6 +175,10 @@ def resume(root: Path) -> dict[str, Any]:
 
     root = root.resolve()
     config, state = load_runtime(root)
+    request = pause_request(root)
+    if not (request and request.get("require_revision")):
+        if reason := _task_eligibility_error(root, state):
+            raise HarnessError(reason)
     plan_doc = config.get("plan_doc")
     if config.get("reviewer") and plan_doc:
         revision, review = current_plan(root, config)
@@ -207,6 +218,9 @@ def resume(root: Path) -> dict[str, Any]:
         request = pause_request(root)
         if not request and state.get("phase") != "paused":
             raise HarnessError("runner is not paused")
+        if not (request and request.get("require_revision")):
+            if reason := _task_eligibility_error(root, state):
+                raise HarnessError(reason)
 
         revision, review = current_plan(root, config)
         if request and request.get("require_revision"):
