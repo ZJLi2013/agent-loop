@@ -19,6 +19,8 @@ from harness.records import (
     close_task,
     design_location_error,
     leftovers,
+    open_task_ids,
+    task_row,
 )
 from harness.storage import config_digest
 
@@ -100,6 +102,19 @@ class RecordLifecycleTest(unittest.TestCase):
             self.assertIn("| t1 |", archive)
             self.assertIn("| t2 |", archive)
             self.assertEqual(archived_task_ids(root), {"t1", "t2"})
+
+    def test_only_rows_led_by_a_priority_are_task_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / ".agent-loop"
+            runtime.mkdir()
+            (runtime / "task.md").write_text(
+                TASKS + "| step | t4 | r1 | other table | check | 🔬 doing | 0 |\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(open_task_ids(root), ["t3"])
+            self.assertIsNone(task_row(root, "t4"))
 
     def test_archiving_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

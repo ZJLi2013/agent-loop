@@ -104,6 +104,26 @@ class HarnessPauseTest(unittest.TestCase):
         self.assertEqual(state["plan_review"], "approved")
         self.assertIsNone(pause_request(self.root))
 
+    def test_pause_and_resume_refuse_a_closed_task(self) -> None:
+        self.write_plan(1, "approved")
+        self.write_task(1)
+        self.init()
+        request_pause(self.root, reason="human requested review")
+        task = self.root / ".agent-loop" / "task.md"
+        task.write_text(
+            task.read_text(encoding="utf-8").replace("🔬 doing", "✅ done"),
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(HarnessError, "init its successor"):
+            resume(self.root)
+        with self.assertRaisesRegex(HarnessError, "init its successor"):
+            request_pause(self.root, reason="another review")
+
+        request_pause(self.root, reason="human changed the goal", require_revision=True)
+        with self.assertRaisesRegex(HarnessError, "Revision to increase"):
+            resume(self.root)
+
     def test_pause_interrupts_a_running_process(self) -> None:
         self.write_plan(1, "approved")
         self.write_task(1)
