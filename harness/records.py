@@ -38,19 +38,19 @@ def _cells(line: str) -> list[str] | None:
 
 def _task_id(line: str) -> str | None:
     cells = _cells(line)
-    if not cells or len(cells) < 2 or cells[1].lower() == "id":
+    if not cells or len(cells) < 7 or cells[1].lower() == "id":
         return None
-    if all(set(cell) <= {"-", ":"} for cell in cells):
+    if not re.fullmatch(r"P\d+", cells[0]):
         return None
     return cells[1] or None
 
 
 def _closed(line: str) -> bool:
     cells = _cells(line)
-    # Mainline rows have five cells and stay in task.md after their Goal is done.
+    # Mainline rows stay in task.md after their Goal is done.
     return bool(
         cells
-        and len(cells) >= 6
+        and _task_id(line)
         and any(
             cell.startswith(marker)
             for cell in cells
@@ -77,10 +77,11 @@ def archived_task_ids(root: Path) -> set[str]:
     }
 
 
-def open_task_ids(root: Path) -> list[str]:
+def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
     path = task_file(root)
     if not path.exists():
         return []
+    plan = (root / plan_doc).resolve() if plan_doc else None
     return [
         task_id
         for line in path.read_text(encoding="utf-8").splitlines()
@@ -88,6 +89,10 @@ def open_task_ids(root: Path) -> list[str]:
         and (cells := _cells(line))
         and len(cells) >= 6
         and not _closed(line)
+        and (
+            plan is None
+            or any(target.is_relative_to(plan.parent) for target in _linked_files(line, path.parent))
+        )
     ]
 
 

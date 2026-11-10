@@ -301,6 +301,11 @@ harness 不捆绑这些工具。凭据与模型选择由该工具负责。review
 agent-loop-harness plan-review --plan-doc plan.md
 ```
 
+`plan-review` 只读取 task 表中链接到该计划或其目录内文件的未关闭 task，不为主线 Goal 行或表头写评审记录。
+其他计划的 task 若没有这样的链接，其记录冲突不阻塞本次评审。task reviewer 指定后继 task 时，Harness 会先检查
+该 id 的评审记录是否属于它；大小写冲突会使本次决策无效，并提示 reviewer 改名后重试，不会先保存无法开工的
+`continue`。已有评审记录保留。
+
 读报告，批准或修改计划，激活 task，再按上文初始化。plan reviewer 只给建议，不能批准计划；报告里没有
 `human: true` 项时 worker 不问你，回应 `must` 后写 `Plan Review: unreviewed` 开工。某个 revision 的每个 open task
 都已通过更早的 plan review 时，human 可以不再评审直接批准：`agent-loop-harness plan-review --plan-doc plan.md
