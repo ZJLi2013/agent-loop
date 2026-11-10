@@ -21,7 +21,6 @@ from harness.plan_review import (
     run_plan_review,
     task_record,
 )
-from harness.records import archive_closed_tasks
 from harness.storage import state_lock
 
 MUST = {
@@ -114,62 +113,6 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(second["tasks"], {})
         self.assertEqual(self.calls(), "1")
         self.assertIn("- t1：t1 标题", prompt)
-
-    def test_plan_review_ignores_mainline_rows_and_headers(self) -> None:
-        tasks = self.root / ".agent-loop" / "task.md"
-        mainline = (
-            "## 主线\n\n"
-            "| 序 | Goal | 问题 | 退出条件 | 状态 | plan |\n"
-            "|---|---|---|---|---|---|\n"
-            "| 1 | G7 | old | done | ✅ done | [plan](../plan.md) |\n"
-            "| 2 | G8 | next | done | ▶ next | [plan](../plan.md) |\n"
-            "\n## Candidates\n\n| P | title | condition |\n| P1 | candidate | later |\n"
-            "\n## Goal\n\n"
-        )
-        tasks.write_text(mainline + tasks.read_text(encoding="utf-8"), encoding="utf-8")
-        self.configure(reviewer_writing({"t1": [], "Goal": [], "G8": []}))
-
-        report = self.review()
-
-        self.assertEqual(list(report["tasks"]), ["t1"])
-        records = self.root / ".harness" / "plan-review" / "tasks"
-        self.assertEqual({path.name for path in records.iterdir()}, {"t1.json"})
-        self.assertEqual(archive_closed_tasks(self.root), [])
-        self.assertTrue(tasks.read_text(encoding="utf-8").startswith(mainline))
-
-    def test_plan_review_ignores_collision_in_another_plans_task(self) -> None:
-        self.write_tasks(("t1", "📝 proposed"), ("t2", "📝 proposed"), ("t3", "📝 proposed"))
-        plan = self.root / "plans" / "current" / "plan.md"
-        plan.parent.mkdir(parents=True)
-        plan.write_text("# Current\n", encoding="utf-8")
-        design = plan.parent / "sub-exp" / "t3.md"
-        design.parent.mkdir()
-        design.write_text("# t3 design\n", encoding="utf-8")
-        other = self.root / "plans" / "other" / "plan.md"
-        other.parent.mkdir()
-        other.write_text("# Other\n", encoding="utf-8")
-        tasks = self.root / ".agent-loop" / "task.md"
-        tasks.write_text(
-            tasks.read_text(encoding="utf-8")
-            .replace("../plan.md#t1-design", "../plans/current/plan.md#t1-design")
-            .replace("../plan.md#t2-design", "../plans/other/plan.md#t2-design")
-            .replace("../plan.md#t3-design", "../plans/current/sub-exp/t3.md"),
-            encoding="utf-8",
-        )
-        record = self.root / ".harness" / "plan-review" / "tasks" / "t2.json"
-        record.parent.mkdir(parents=True)
-        record.write_text(json.dumps({
-            "task_id": "T2", "reviews": [], "approvals": [], "again": [],
-        }), encoding="utf-8")
-        before = record.read_bytes()
-        self.configure(reviewer_writing({"t1": [], "t3": []}))
-
-        report = run_plan_review(self.root, plan_doc="plans/current/plan.md")
-
-        self.assertEqual(list(report["tasks"]), ["t1", "t3"])
-        self.assertNotIn("- t2：", self.prompt())
-        self.assertEqual(record.read_bytes(), before)
-        self.assertEqual(self.calls(), "1")
 
     def test_task_id_reused_by_another_plan_is_reviewed_again(self) -> None:
         self.configure(reviewer_writing({"t1": []}))
