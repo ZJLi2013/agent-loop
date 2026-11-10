@@ -200,9 +200,12 @@ sub-exp 的假设、判据与证据。一个知识点只能有一个 owner；其
 ```text
 Plan Revision / Plan Review
 Goal
+设计（策略、手写的产出样例、关键选择、不做什么、验收怎么判）
 当前结论
 脉络（一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision；不放读数与链接）
+---  以下是执行细节：human 在 Gate 只读上面几节
 系统 / Pipeline（确实存在才写）
+<task id> 标题段（task 设计）
 Experiment Log
 ```
 
@@ -246,7 +249,9 @@ Harness 不自动回收。占用标记的进程已不在时，exec / verify / ga
 
 ### Independent review boundaries
 
-plan review 的单位是 task：每个 task 只在第一次出现时审一次，一次调用审完所有未审的 task，设计之后再改也不重审；
+plan review 的单位是 task：每个 task 只在第一次出现时审一次，一次调用审完链接到本 plan（或其目录内已有文件）、
+未关闭且未审或需重审的 task，设计之后再改也不重审。task 行是 `task.md` 里至少 7 列、首列为 `P<n>` 的表格行，
+主线行、候选行与表头不是。
 human 可用 `plan-review --again` 要求重审。记录的身份与准入 guard 见[状态模型](#状态模型)的 task 实例。
 reviewer 与 executor 之间的协议：意见分 `must`（不改就方向错、结论错或白跑昂贵实验，须写后果与依据，否则按
 `suggest` 记）与 `suggest`（严谨性，executor 可跳过），各最多 3 条，超出的丢弃。`must` 必须由 executor 逐条回应
@@ -254,7 +259,8 @@ reviewer 与 executor 之间的协议：意见分 `must`（不改就方向错、
 task reviewer 写的 successor 与其他 task 一样，在 init 前经独立 plan review：未审时 `init` 先跑 plan review 再复查准入，
 仍有未回应的 `must` 或待 human `--approve` 的项即拒绝。plan 已 `approved` 时这条补审只给上一个 task reviewer
 指名的 task；其他未审 task 被拒绝，须改回 `proposed`、跑 plan review、经 human 批准再 `init`。
-代价是每个新 successor 多一次 plan reviewer 调用。记录只由 plan review 写入（`source="plan_review"` 与它的
+代价是每个新 successor 多一次 plan reviewer 调用。task reviewer 指名的 successor 若与别的 task 共用记录文件（大小写撞名），
+决策在落盘前作废，免得无人值守时绑到一个 `init` 会拒绝的 task。记录只由 plan review 写入（`source="plan_review"` 与它的
 `run_id`）；最后一条记录不是 plan review 写的 task 视为未审。
 Plan Revision 只承担 human 纠偏。
 
@@ -263,7 +269,8 @@ reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checkli
 plan / task / 设计文档直接链接的文件与设计列出的被测代码；缺了就报缺失，不自行搜索。
 
 两个 reviewer 都审被测内容本身，不只审格式与严谨性：交给被测方的题目、数据、样本或请求要有渲染样例，
-reviewer 看样例判断它是否在测 Goal 要测的东西；task reviewer 把实际产物与设计不一致归为 `ask_human`。
+reviewer 看样例判断它是否在测 Goal 要测的东西；实际产物与设计不一致时，修法明确的由 task reviewer 写修正 task 并选
+`continue`，修正还是换方向要 human 取舍时才选 `ask_human`。
 领域检查项不进 agent-loop，由各 repo 的可选 `.agent-loop/review-checklist.md` 承载，存在时列入两份 prompt。
 plan reviewer 另查新增持久状态或读写边界的 task 是否带模块契约、每条不变量是否配了测试，不审代码布局。
 
@@ -357,6 +364,7 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | `adapters/protocol.py` | 平台无关的 hook request / response |
 | `adapters/core.py` | 子项目发现、memory、Goal Review、completion gate 的事件处理 |
 | `adapters/followup.py` | 同一会话的重复 followup 去重 |
+| `adapters/codex_review.py` | Codex CLI reviewer 入口（Windows 经 WSL）：`reviewer.json` 不写路径，Codex 参数取 `AGENT_LOOP_CODEX_ARGS` |
 | `adapters/cursor/hooks/` | Cursor payload / output codec |
 | `adapters/dsh/hooks/` | dsh `hooks-codex` 桥接的 payload / output codec（`Stop`、`SessionStart`） |
 | `scripts/sync-to-cursor.ps1` | 安装 user-level adapter |
@@ -441,6 +449,7 @@ agent-loop/
 │   ├── protocol.py           # platform-neutral hook boundary
 │   ├── core.py               # shared hook actions
 │   ├── followup.py           # per-session followup dedupe
+│   ├── codex_review.py       # Codex CLI reviewer entry point
 │   ├── cursor/hooks/         # Cursor codec
 │   └── dsh/hooks/            # dsh (hooks-codex bridge) codec
 └── docs/study/               # 按 feature 分目录的调研与设计依据，不承担当前架构定义
