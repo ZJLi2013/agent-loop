@@ -545,6 +545,40 @@ class HumanSuccessorTest(unittest.TestCase):
         )
         return state
 
+    def assert_successor_record_is_rejected(self, filename: str) -> None:
+        tasks = self.root / ".agent-loop" / "task.md"
+        tasks.write_text(
+            "\n".join(tasks.read_text(encoding="utf-8").splitlines()[:3]) + "\n",
+            encoding="utf-8",
+        )
+        record = self.root / ".harness" / "plan-review" / "tasks" / filename
+        record.parent.mkdir(parents=True)
+        record.write_text(json.dumps({
+            "task_id": "T2", "reviews": [], "approvals": [], "again": [],
+        }), encoding="utf-8")
+        before = record.read_bytes()
+        with self.assertRaisesRegex(HarnessError, "rename the task"):
+            task_record(self.root, "t2")
+        self.init(plan_reviewer((CONTINUE, PLAN_WITH_T1, False)))
+
+        review = run_review(self.root)["review"]
+
+        self.assertIsNone(review["decision"])
+        self.assertIsNone(review["next_task"])
+        self.assertIn("rename the task", review["error"])
+        self.assertEqual(record.read_bytes(), before)
+        self.assertTrue((self.root / ".harness" / "tasks" / "t1").is_dir())
+        self.assertIn("| t1 |", tasks.read_text(encoding="utf-8"))
+        self.assertNotIn("review_running", load_runtime(self.root)[1])
+        self.assertIn("review", completion_gate(self.root) or "")
+
+    def test_continue_rejects_successor_record_owned_by_another_task(self) -> None:
+        self.assert_successor_record_is_rejected("t2.json")
+
+    @unittest.skipUnless(sys.platform == "win32", "requires a Windows case-insensitive file system")
+    def test_continue_rejects_case_colliding_successor(self) -> None:
+        self.assert_successor_record_is_rejected("T2.json")
+
     def test_unattended_release_follows_the_reviewer(self) -> None:
         cases = (
             ("stop", None, False),
