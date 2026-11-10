@@ -280,6 +280,30 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         _, state = load_runtime(self.root)
         self.assertEqual(state["review"]["attempts"], 2)
 
+    def test_successor_must_be_an_open_task(self) -> None:
+        self.init(reviewer_writing({"decision": "continue", "next_task": "t1", "why": "again"}))
+
+        review = run_review(self.root)["review"]
+
+        self.assertIsNone(review["decision"])
+        self.assertIn("must be an open task", review["error"])
+
+    def test_successor_sharing_another_tasks_record_is_refused(self) -> None:
+        self.init(reviewer_writing(
+            {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
+        ))
+        record = self.root / ".harness" / "plan-review" / "tasks" / "t2.json"
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text(
+            json.dumps({"task_id": "T2", "reviews": [], "approvals": [], "again": []}),
+            encoding="utf-8",
+        )
+
+        review = run_review(self.root)["review"]
+
+        self.assertIsNone(review["decision"])
+        self.assertIn("rename the task", review["error"])
+
     def test_non_blocking_findings_reach_the_worker(self) -> None:
         self.init(
             reviewer_decision_only(
