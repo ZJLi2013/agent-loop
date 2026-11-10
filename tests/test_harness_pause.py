@@ -19,6 +19,8 @@ from harness.core import (
     resume,
     run_command,
 )
+from harness.plan_review import run_plan_review
+from harness.records import archive_closed_tasks
 
 
 class HarnessPauseTest(unittest.TestCase):
@@ -102,6 +104,64 @@ class HarnessPauseTest(unittest.TestCase):
         self.assertEqual(state["phase"], "ready")
         self.assertEqual(state["plan_revision"], 2)
         self.assertEqual(state["plan_review"], "approved")
+        self.assertIsNone(pause_request(self.root))
+
+    def test_pause_rejects_closed_or_missing_task(self) -> None:
+        self.write_plan(1, "proposed")
+        self.write_task(1)
+        report = json.dumps({"summary": "ready", "tasks": {"t1": {"findings": []}}})
+        reviewer = {
+            "argv": [
+                sys.executable, "-S", "-c",
+                "from pathlib import Path; "
+                f"Path('.harness/plan-review/report.json').write_text({report!r})",
+            ],
+        }
+        (self.root / ".agent-loop" / "reviewer.json").write_text(
+            json.dumps(reviewer), encoding="utf-8"
+        )
+        run_plan_review(self.root, plan_doc="plan.md")
+        self.write_plan(1, "approved")
+        self.init()
+        run_command(
+            self.root, [sys.executable, "-S", "-c", "print('OK')"], kind="verify"
+        )
+        state_path = harness_dir(self.root) / "state.json"
+        before = state_path.read_bytes()
+        self.assertEqual(load_runtime(self.root)[1]["phase"], "verified")
+        task = self.root / ".agent-loop" / "task.md"
+        active = task.read_text(encoding="utf-8")
+
+        for status in ("✅ done", "❌ dropped", "archived", "missing", "no task file"):
+            with self.subTest(status=status):
+                if status == "no task file":
+                    task.unlink()
+                elif status == "missing":
+                    task.write_text(active.replace("t1", "t2"), encoding="utf-8")
+                else:
+                    closed = "✅ done" if status == "archived" else status
+                    task.write_text(active.replace("🔬 doing", closed), encoding="utf-8")
+                    if status == "archived":
+                        self.assertEqual(archive_closed_tasks(self.root), ["t1"])
+                with self.assertRaisesRegex(HarnessError, "task t1.*closed or missing"):
+                    request_pause(self.root, reason="wait for PR merge")
+                self.assertIsNone(pause_request(self.root))
+                self.assertEqual(state_path.read_bytes(), before)
+
+        task.write_text(active, encoding="utf-8")
+        request_pause(self.root, reason="review open task")
+        self.assertEqual(resume(self.root)["phase"], "ready")
+        self.assertIsNone(pause_request(self.root))
+
+    def test_pause_resume_without_plan_or_task_list(self) -> None:
+        initialize(
+            self.root,
+            task_id="t1",
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
+        )
+        request_pause(self.root, reason="human requested review")
+        self.assertIsNotNone(pause_request(self.root))
+        self.assertEqual(resume(self.root)["phase"], "ready")
         self.assertIsNone(pause_request(self.root))
 
     def test_pause_interrupts_a_running_process(self) -> None:
