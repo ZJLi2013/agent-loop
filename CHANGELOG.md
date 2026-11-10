@@ -297,6 +297,8 @@ invoke on-demand skills.
   (#174), so a case collision cannot bind unattended execution to a task that `init` refuses. Plan review selects
   task rows linked to the plan or files in its directory before reading their records; mainline rows and headers
   are not tasks, and an unrelated task's colliding record no longer blocks the review. Existing records are kept.
+  A task row now needs at least seven cells and a `P<n>` first cell; a six-cell table without the `rev` column is
+  no longer read. See [the task table format](docs/usage.md#创建并评审计划) for the rule and a migration example.
 
 - `leftovers` no longer lists the verifier files an active Harness has locked (#164). In a project without a
   reviewer, deleting a reported verifier after `clean-task` made the completion gate call the evidence stale; the
