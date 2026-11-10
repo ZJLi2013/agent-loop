@@ -37,7 +37,7 @@
 - kubectl 把类型集合在两处各写一遍：这正是 #183 的形态，不照搬。
 - 让 `pause` 跟 `resume` 一样只在配置了 reviewer 时检查：没有 reviewer 但绑定了计划的项目，`init` 已要求 task 行，暂停也该要求。
 
-## 补充修正怎么做与验收
+## 验收：在 #183 之后追加测试、修复、撤测三个提交
 
 - 在 #183 保留的 auto-fix worktree（分支 `auto-fix/177`）里交给 Codex 一次，输入是本文的推荐与 issue；不重跑
   `.github/auto-fix/run.ps1`，不改 `.github/auto-fix/`，不手写代码。
