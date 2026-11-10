@@ -222,6 +222,22 @@ Plan Review: proposed
 创建 `.agent-loop/task.md`，把当前提议的 task 绑定到 `r1`。[示例 task](../examples/minimal-project/task.md) 展示了表格格式，
 但它为了预批准演示从 `doing` 开始；新项目的 task 应从 `📝 proposed` 开始。
 
+Harness 只把同时满足两条的表格行读作 task：至少 7 列，第一列是 `P` 加数字（`P0`、`P1`…）。主线表、候选表、表头和分隔行
+都不满足，所以不会被当成 task；不满足的 task 行同样读不到：plan review 不审它，`init --task` 找不到它。
+没有 `rev` 列的 6 列旧表要迁移，在 id 后补上绑定 plan 的那一列：
+
+```markdown
+| P | id | task | 验收检查点 | 状态 | 失败 |
+| P1 | t3 | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
+```
+
+改为
+
+```markdown
+| P | id | rev | task | 验收检查点 | 状态 | 失败 |
+| P1 | t3 | r1 | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
+```
+
 评审计划，然后把它设为 `Plan Review: approved`，并把一个 task 激活为 `🔬 doing`。配置了 reviewer 时，先按下文取得它的
 plan review 建议。
 
@@ -300,6 +316,11 @@ harness 不捆绑这些工具。凭据与模型选择由该工具负责。review
 ```sh
 agent-loop-harness plan-review --plan-doc plan.md
 ```
+
+`plan-review` 只读取 task 表中链接到该计划或其目录内文件的未关闭 task，不为主线 Goal 行或表头写评审记录。
+其他计划的 task 若没有这样的链接，其记录冲突不阻塞本次评审。task reviewer 指定后继 task 时，Harness 会先检查
+该 id 的评审记录是否属于它；大小写冲突会使本次决策无效，并提示 reviewer 改名后重试，不会先保存无法开工的
+`continue`。已有评审记录保留。
 
 读报告，批准或修改计划，激活 task，再按上文初始化。plan reviewer 只给建议，不能批准计划；报告里没有
 `human: true` 项时 worker 不问你，回应 `must` 后写 `Plan Review: unreviewed` 开工。某个 revision 的每个 open task

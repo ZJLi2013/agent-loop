@@ -293,6 +293,13 @@ invoke on-demand skills.
 
 ### Fixed
 
+- Task review rejects a successor whose plan-review record belongs to another task id before saving the decision
+  (#174), so a case collision cannot bind unattended execution to a task that `init` refuses. Plan review selects
+  task rows linked to the plan or files in its directory before reading their records; mainline rows and headers
+  are not tasks, and an unrelated task's colliding record no longer blocks the review. Existing records are kept.
+  A task row now needs at least seven cells and a `P<n>` first cell; a six-cell table without the `rev` column is
+  no longer read. See [the task table format](docs/usage.md#创建并评审计划) for the rule and a migration example.
+
 - Ordinary `pause` and `resume` share one task eligibility check when the current state is bound to a plan (#177).
   Done, dropped, archived or missing tasks are refused with the same reason and an instruction to `init` the successor,
   with or without a reviewer. Refusal preserves state and any existing pause request, including requests from older
