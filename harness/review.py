@@ -252,6 +252,13 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             if not status or any(marker in status for marker in CLOSED_MARKERS):
                 decision = None
                 error = f"next task {next_task} must be an open task in the task list"
+            else:
+                from harness.plan_review import task_record
+
+                try:
+                    task_record(root, next_task)
+                except HarnessError as exc:
+                    decision, error = None, str(exc)
         if (
             decision
             and decision["decision"] == "revise"

@@ -210,7 +210,7 @@ def run_plan_review(
     with state_lock(root):
         pending = [
             task_id
-            for task_id in open_task_ids(root)
+            for task_id in open_task_ids(root, plan_doc=relative)
             if review_status(root, task_id, relative) in {"not_reviewed", "needs_review"}
         ]
         if not pending:
