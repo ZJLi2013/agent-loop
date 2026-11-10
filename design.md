@@ -61,12 +61,24 @@ agent-loop 只维护三类公开保证：
 
 | 维度 | 身份 | 取值 | 谁能改 | 存在哪 | 契约测试 |
 |---|---|---|---|---|---|
-| task 实例 | task id 按原字符串匹配，大小写不同却共享同一记录文件时拒绝；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
+| task 实例 | [task 行](#task-row)第二格的 task id，按原字符串匹配；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
 | 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `files`（`argv` 指向的工作区内文件的 SHA-256，含被 gitignore 的路径）/ `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py`、`tests/test_review.py` |
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；按 reviewer 开工只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
 | 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
-| 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定（workspace 内嵌套在另一项目下、自身没有 `.git` 的目录不绑定，如测试 fixture）；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
-| 记录寿命 | closed task 按 task id 归档；`init` 只接受 CLOSE 能归档的设计位置（见 [One plan document](#one-plan-document)）；`.agent-loop/` 的其余文件按名字里的已关闭 task id 或所在的已关闭 Goal plan 目录认领 | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或在 `<plan>-archive.md`；scratch 存在或已删；`progress.md` 的交接段数；[`leftovers`](#leftovers)（认领到已关闭记录、且没被现行文档提到，只报不删）；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）移走第一段以外的交接段；worker 处理 `leftovers`；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；plan → `<plan>-archive.md`；`progress.md` → `archive/progress-YYYY-MM.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py`、`tests/test_review.py` |
+| 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定它所在的项目，项目是自带 `.git` 的目录，或 workspace 内没有上级目录含 `.agent-loop/task.md` 的目录（测试 fixture 与示例因此属于外层项目）；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
+| 记录寿命 | closed task 按 task id 归档；`init` 只接受 CLOSE 能归档的设计位置（见 [One plan document](#one-plan-document)）；`.agent-loop/` 的其余文件按名字里的已关闭 task id 或所在的已关闭 Goal plan 目录认领 | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或在 `<plan>-archive.md`；scratch 存在或已删；`progress.md` 的交接段数；[`leftovers`](#leftovers)（认领到已关闭记录、没被现行文档提到、也不受保护的文件，只报不删）；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）移走第一段以外的交接段；worker 处理 `leftovers`；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；plan → `<plan>-archive.md`；`progress.md` → `archive/progress-YYYY-MM.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py`、`tests/test_review.py` |
+
+<a id="task-row"></a>
+task 行按读它的操作定义，主线表的行只有五格，不属于任何一种：
+
+- 身份（`harness/records.py` 的 `_task_id`）：`task.md` 或 `archive/tasks.md` 里至少七格、首格完整匹配 `P\d+`、
+  第二格非空且小写不是 `id` 的表格行；第二格是 task id。`open_task_ids`、`task_row`、`archived_task_ids` 与归档按它找行。
+- 关闭（`_closed`）：任一格以 `✅ done` 或 `❌ dropped` 开头的 task 行。`open_task_ids` 是 `task.md` 里没关闭的 task 行，
+  归档移走关闭的。
+- revision（`harness/plan.py` 的 `task_plan_revision`）：依次在 `task.md`、`archive/tasks.md` 里找至少七格、第二格等于
+  task id 的第一行，第三格须是 `rN`。
+
+契约测试：`test_records.py` 的 `test_only_rows_led_by_a_priority_are_task_rows`。
 
 已知与实现不符：task 设计段只在标题首词是 task id 时退役，写在主题标题下的设计不退役（[#123](https://github.com/ZJLi2013/agent-loop/issues/123)）。
 
@@ -94,33 +106,46 @@ agent-loop 只维护三类公开保证：
 | `EVIDENCE_STALE` | `VERIFIED → FAILED` |
 | `BUDGET_EXHAUSTED / DISABLED` | active state → `STOPPED` |
 
-跨维度的 guard 是可执行条件，不写成 agent 自觉：
+<a id="guards"></a>
+跨维度的 guard 是可执行条件，不写成 agent 自觉。每道 guard 只在「拦哪些操作」列出的操作上检查，列出的操作各自写明
+不满足时的结果。gate 指 stop hook 调用的 `completion_gate`；exec 与 verify 都经 `core.run_command`。gate 的 plan 检查
+（`plan_can_run`）在 task 已是本次已审、verifier 未变的 `VERIFIED` 时不运行，这时 gate 直接交接 reviewer 的决定。
 
-- plan document `Plan Revision` = task `rN` = runtime revision；
-- `Plan Review` 是 `approved` 或 `unreviewed`；有待 human 决定的 review 项时不认 `unreviewed`；
-- task 有有效的 plan review：最后一条记录由 plan reviewer 写、对应当前 `plan_doc`、之后没有 `--again`，
-  `must` 全部回应，human 项有不早于 review 的 `--approve`；
-- pause request 不存在；
-- `config.json` 的摘要等于 init 时记下的 `config_sha256`；
-- attempt / wall budget 尚有余额，用尽后只要求一次 Auto-Stop Report；
-- task reviewer 的决策落盘前，runner 与下一 task 的 init 都被拒绝；
-- verify 开跑前与写入通过前，`verifier.files` 的每个文件摘要等于 init 时的值；
-- verifier 通过且 workspace fingerprint 未变化；task reviewer 的决定落盘前，`verifier.files` 也未变化。git 项目的
-  fingerprint 不含被忽略的文件，`init` 把 `/.agent-loop/`、`/.harness/` 写进 `.git/info/exclude`，CLOSE 改 `.agent-loop/`
-  不使证据 stale；不是 git 仓库或还没有提交时回退为 `.harness/`、`.git` 之外全部文件的哈希，CLOSE 改 `task.md` 也会使证据 stale；
-- 请求的会话不是 `owner` 时，gate 不写状态、不发 followup。
+| guard | 拦哪些操作 | 执行它的函数 | 契约测试 |
+|---|---|---|---|
+| revision 一致 | init：plan `Plan Revision` ≠ task `rN` 时拒绝；exec、verify、gate 的 plan 检查、Goal Review `--decision continue`：plan `Plan Revision` 须等于 `state.plan_revision`（不等时 exec / verify / gate 写 `require_revision` 的 pause），也须等于 task `rN`（不等时写普通 pause），continue 不满足即拒绝；resume：plan `Plan Revision` ≠ task `rN` 时拒绝，通过后把它写进 `state.plan_revision` | `core.initialize`；`plan.plan_can_run`（经 `run_command`、`completion_gate`、`attention.record_goal_review`）；`plan.resume` | `test_harness_pause.py`：`test_init_rejects_task_bound_to_another_revision`、`test_human_correction_requires_new_approved_revision` |
+| 纠偏要求新 revision：pause 带 `require_revision` 时，`Plan Revision` 大于 `state.plan_revision` | resume、Goal Review `--decision continue`：拒绝 | `plan.resume`；`attention.record_goal_review` | `test_harness_pause.py`：`test_human_correction_requires_new_approved_revision` |
+| `Plan Review` 是 `approved` 或 `unreviewed` | init：`proposed` 时以 `PAUSED` 起步并写 pause；exec、verify、gate 的 plan 检查：写 pause；resume、Goal Review `--decision continue`：拒绝 | `core.initialize`；`plan.plan_can_run`（同上）；`plan.resume` | `test_harness_pause.py`：`test_proposed_plan_starts_paused`；`test_page.py`：`test_proposed_plan_is_paged_and_ok_approves_and_resumes` |
+| task 有有效的 plan review（配置了 reviewer 且绑定 plan 时）：最后一条记录对应当前 `plan_doc`（没有 `plan_doc` 字段的记录算对应）、`source` 不是 `task_review`、之后没有 `--again`；`must` 全部回应；有 human 项时有不早于该 review 的 `--approve` | init：未满足且 `Plan Review` 是 `approved`、task 不是 reviewer 选的后继时拒绝，要求先改回 `proposed`；其余情况当场跑 plan reviewer 再判，仍不满足即拒绝；exec、verify：写 pause；resume：未满足时当场跑 plan reviewer，仍不满足即拒绝，满足了而 `Plan Review` 是 `approved` 时改回 `proposed` 并拒绝。init 与 resume 还要求有 human 项时 `Plan Review` 不是 `unreviewed` | `plan_review.plan_review_ready`（经 `core.initialize`、`run_command`、`plan.resume`） | `test_plan_review.py`：`test_must_items_need_an_answer_before_init`、`test_human_items_wait_for_the_human`、`test_approved_plan_cannot_skip_missing_review`、`test_proposed_plan_is_reviewed_before_human_resume`、`test_task_id_reused_by_another_plan_is_reviewed_again`、`test_records_from_before_the_protocol_still_read`；`test_review.py`：`test_successor_is_plan_reviewed_before_init` |
+| 没有 pause request（`.harness/pause.json`） | exec、verify：拒绝并转 `PAUSED`；运行中的命令：runner 轮询到即中断；task review：拒绝；gate：只发 Goal Review 提示或 pager followup | `plan.pause_request`（经 `run_command`、`runner.execute_process`、`review.run_review`、`completion_gate`） | `test_harness_pause.py`：`test_pause_interrupts_a_running_process` |
+| 被 pause 或 resume 的 task 仍开着（`state.plan_revision` 非空时）：task id 在 `records.open_task_ids` 里 | 不带 `require_revision` 的 pause 写入（`pause` CLI、init 的 proposed 暂停、Goal attention、exec / verify 因 plan 或 review 未就绪的暂停）：拒绝；resume（当前 pause 不带 `require_revision` 时）：调 plan reviewer 前与持锁后各查一次，拒绝并提示 init 后继 | `plan._task_eligibility_error`（经 `plan.request_pause`、`plan.resume`） | `test_harness_pause.py`：`test_pause_and_resume_refuse_a_closed_task` |
+| config 未变：`config.json` 的摘要 = `state.config_sha256` | 每个经 `load_runtime` 读运行时的操作（exec、verify、task review、resume、`status`）：拒绝；gate：要求先修复 state | `storage.load_runtime` | `test_harness.py`：`test_config_drift_is_rejected` |
+| 预算有余额：`verify_attempts` < `max_attempts`，且 `wall_seconds_used` < `max_wall_seconds` | exec、verify 开跑前：拒绝并转 `STOPPED`，单次运行的 timeout 截到剩余 wall；exec 结束与未通过的 verify 结束：用尽即转 `STOPPED`；通过的 verify 转 `VERIFIED`，被 pause 中断的运行转 `PAUSED`，两者都不查预算；gate：`STOPPED` 时第一次要求 Auto-Stop Report 并记 `stop_report_requested`，记过之后只发 followup | `core._budget_exhausted`（经 `run_command`）；`core.completion_gate` | `test_harness.py`：`test_timeout_kills_run_and_stops_at_budget`、`test_completion_gate_requests_one_stop_report` |
+| task reviewer 的决定已落盘（配置了 reviewer 且 phase 为 `VERIFIED` 时）：`review.verify_run_id` = `last_run_id` 且有 `decision` | exec、verify：未落盘、`continue`、`ask_human`、`stop` 都拒绝，`revise` 放行；下一 task 的 init：reviewer 正在跑、未落盘或 `revise` 时拒绝；`clean-task`：未落盘或 `revise` 时拒绝 | `core.run_command`；`core.initialize`；`core.clean_scratch` | `test_review.py`：`test_pending_review_blocks_execution_and_next_task`、`test_other_decisions_still_block_execution`、`test_revise_keeps_the_task_open_until_it_is_verified_again` |
+| verifier 文件未变：`verifier.files` 的每个摘要 = init 时的值（见 [verifier 文件锁](#verifier-file-lock)） | verify：开跑前拒绝，写通过前判 `reject`；task review：这次 verify 的决定未落盘时拒绝；gate：决定未落盘时比对，不符判 stale | `fingerprint.verifier_drift`（经 `run_command`、`review.run_review`、`completion_gate`） | `test_harness.py`：`test_verifier_file_edit_before_verify_is_refused`、`test_verifier_that_rewrites_itself_does_not_pass`、`test_verifier_file_edit_after_verify_makes_evidence_stale`；`test_review.py`：`test_review_refuses_a_changed_verifier`、`test_gate_rechecks_the_verifier_after_an_invalid_review` |
+| evidence 新鲜：verifier 退出码为 0 且输出符合 `expect_regex` / `forbid_regex`，之后 workspace fingerprint = `verified_fingerprint` | verify：不符合输出约定判 `reject`；task review：这次 verify 还没审时，fingerprint 不符拒绝；gate：`VERIFIED` 且这次 verify 还没审时，fingerprint 不符转 `FAILED`（`EVIDENCE_STALE`）。「已审」只看 `review.verify_run_id` = `last_run_id`：无效的 reviewer 可能已改写 `task.md`，那是允许的工作文档改写 | `core._matches_contract`；`fingerprint.workspace_fingerprint`（经 `run_command`、`review.run_review`、`completion_gate`） | `test_harness.py`：`test_output_contract_can_reject_exit_zero`、`test_completion_gate_requires_fresh_verification`、`test_git_path_skips_nested_foreign_runtime` |
+| 请求的会话是 `owner`，或 `owner` 为空 | gate：不是时不写状态、不发 followup | `core.owned_by_other`（经 `completion_gate`） | `test_harness_stop.py`：`test_other_sessions_task_is_left_alone` |
+| task id 独占 plan-review 记录：`.harness/plan-review/tasks/<id>.json` 里的 `task_id` 等于请求的 id（大小写不同的 id 在不分大小写的文件系统上共享一个文件） | init 的 plan review、`plan-review` 及其 `--respond` / `--approve` / `--again`：拒绝且不改记录；task reviewer 指名后继：决定作废 | `plan_review.task_record`（经 `run_plan_review`、`plan_review_ready`、`respond_task`、`approve_task`、`again_task`、`review.run_review`） | `test_plan_review.py`：`test_a_record_of_another_task_id_is_refused_everywhere`；`test_review.py`：`test_successor_sharing_another_tasks_record_is_refused` |
+| 后继是开着的 task：decision 的 `next_task` 在 `task.md` 有 task 行，其第六格非空且不包含 `✅ done` 或 `❌ dropped` | task reviewer 指名后继：决定作废 | `review.run_review` | `test_review.py`：`test_successor_must_be_an_open_task` |
+
+workspace fingerprint 由 `harness/fingerprint.py` 的 `workspace_fingerprint` 计算，两种项目各有范围：
+
+- git 项目且已有提交：`HEAD`、相对 `HEAD` 的 diff（含已跟踪的文件）与未被忽略的未跟踪文件，不含 `.harness/` 与其他 agent
+  的运行目录（`.codex/`）。`init` 把 `/.agent-loop/`、`/.harness/` 写进 `.git/info/exclude`，所以 CLOSE 改未跟踪的
+  `.agent-loop/` 文件不改 fingerprint；已被 git 跟踪的 `.agent-loop/` 文件计入 diff。
+- 不是 git 仓库或还没有提交：`.harness/`、`.git` 与其他 agent 的运行目录之外全部文件的哈希，CLOSE 改 `task.md` 也改 fingerprint。
 
 <a id="verifier-file-lock"></a>
 verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprint 分开：
 
 - `verifier_files(root, argv)`：`argv` 中按 root 解析后落在 root 内的普通文件，返回相对 root 的 POSIX 路径到 SHA-256 的映射；
   `init` 写进 `verifier.files`，由 `config_sha256` 锁住。不追踪 verifier import 的模块与 root 外的文件。
-- `verifier_drift(root, config)`：返回第一个缺失、不可读或摘要不符的路径，没有不符时返回 None；没有 `files` 的旧 config 恒为 None。
-- 有效期从 `init` 到 task reviewer 对这次 verify 的决定落盘：决定落盘的同一步关闭 task 并删除 `.harness/tasks/<id>/`，
-  之后的 `--objection` 不复核。review 的 run id 已匹配、有效决定却未落盘时（reviewer 写出无效决定），`completion_gate`
-  仍复核 verifier 摘要，不符即 stale。这时「已审」判定照旧只看 run id，不改走 workspace fingerprint：无效的 reviewer
-  可能已经改写 task.md，那是允许的工作文档改写，不应判为证据 stale。
-- 只在开跑前与写入通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
+- `verifier_drift(root, config)`：逐个比对 `verifier.files` 的键，返回第一个缺失、不可读或摘要不符的路径，全部相符时返回 None；
+  config 没有 `files` 时比对集合为空。
+- task review 与 gate 的比对期从 `init` 到 task reviewer 对这次 verify 的有效决定落盘，之后的 `--objection` 不复核。
+  `continue` / `ask_human` / `stop` 落盘的同一步关闭 task 并删除 `.harness/tasks/<id>/`；`revise` 保留 task 与 scratch，
+  下一次 verify 开跑前比对。reviewer 写出无效决定不结束比对期，`completion_gate` 继续复核。
+- 每次 verify 在开跑前与判定通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
 
 <a id="leftovers"></a>
 `.agent-loop/` 的退役由 `harness/records.py` 拥有，在 task CLOSE 的同一步运行（reviewer 决定落盘、`close_task` 之后，
@@ -130,22 +155,24 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
   `archive/progress-YYYY-MM.md`（CLOSE 时刻的月份）。先写 archive 再原子替换 `progress.md`；任一步失败返回错误，并入
   `cleanup_error` / `clean-task` 的 `error`，`progress.md` 保持原样、task 照常关闭。archive 已追加而 `progress.md` 未替换时，
   重跑按段内容去重，不重复追加。围栏代码块里的 `## ` 不算段首。
-- `leftovers(root)`：无状态，每次调用重算，只报不删。一个文件被报出当且仅当它认领到已关闭记录、且没被现行文档提到：
+- `leftovers(root)`：无状态，每次调用重算，只报不删。报出的文件同时满足三条：认领到已关闭记录、没被现行文档提到、不受保护。
   - 认领：文件名（不含扩展名，不分大小写）含已关闭 task id，id 前不是字母、后不是字母数字（`verify_g7p2` 认领 `p2`，
     `verify_t11` 不认领 `t1`）；或它最近的 plan 目录属于主线表里 `✅ done` 的 Goal。已关闭 task id 是 `archive/tasks.md`
     的 id 减去 `task.md` 仍开着的 id，因为 id 跨 Goal 复用。plan 所在目录须是 `.agent-loop/` 的子目录；直接放在
     `.agent-loop/` 下或它之外的 plan 不认领任何文件。
-  - 现行文档：`task.md`、`progress.md` 第一段、`memory/*.md`、`.agent-loop/*.json`、开着的 task 行与未完成主线行链接的
-    plan。「提到」是文件名或 `.agent-loop/` 相对路径原样出现：引用多数写成反引号里的文件名，不是链接。已关闭 Goal 的
+  - 现行文档：`task.md`、`progress.md` 第一段、`memory/*.md`、`.agent-loop/*.json`、未完成主线行与 `task.md` 里至少六格、
+    未关闭的表格行链接的 plan。「提到」是文件名或 `.agent-loop/` 相对路径原样出现：引用多数写成反引号里的文件名，不是链接。已关闭 Goal 的
     plan、`*-archive.md` 与 `archive/` 是历史，其中的提及不算。
-  - 永不报出：`task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、`review-checklist.md`、
-    `reports/`（各有自己的退役规则），以及开着的 task 行与主线行链接的 plan 文档、`*-archive.md`、`sub-exp/` 与任意 `archive/` 下的文件。
-    Harness 仍 active 时，config 锁定的 verifier 文件也不报：删掉它会让 completion gate 判证据 stale；`disable` 或下一次
-    `init` 后照常认领。它仍计入所在目录的文件数。锁定集合经 `harness.storage.load_runtime` 读：没有 `.harness/state.json`
-    时为空；读不出或 `config_sha256` 不符时锁定集合未知，返回空列表。`status` 在调用前已 `load_runtime`，state 损坏时照旧失败。
-  - 一个目录下的文件全部被报出时，只报该目录一行。
-- 只报不删、不进 completion gate：Harness 分不清长期工具与一次性脚本，报出的条目挡不住完成。没被现行文档提到、
-  但不带已关闭标识的条目（例如迁到别的工作副本的支线目录）不报：按名字之外的线索认领会把没写进文档的长期工具也报出来。
+  - 受保护：`.agent-loop/` 顶层的 `task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、
+    `review-checklist.md`、`reports/`（各有自己的退役规则，不参与扫描）；主线行与上述未关闭表格行链接的 plan 文档、
+    `*-archive.md`、`sub-exp/` 与任意 `archive/` 下的文件；active Harness 的 config 锁定的 verifier 文件（删掉它会让
+    completion gate 判证据 stale）。锁定集合经 `harness.storage.load_runtime` 读：没有 `.harness/state.json` 或 Harness
+    不 active 时为空；读不出或 `config_sha256` 不符时锁定集合未知，`leftovers` 返回空列表。`status` 先 `load_runtime`
+    再调用它，state 损坏时 `status` 失败。
+  - 目录合并只统计扫描集合里的文件：一个目录的扫描文件全部被报出时合并为该目录一行；顶层以外的受保护文件计入总数、
+    不计入报出数。每个条目按满足条件的最高祖先目录合并。
+- 只报不删、不进 completion gate：Harness 分不清长期工具与一次性脚本，报出的条目挡不住完成。认领只看名字与 plan 目录：
+  按名字之外的线索认领会把没写进文档的长期工具也报出来，所以不带已关闭标识的条目（例如迁到别的工作副本的支线目录）不报。
 
 ## Architecture
 
@@ -250,9 +277,8 @@ Harness 不自动回收。占用标记的进程已不在时，exec / verify / ga
 ### Independent review boundaries
 
 plan review 的单位是 task：每个 task 只在第一次出现时审一次，一次调用审完链接到本 plan（或其目录内已有文件）、
-未关闭且未审或需重审的 task，设计之后再改也不重审。task 行是 `task.md` 里至少 7 列、首列为 `P<n>` 的表格行，
-主线行、候选行与表头不是。
-human 可用 `plan-review --again` 要求重审。记录的身份与准入 guard 见[状态模型](#状态模型)的 task 实例。
+未关闭且未审或需重审的 task，设计之后再改也不重审；哪些表格行是 task 行见[状态模型](#task-row)。
+human 可用 `plan-review --again` 要求重审。记录的身份与准入 guard 见[状态模型](#guards)。
 reviewer 与 executor 之间的协议：意见分 `must`（不改就方向错、结论错或白跑昂贵实验，须写后果与依据，否则按
 `suggest` 记）与 `suggest`（严谨性，executor 可跳过），各最多 3 条，超出的丢弃。`must` 必须由 executor 逐条回应
 `applied` 或带事实的 `reject`，init 前检查；带 `human: true` 的 must 须 human 用 `--approve` 选择，`unreviewed` 不认。
