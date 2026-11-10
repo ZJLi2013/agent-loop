@@ -300,6 +300,13 @@ invoke on-demand skills.
   A task row now needs at least seven cells and a `P<n>` first cell; a six-cell table without the `rev` column is
   no longer read. See [the task table format](docs/usage.md#创建并评审计划) for the rule and a migration example.
 
+- Ordinary `pause` and `resume` share one task eligibility check when the current state is bound to a plan (#177).
+  Done, dropped, archived or missing tasks are refused with the same reason and an instruction to `init` the successor,
+  with or without a reviewer. Refusal preserves state and any existing pause request, including requests from older
+  versions. `resume` checks before plan review and rechecks under the state lock using the reloaded state and pause
+  request; the reviewer runs without that lock. Runs without a bound plan remain pausable and resumable regardless of
+  task-list contents. `--require-revision` pauses and their resume retain the existing revision and approval requirements.
+
 - `leftovers` no longer lists the verifier files an active Harness has locked (#164). In a project without a
   reviewer, deleting a reported verifier after `clean-task` made the completion gate call the evidence stale; the
   file is now claimed only after `disable` or the next `init`. When `.harness/` cannot be read, `leftovers` is empty.

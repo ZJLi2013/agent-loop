@@ -334,6 +334,13 @@ agent-loop-harness plan-review --plan-doc plan.md
 
 ## 纠偏与 Goal Review
 
+普通 `pause` 和 `resume` 共用任务资格检查：仅当当前状态已绑定计划（`plan_revision` 不为 `null`）时，要求当前任务仍在
+`task.md` 中且未关闭。已完成、放弃、归档或缺失的任务（包括缺少 `task.md`）都会被拒绝，提示用 `init` 初始化后继任务，
+与是否配置 reviewer 无关。拒绝 `pause` 不会写入 `pause.json`；拒绝 `resume` 会保留暂停请求和状态，旧版本留下的暂停也适用。
+`resume` 在启动 plan reviewer 前检查，并在评审结束后持有状态锁、重读状态和暂停请求时再次检查；评审期间不持有状态锁。
+`task.md` 不受该锁保护，锁内读取后的外部编辑不在此保证内。未绑定计划时，即使任务表不存在或不含当前任务，也允许暂停和恢复。
+`--require-revision` 纠偏暂停及其恢复不受此资格检查限制，任务关闭后仍可发起；恢复仍须满足计划修订、批准和任务版本要求。
+
 工作进行中要改 Goal 或范围时：
 
 ```sh
