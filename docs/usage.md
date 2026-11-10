@@ -313,6 +313,9 @@ agent-loop-harness plan-review --plan-doc plan.md
 
 ## 纠偏与 Goal Review
 
+普通 `pause` 在任务已绑定计划或项目存在 `task.md` 时，要求当前任务仍在任务表中且未关闭；已关闭或归档的任务会直接拒绝暂停，
+不会写入 `pause.json`。`--require-revision` 纠偏暂停仍允许在任务关闭后发起，随后必须修订计划并协调任务表。
+
 工作进行中要改 Goal 或范围时：
 
 ```sh

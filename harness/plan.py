@@ -8,6 +8,7 @@ from typing import Any
 from harness.errors import HarnessError
 from harness.project import runtime_dir, task_file
 from harness.protocol import Event, TransitionError, apply_event
+from harness.records import open_task_ids
 from harness.storage import (
     HARNESS_DIR,
     STATE_FILE,
@@ -102,6 +103,14 @@ def request_pause(
     state = read_json(state_path)
     if not state.get("active"):
         raise HarnessError("harness is disabled")
+    if (
+        not require_revision
+        and (state.get("plan_revision") is not None or task_file(root).exists())
+        and str(state["task_id"]) not in open_task_ids(root)
+    ):
+        raise HarnessError(
+            f"cannot pause: task {state['task_id']} is closed or missing from the task list"
+        )
     path = base / PAUSE_FILE
     existing = read_json(path) if path.exists() else {}
     if existing and kind == "goal_review":
