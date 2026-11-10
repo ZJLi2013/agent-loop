@@ -19,6 +19,17 @@
 两者共同保证的是：**暂停成功后，恢复不会因为同一个前提而失败。** kubectl 靠两边同一组类型，Argo 靠恢复不设更严的前提。
 #183 之前的 agent-loop 两条都不满足，#177 的卡死由此而来。
 
+## 真实运行里的一次复现
+
+2026-11-10，一个配置了 reviewer 与计划的项目，安装的是不含 #183 的版本：
+
+1. task reviewer 对当前 task 给出 `ask_human`，把这一行关闭归档，另排一个 `📝 proposed` 的后继。
+2. agent 等 human 答复时执行普通 `pause`，命令接受并写下 `pause.json`。
+3. human 答复后 `resume` 报 `task <id> is missing from the task list`，`pause.json` 留着。
+4. 后继标为 `🔬 doing` 并经 human 选定后，`init` 后继成功，`pause.json` 被清掉。
+
+这次复现的是 #177 报告的情形：task 已归档，#183 的检查会在第 2 步拒绝暂停。第 4 步说明卡住后有一条不改状态文件的恢复路径。
+
 ## 推荐
 
 - 判定只有一份，归 `harness/plan.py`：返回拒绝理由或 `None`，`request_pause`（非 `--require-revision`）与 `resume`
