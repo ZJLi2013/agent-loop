@@ -296,6 +296,9 @@ invoke on-demand skills.
 - `pause` rejects a closed or missing task when Harness has a plan or the project has a task list (#177),
   before writing a pause request that `resume` cannot clear through the plan-review gate. Correction pauses
   with `--require-revision` still allow the plan and task list to be reconciled after a task closes.
+  The check is stricter than the one `resume` runs, which applies only with a reviewer and a plan and accepts a
+  closed row still in the table; a project with `task.md` but no plan can no longer pause a task missing from it.
+  The two checks are not shared yet; see [纠偏与 Goal Review](docs/usage.md#纠偏与-goal-review).
 
 - `leftovers` no longer lists the verifier files an active Harness has locked (#164). In a project without a
   reviewer, deleting a reported verifier after `clean-task` made the completion gate call the evidence stale; the

@@ -316,6 +316,10 @@ agent-loop-harness plan-review --plan-doc plan.md
 普通 `pause` 在任务已绑定计划或项目存在 `task.md` 时，要求当前任务仍在任务表中且未关闭；已关闭或归档的任务会直接拒绝暂停，
 不会写入 `pause.json`。`--require-revision` 纠偏暂停仍允许在任务关闭后发起，随后必须修订计划并协调任务表。
 
+`resume` 的对应检查是另一份、条件不同：只在配置了 reviewer 与计划时检查，且已关闭但仍留在表里的行也算存在。所以有两种情形
+`pause` 拒绝而 `resume` 本可通过：task 已关闭但行还在表里；项目有 `task.md`、没有计划，而当前 task 不在表里（此前这种情形
+`pause` 与 `resume` 都成功）。两份检查尚未合并为一份。
+
 工作进行中要改 Goal 或范围时：
 
 ```sh
