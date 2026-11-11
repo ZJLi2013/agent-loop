@@ -86,11 +86,13 @@ invoke on-demand skills.
 
 ### Changed
 
-- Sessions switch only at task boundaries (#197): a task keeps one session from `init` to close, and the next task
-  starts in a new session. When a task closes (reviewer `continue`, `ask_human` or `stop`, or a valid verification
-  without a reviewer), the stop followup asks for the handoff and a new session instead of initializing the next task
-  here; without a reviewer it also asks for `clean-task` and `disable`. A pending pager checkpoint is shown alongside
-  instead of being hidden. Migration: a session that ran consecutive tasks now stops at each task boundary.
+- Session switching (#196): a task never switches sessions mid-task; after it closes, the session switches only
+  when it has grown heavy (context at half its window or more, a cold cache that costs more to resume than a fresh
+  session, or a compaction). `task-state` states the criteria. Cursor preCompact now marks the session for every
+  session id; when a marked session closes a task, the stop followup asks for the handoff and a new session instead
+  of initializing the next task here. A host that sets `AGENT_LOOP_SESSION_HOST` gets a handoff and the end of the
+  turn at every close, and decides itself. A pending pager checkpoint is shown alongside the review followup instead
+  of being hidden. Unmarked sessions without a host behave as before.
 - `write-for-humans` covers PR and issue bodies a human approves or decides: the decisions the human owns go in one
   numbered section, each with a recommendation and reason, and the part outside `<details>` is enough to decide.
 - `external-output-boundary` loads on demand (`alwaysApply: false`): Cursor keeps only its description, which names

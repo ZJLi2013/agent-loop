@@ -315,13 +315,24 @@ def _review_in_progress(state: dict[str, Any]) -> str:
     )
 
 
-def closed_handoff(task_id: str, next_task: str | None = None) -> str:
+def _next_step(handoff: str, next_task: str | None) -> str:
     following = next_task or "the next task"
+    if handoff == "host":
+        return (
+            f"End your turn: the host decides whether {following} continues in this session "
+            "or a new one and sends the next step. Do not initialize another task in this turn."
+        )
+    return (
+        f"This session has been compacted, so make your final reply tell the human to start "
+        f"{following} in a new session. Do not initialize another task in this session."
+    )
+
+
+def _closed(handoff: str, task_id: str, next_task: str | None = None) -> str:
     first = f" whose first command initializes {next_task}" if next_task else ""
     return (
-        f"{task_id} is closed. Write the handoff at the top of .agent-loop/progress.md{first}, "
-        f"and make your final reply tell the human to start {following} in a new session. "
-        "Do not initialize another task in this session."
+        f"{task_id} is closed. Write the handoff at the top of .agent-loop/progress.md{first}. "
+        + _next_step(handoff, next_task)
     )
 
 
@@ -330,6 +341,7 @@ def review_followup(
     config: dict[str, Any],
     state: dict[str, Any],
     state_path: Path,
+    handoff: str | None = None,
 ) -> str | None:
     runner = Path(__file__).with_name("run.py")
     command = f'python "{runner}" --root "{root.resolve()}" review'
@@ -338,13 +350,14 @@ def review_followup(
     review = state.get("review") or {}
     if review.get("verify_run_id") != state.get("last_run_id"):
         if not config.get("reviewer"):
+            if not handoff:
+                return None
             base = f'python "{runner}" --root "{root.resolve()}"'
             return (
                 f"Task {state['task_id']} is verified and no reviewer is configured. Finish "
                 "CLOSE: mark its row in task.md, write the handoff at the top of "
                 f".agent-loop/progress.md, then run {base} clean-task and {base} disable. "
-                "Make your final reply tell the human to start the next task in a new "
-                "session. Do not initialize another task in this session."
+                + _next_step(handoff, None)
             )
         return (
             f"Task {state['task_id']} is verified. The next step belongs to the "
@@ -357,19 +370,23 @@ def review_followup(
             else ""
         )
         findings = describe(review.get("findings") or [])
+        then = (
+            _closed(handoff, state["task_id"], review["next_task"])
+            if handoff
+            else f"initialize the Harness for {review['next_task']} and execute it."
+        )
         return (
             f"Reviewer chose continue -> {review['next_task']}: {review['why']}. {findings} "
             "Read the updated task list and check the rewrite only for factual "
             "errors (wrong path or number, already done, cannot run here, over "
-            f"budget).{objection} Otherwise "
-            + closed_handoff(state["task_id"], review["next_task"])
+            f"budget).{objection} Otherwise {then}"
         )
-    if review.get("decision") == "stop":
-        return f"Reviewer chose stop: {review['why']}. " + closed_handoff(state["task_id"])
-    if review.get("decision") == "ask_human":
+    if handoff and review.get("decision") == "stop":
+        return f"Reviewer chose stop: {review['why']}. " + _closed(handoff, state["task_id"])
+    if handoff and review.get("decision") == "ask_human":
         return (
             f"Reviewer handed the next step to the human: {review['why']}. Put that "
-            "question to the human. " + closed_handoff(state["task_id"])
+            "question to the human. " + _closed(handoff, state["task_id"])
         )
     if review.get("decision") == "revise":
         findings = describe(review.get("findings") or [])

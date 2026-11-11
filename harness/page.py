@@ -244,8 +244,7 @@ def _apply(
     if verb == "OK" and kind == "ask_human":
         return (
             "Human accepted the reviewer's proposal via pager. Mark the proposed task "
-            "🔬 doing, keep Plan Review: approved, and write the handoff so that a new "
-            "session initializes it; do not initialize it in this session.",
+            "🔬 doing, keep Plan Review: approved, and initialize it.",
             False,
         )
     return f"Human replied {verb} via pager. Stop at this checkpoint.", False

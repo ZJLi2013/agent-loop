@@ -10,6 +10,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
+from adapters.compaction import record_compaction  # noqa: E402
 from adapters.core import has_active_harness  # noqa: E402
 from adapters.cursor.session_scope import roots, session_id  # noqa: E402
 
@@ -20,6 +21,7 @@ def output_for(raw: str) -> str:
     try:
         payload = json.loads(raw or "{}")
         if isinstance(payload, dict):
+            record_compaction(session_id(payload))
             window = payload.get("context_window_size")
             if (
                 has_active_harness(roots(payload), session_id(payload))

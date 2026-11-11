@@ -55,18 +55,15 @@ PROPOSED ─► READY ─► RUNNING ─► VERIFYING ─► VERIFIED
 - Harness：存在 `🔬 doing` 的项目必须有启用中的 `.harness/state.json`；Cursor session
   绑定它读过 `task.md` 的每个项目，lifecycle hook 不扫描同 workspace 的其它项目。
   耗时或改变验收证据的命令经 runner，结束前运行锁定 verifier。detach 作业仍绑定启动它的唯一
-  task；只允许同一 task 内串联步骤，跨 task 必须等 verifier 与 reviewer 完成后在新会话初始化。
+  task；只允许同一 task 内串联步骤，跨 task 必须等 verifier 与 reviewer 完成后重新初始化。
+  task 执行中不换会话；关闭后换不换按 `task-state`「跨 session 交接」的判据。
   stop hook 拒绝缺 Harness、未验证、证据 stale 或预算不清的完成声明。
-- 会话：换会话只以 task 周期为界。task 执行中保持同一会话；verifier、reviewer 决定落盘与 CLOSE 完成后，
-  在 `progress.md` 写交接，最终回复请 human 开新会话做下一个 task，本会话不 init 也不执行它。
-  所有 Cursor 会话都适用（IDE 会话与调度窗口，经不经路由器都一样），没有 Harness 的 task 也一样。
 
 ## 无人值守
 
 user 明确说「无人值守 / overnight / 我下班了 / 明早看结果」时，直到 user 再次说话：
 
-- 遇 reviewer 的 `human` 项、失败上限或预算用尽即停；task 关闭后写交接即停（`stop` 时先按 `work-planning`
-  的主线交接写好下一个 Goal 的 plan 与 plan review）；不写远端串联脚本；
+- 遇 reviewer 的 `human` 项、`stop`（`work-planning` 的主线交接除外）、失败上限或预算用尽即停；不写远端串联脚本；
 - 不问选择题，记录选中理由与放弃项；有显著权衡时标 `⚠️ 待确认`；
-- blocked task 记下原因后写交接即停，交接写明下一条可做的 task；不可逆操作仍跳过；
+- blocked task 跳过做下一条，全部 blocked 才停；不可逆操作仍跳过；
 - 环境重试上限不变；收工把状态、失败计数、待确认项和明早第一条命令写进被处理项目的 `progress.md` 交接（夜间报告）。

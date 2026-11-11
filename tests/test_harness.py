@@ -176,7 +176,7 @@ class HarnessTest(unittest.TestCase):
         self.assertIn("not independently verified", completion_gate(self.root) or "")
 
         verify(self.root)
-        self.assertIn("no reviewer is configured", completion_gate(self.root) or "")
+        self.assertIsNone(completion_gate(self.root))
 
         (self.root / "changed.py").write_text("changed = True\n")
         message = completion_gate(self.root) or ""
@@ -187,7 +187,7 @@ class HarnessTest(unittest.TestCase):
         self.assertIsNone(pause_request(self.root))
 
         verify(self.root)
-        self.assertIn("no reviewer is configured", completion_gate(self.root) or "")
+        self.assertIsNone(completion_gate(self.root))
 
     def test_completion_gate_requests_one_stop_report(self) -> None:
         self.init("raise SystemExit(1)", max_attempts=1)
@@ -304,7 +304,7 @@ class VerifierLockTest(unittest.TestCase):
     def test_verifier_file_edit_after_verify_makes_evidence_stale(self) -> None:
         self.init(self.ignored)
         verify(self.root)
-        self.assertIn("no reviewer is configured", completion_gate(self.root) or "")
+        self.assertIsNone(completion_gate(self.root))
 
         self.ignored.write_text("print('OK')  # edited after\n")
         message = completion_gate(self.root) or ""
@@ -326,7 +326,7 @@ class VerifierLockTest(unittest.TestCase):
 
         self.assertEqual(config["verifier"].get("files", {}), {})
         self.assertEqual(verify(self.root)["outcome"], "pass")
-        self.assertIn("no reviewer is configured", completion_gate(self.root) or "")
+        self.assertIsNone(completion_gate(self.root))
 
     def test_config_without_verifier_files_verifies_as_before(self) -> None:
         self.init(self.ignored)
@@ -341,7 +341,7 @@ class VerifierLockTest(unittest.TestCase):
         self.ignored.write_text("print('OK')  # written before the lock existed\n")
 
         self.assertEqual(verify(self.root)["outcome"], "pass")
-        self.assertIn("no reviewer is configured", completion_gate(self.root) or "")
+        self.assertIsNone(completion_gate(self.root))
 
 
 class LockTest(unittest.TestCase):
