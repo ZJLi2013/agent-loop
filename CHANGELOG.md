@@ -86,6 +86,8 @@ invoke on-demand skills.
 
 ### Changed
 
+- `write-for-humans` sets the language of PRs and issues: Chinese titles, bodies and comments in the human's own
+  repositories, English by default elsewhere, and whatever language the human names when they name one.
 - `write-for-humans` covers PR and issue bodies a human approves or decides: the decisions the human owns go in one
   numbered section, each with a recommendation and reason, and the part outside `<details>` is enough to decide.
 - `external-output-boundary` loads on demand (`alwaysApply: false`): Cursor keeps only its description, which names
