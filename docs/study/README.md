@@ -24,6 +24,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 - [范围判据回放](scope-replay.md)：只读范围一节的 reviewer 对六条历史输入判对五条，#77 暴露的处置表缺口。
 - [改假设时换一层](layer-shift-replay.md)：同一组件内第二个假设被推翻时上移到组件 / 方法类别对照，两个阶段不动 Goal 时交 human；改动前后的回放，以及三处改动前已成立而不加的措辞。
 - [先用上再加深](use-first-replay.md)：供读者反复取用的产出，第一个退出条件是一次真实使用，用上之前不加深；改动前后的回放，以及触发条件为什么不写「给人读」。
+- [交接笔记不加「未完事项」「授权」](handoff-note-replay.md)：两段式回放里现有四项已让接手会话处理对在等的事与「不合并」，#193 不改规则；重开条件。
 - [纠正只记一处、第二次起草](correction-replay.md)：human 纠正写进宿主日志或 `[纠正]` lesson 之一，第二次起草规则改动；改动前后的回放，真实会话里的一次观察，以及信号按原文计数会漏同义。
 - [暂停与恢复共用一份 task 判定](pause-resume-eligibility.md)：#177 的补充修正依据，对照 kubectl 与 Argo Workflows 的 pause / resume。
 - [Gate 只摆设计与结论](plan-gate-replay.md)：plan 模板加「设计」一节与执行细节分隔线，Gate 问题先给设计与结论；判断类默认 agent 判断一句为什么不加。
