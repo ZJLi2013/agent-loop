@@ -10,7 +10,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
-from adapters.compaction import record_compaction  # noqa: E402
+from harness.compaction import record_compaction  # noqa: E402
 from adapters.core import has_active_harness  # noqa: E402
 from adapters.cursor.session_scope import roots, session_id  # noqa: E402
 

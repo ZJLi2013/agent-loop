@@ -12,7 +12,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from adapters import compaction
+from harness import compaction
 from adapters.core import handle
 from adapters.protocol import HookEvent, HookRequest
 from harness import run
@@ -69,8 +69,13 @@ class CompactionHandoffTest(unittest.TestCase):
         self.assertEqual(self.stop_mode({"AGENT_LOOP_SESSION_HOST": "1"}), "host")
 
     def verify_payload(self, host: str) -> dict[str, object]:
+        env = {
+            "AGENT_LOOP_SESSION_HOST": host,
+            "AGENT_LOOP_SESSION_ID": "",
+            "CURSOR_CONVERSATION_ID": self.session,
+        }
         out = io.StringIO()
-        with mock.patch.dict(os.environ, {"AGENT_LOOP_SESSION_HOST": host}), redirect_stdout(out):
+        with mock.patch.dict(os.environ, env), redirect_stdout(out):
             run.main(["--root", str(self.root), "verify"])
         return json.loads(out.getvalue())
 
@@ -82,6 +87,15 @@ class CompactionHandoffTest(unittest.TestCase):
 
         self.assertIn("no reviewer is configured", handoff)
         self.assertIn("End your turn", handoff)
+
+    def test_verify_hands_a_compacted_session_off_to_a_new_session(self) -> None:
+        initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
+        compaction.record_compaction(self.session)
+
+        handoff = str(self.verify_payload("").get("handoff"))
+
+        self.assertIn("in a new session", handoff)
+        self.assertIn("Do not initialize another task in this session", handoff)
 
 
 if __name__ == "__main__":

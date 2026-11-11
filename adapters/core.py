@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from adapters.compaction import compacted
+from harness.compaction import compacted
 from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
 from harness.core import HarnessError, completion_gate, owned_by_other
 from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file, worktree_memory

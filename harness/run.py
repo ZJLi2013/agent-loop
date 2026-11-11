@@ -10,6 +10,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from harness.attention import record_goal_review  # noqa: E402
+from harness.compaction import compacted  # noqa: E402
 from harness.core import (  # noqa: E402
     DEFAULT_MAX_ARTIFACTS,
     DEFAULT_MAX_ATTEMPTS,
@@ -218,14 +219,20 @@ def main(argv: list[str] | None = None) -> int:
             payload = {"result": result, "state": state}
             if config.get("reviewer") and review_passed and review["decision"] != "revise":
                 payload["leftovers"] = leftovers(root)
+            if os.environ.get("AGENT_LOOP_SESSION_HOST"):
+                handoff = "host"
+            elif compacted(_session_id()):
+                handoff = "new_session"
+            else:
+                handoff = None
             if (
-                os.environ.get("AGENT_LOOP_SESSION_HOST")
+                handoff
                 and state["phase"] == "verified"
                 and review_passed
                 and review.get("decision") != "revise"
             ):
                 payload["handoff"] = review_followup(
-                    root, config, state, harness_dir(root) / STATE_FILE, "host"
+                    root, config, state, harness_dir(root) / STATE_FILE, handoff
                 )
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0 if state["phase"] == "verified" and review_passed else 1

@@ -134,8 +134,8 @@ Mainline Review: approved
 - 本会话压缩过。
 
 看得见读数的一方来判：IDE 会话由 human 看上下文指示；会话压缩过时 stop hook 在 task 关闭处提示交接与开新会话。
-宿主设了 `AGENT_LOOP_SESSION_HOST`（如调度工具）时，每次关闭都写交接并结束这一轮，由宿主判续用还是新开；
-`verify` 通过时输出里的 `handoff` 就是这一步，照它做，不在同一轮开下一个 task。
+宿主设了 `AGENT_LOOP_SESSION_HOST`（如调度工具）时，每次关闭都写交接并结束这一轮，由宿主判续用还是新开。
+`verify` 通过时输出里有 `handoff`（有宿主，或本会话压缩过）就照它做，不在同一轮开下一个 task。
 agent 看不到自己的上下文读数，不凭感觉换。
 
 四份东西分工不同，**活跃状态覆盖，历史证据归档**：
