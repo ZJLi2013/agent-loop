@@ -361,7 +361,8 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 CLI `init` 把会话 id（依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID`）记为 task 的 `owner`。
 gate 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
 没有 owner 的 state 照旧处理。换会话继续同一个 task 时，新会话用 `handoff --from <旧会话> --task <task_id>@<created_at>`
-接手，此后 gate 约束新会话；Harness 不自动接管，也不判断谁该接手。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 preCompact 只检查这些项目，
+接手，此后 gate 约束新会话；Harness 不自动接管，也不判断谁该接手。交接记录写在 `state.json` 的 `handoff`，
+不写 `runs.jsonl`：重复交接是否算同一次要在同一把锁里读到它，而 `runs.jsonl` 按 `max_journal_entries` 截断、只存 run 结果。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 preCompact 只检查这些项目，
 不扫描 workspace 里的其它项目；dsh 会话只看 payload `cwd` 这一个项目，与 CLI 默认 `--root` 一致。
 <a id="session-scope"></a>
 绑定归 `adapters/cursor/session_scope.py`：被读的 `<dir>/.agent-loop/task.md`（或旧 `.cursor/task.md`）让 `<dir>` 成为候选，
