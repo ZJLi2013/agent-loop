@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
+import sys
 import tempfile
 import unittest
 import uuid
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
 from adapters import compaction
 from adapters.core import handle
 from adapters.protocol import HookEvent, HookRequest
+from harness import run
+from harness.core import initialize
 
 HOOK = Path(__file__).resolve().parents[1] / "adapters" / "cursor" / "hooks" / "goal-refresh.py"
 
@@ -62,6 +67,21 @@ class CompactionHandoffTest(unittest.TestCase):
         compaction.record_compaction(self.session)
         self.assertEqual(self.stop_mode(env), "new_session")
         self.assertEqual(self.stop_mode({"AGENT_LOOP_SESSION_HOST": "1"}), "host")
+
+    def verify_payload(self, host: str) -> dict[str, object]:
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, {"AGENT_LOOP_SESSION_HOST": host}), redirect_stdout(out):
+            run.main(["--root", str(self.root), "verify"])
+        return json.loads(out.getvalue())
+
+    def test_verify_tells_a_hosted_worker_to_end_the_turn(self) -> None:
+        initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
+
+        self.assertNotIn("handoff", self.verify_payload(""))
+        handoff = str(self.verify_payload("1").get("handoff"))
+
+        self.assertIn("no reviewer is configured", handoff)
+        self.assertIn("End your turn", handoff)
 
 
 if __name__ == "__main__":

@@ -125,7 +125,8 @@ Mainline Review: approved
 ## 跨 session 交接
 
 **task 执行中不换会话；task 关闭后可以换，会话变重才换。** 关闭指验证通过、reviewer 的关闭决定（`continue` /
-`ask_human` / `stop`）落盘、CLOSE 与交接写完；`revise`、pause、预算耗尽、`disable`、挂着等待都不算。没有 active task
+`ask_human` / `stop`）落盘、CLOSE 与交接写完；没配 reviewer 时是验证通过后 CLOSE 跑完 `clean-task` 与 `disable`。
+`revise`、pause、预算耗尽、未验证通过就 `disable`、挂着等待都不算。没有 active task
 的会话随时可换。在关闭点上，下面任一条成立就换，否则在本会话接着做下一个 task：
 
 - 已用上下文 ≥ 会话窗口的一半（300k 窗口约 150k，1M 窗口约 500k）；
@@ -133,7 +134,8 @@ Mainline Review: approved
 - 本会话压缩过。
 
 看得见读数的一方来判：IDE 会话由 human 看上下文指示；会话压缩过时 stop hook 在 task 关闭处提示交接与开新会话。
-宿主设了 `AGENT_LOOP_SESSION_HOST`（如调度工具）时，每次关闭都写交接并结束这一轮，由宿主判续用还是新开。
+宿主设了 `AGENT_LOOP_SESSION_HOST`（如调度工具）时，每次关闭都写交接并结束这一轮，由宿主判续用还是新开；
+`verify` 通过时输出里的 `handoff` 就是这一步，照它做，不在同一轮开下一个 task。
 agent 看不到自己的上下文读数，不凭感觉换。
 
 四份东西分工不同，**活跃状态覆盖，历史证据归档**：

@@ -36,8 +36,9 @@ from harness.plan_review import (  # noqa: E402
     run_plan_review,
 )
 from harness.records import leftovers  # noqa: E402
-from harness.review import run_review  # noqa: E402
+from harness.review import review_followup, run_review  # noqa: E402
 from harness.scratch import scratch_path, strays  # noqa: E402
+from harness.storage import STATE_FILE, harness_dir  # noqa: E402
 
 
 SESSION_ENV = ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID", "DSH_SESSION_ID")
@@ -217,6 +218,15 @@ def main(argv: list[str] | None = None) -> int:
             payload = {"result": result, "state": state}
             if config.get("reviewer") and review_passed and review["decision"] != "revise":
                 payload["leftovers"] = leftovers(root)
+            if (
+                os.environ.get("AGENT_LOOP_SESSION_HOST")
+                and state["phase"] == "verified"
+                and review_passed
+                and review.get("decision") != "revise"
+            ):
+                payload["handoff"] = review_followup(
+                    root, config, state, harness_dir(root) / STATE_FILE, "host"
+                )
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0 if state["phase"] == "verified" and review_passed else 1
         if args.action == "review":

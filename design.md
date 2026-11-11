@@ -359,9 +359,11 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 CLI `init` 把会话 id（依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID`）记为 task 的 `owner`。
 gate 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
 换会话只发生在 task 关闭之后：从 `init` 到 task 关闭保持同一 worker 会话，验证与已配置 reviewer 的决策落盘也在此周期内；
-`revise`、pause、预算停止与 `disable` 不关闭 task，修复或恢复留在原会话。关闭后换不换按 `task-state` 的判据，
+没配 reviewer 时，验证通过后 CLOSE 跑完 `clean-task` 与 `disable` 即关闭；`revise`、pause、预算停止与未验证通过就
+`disable` 不关闭 task，修复或恢复留在原会话。关闭后换不换按 `task-state` 的判据，
 换了的话下一个 task 由新会话 `init`，写入新 `owner`，接续靠 `.agent-loop/progress.md` 的交接笔记。
-stop 把交接方式传给 gate：环境变量 `AGENT_LOOP_SESSION_HOST` 非空时为 `host`（关闭后写交接并结束这一轮，由宿主判），
+stop 把交接方式传给 gate：环境变量 `AGENT_LOOP_SESSION_HOST` 非空时为 `host`（关闭后写交接并结束这一轮，由宿主判；
+没配 reviewer 的 worker 可能在 stop 之前就开下一个 task，所以 `verify` 通过时输出里也带同一条 `handoff`），
 否则本会话收到过 preCompact 时为 `new_session`（请 human 开新会话），都不是时 followup 照旧。preCompact 对每个带 id 的会话
 记标记（`adapters/compaction.py`），不看是否有 Harness。这条约束由规则、宿主与调度工具遵守，Harness 不加会话切换的 guard。
 没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 preCompact 只检查这些项目，
