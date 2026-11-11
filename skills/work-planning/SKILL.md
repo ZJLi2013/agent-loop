@@ -162,7 +162,7 @@ verifier 通过后：
 ### 主线交接
 
 - reviewer 对主线 Goal 选 `stop` 时，把它在主线表的行改 `✅ done`、下一行改 `▶ next`，为 `▶ next` 的 Goal
-  写 plan、跑独立 plan review 再开工，不停在 DONE；`Mainline Review` 不是 `approved` 时交 human。
+  写 plan、跑独立 plan review，写交接后由新会话开工，不停在 DONE；`Mainline Review` 不是 `approved` 时交 human。
 - 增删 Goal 或改顺序是 `replan`：`Mainline Review` 改 `proposed`，交 human。
 - 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
   开支线要 human 批准。

@@ -89,7 +89,9 @@ class TaskBoundaryReviewTest(unittest.TestCase):
 
     def test_without_reviewer_verified_task_completes(self) -> None:
         self.init(None)
-        self.assertIsNone(completion_gate(self.root))
+        message = completion_gate(self.root) or ""
+        self.assertIn("no reviewer is configured", message)
+        self.assertIn("new session", message)
         with self.assertRaisesRegex(HarnessError, "no reviewer configured"):
             run_review(self.root)
 
@@ -429,6 +431,9 @@ class ReviseTest(unittest.TestCase):
         verify(self.root)
         with self.assertRaisesRegex(HarnessError, "execution remains blocked"):
             run_command(self.root, [sys.executable, "-S", "-c", "pass"], kind="exec")
+        followup = completion_gate(self.root) or ""
+        self.assertIn("Reviewer handed the next step to the human: pick", followup)
+        self.assertIn("new session", followup)
 
     def test_revise_is_allowed_once_per_task(self) -> None:
         with self.subTest("a second verify cannot be sent back again"):

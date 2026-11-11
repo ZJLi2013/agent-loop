@@ -384,8 +384,8 @@ def run_command(
                 )
             if review["decision"] == "continue":
                 raise HarnessError(
-                    f"task {state['task_id']} is complete; initialize reviewer-selected "
-                    f"task {review.get('next_task')} before executing another command"
+                    f"task {state['task_id']} is complete; reviewer-selected task "
+                    f"{review.get('next_task')} starts in a new session"
                 )
             if review["decision"] != "revise":
                 raise HarnessError(
@@ -653,6 +653,16 @@ def owned_by_other(state: dict[str, Any], session_id: str | None) -> bool:
     return bool(owner and owner != session_id)
 
 
+def _verified_followup(
+    root: Path, config: dict[str, Any], state: dict[str, Any], state_path: Path
+) -> str | None:
+    messages = [
+        review_followup(root, config, state, state_path),
+        page_followup(root, config, state),
+    ]
+    return "\n\n".join(message for message in messages if message) or None
+
+
 def completion_gate(root: Path, session_id: str | None = None) -> str | None:
     state_path = harness_dir(root) / STATE_FILE
     if not state_path.exists():
@@ -695,9 +705,7 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             None if reviewed and review.get("decision") else verifier_drift(root, config)
         )
         if phase == Phase.VERIFIED and reviewed and not changed:
-            return review_followup(
-                root, config, state, state_path
-            ) or page_followup(root, config, state)
+            return _verified_followup(root, config, state, state_path)
 
         plan_ready, plan_reason = plan_can_run(root, config, state)
         if not plan_ready:
@@ -720,9 +728,7 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
                 not changed
                 and state.get("verified_fingerprint") == workspace_fingerprint(root)
             ):
-                return review_followup(
-                    root, config, state, state_path
-                ) or page_followup(root, config, state)
+                return _verified_followup(root, config, state, state_path)
             _transition(state, Event.EVIDENCE_STALE)
             state["verified_fingerprint"] = None
             state["last_outcome"] = "stale"

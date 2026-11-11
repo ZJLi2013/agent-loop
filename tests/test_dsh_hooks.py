@@ -58,11 +58,15 @@ class DshHooksTest(unittest.TestCase):
         blocked = self.stop("S")
         with redirect_stdout(io.StringIO()):
             code = run.main(["--root", str(self.root), "verify"])
+        closing = self.stop("S")
+        with redirect_stdout(io.StringIO()):
+            run.main(["--root", str(self.root), "disable"])
         released = self.stop("S")
 
         self.assertIsNotNone(expected)
         self.assertEqual(blocked, {"decision": "block", "reason": expected})
         self.assertEqual(code, 0)
+        self.assertIn("no reviewer is configured", str(closing.get("reason")))
         self.assertEqual(released, {})
 
     def test_stop_leaves_another_sessions_task_alone(self) -> None:

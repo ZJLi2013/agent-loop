@@ -315,6 +315,16 @@ def _review_in_progress(state: dict[str, Any]) -> str:
     )
 
 
+def closed_handoff(task_id: str, next_task: str | None = None) -> str:
+    following = next_task or "the next task"
+    first = f" whose first command initializes {next_task}" if next_task else ""
+    return (
+        f"{task_id} is closed. Write the handoff at the top of .agent-loop/progress.md{first}, "
+        f"and make your final reply tell the human to start {following} in a new session. "
+        "Do not initialize another task in this session."
+    )
+
+
 def review_followup(
     root: Path,
     config: dict[str, Any],
@@ -328,7 +338,14 @@ def review_followup(
     review = state.get("review") or {}
     if review.get("verify_run_id") != state.get("last_run_id"):
         if not config.get("reviewer"):
-            return None
+            base = f'python "{runner}" --root "{root.resolve()}"'
+            return (
+                f"Task {state['task_id']} is verified and no reviewer is configured. Finish "
+                "CLOSE: mark its row in task.md, write the handoff at the top of "
+                f".agent-loop/progress.md, then run {base} clean-task and {base} disable. "
+                "Make your final reply tell the human to start the next task in a new "
+                "session. Do not initialize another task in this session."
+            )
         return (
             f"Task {state['task_id']} is verified. The next step belongs to the "
             f"reviewer, not to you. Run: {command}"
@@ -344,8 +361,15 @@ def review_followup(
             f"Reviewer chose continue -> {review['next_task']}: {review['why']}. {findings} "
             "Read the updated task list and check the rewrite only for factual "
             "errors (wrong path or number, already done, cannot run here, over "
-            f"budget).{objection} Otherwise initialize the Harness for "
-            f"{review['next_task']} and execute it."
+            f"budget).{objection} Otherwise "
+            + closed_handoff(state["task_id"], review["next_task"])
+        )
+    if review.get("decision") == "stop":
+        return f"Reviewer chose stop: {review['why']}. " + closed_handoff(state["task_id"])
+    if review.get("decision") == "ask_human":
+        return (
+            f"Reviewer handed the next step to the human: {review['why']}. Put that "
+            "question to the human. " + closed_handoff(state["task_id"])
         )
     if review.get("decision") == "revise":
         findings = describe(review.get("findings") or [])

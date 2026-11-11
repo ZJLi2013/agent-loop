@@ -358,6 +358,10 @@ native event → platform codec → HookRequest → adapter core → HookRespons
 
 CLI `init` 把会话 id（依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID`）记为 task 的 `owner`。
 gate 遇到别的会话拥有的 task 时不写状态、不发 followup；请求不带会话 id 也算别的会话。
+换会话只以 task 周期为界：从 `init` 到 task 关闭保持同一 worker 会话，验证与已配置 reviewer 的决策落盘也在此周期内；
+task 关闭后的下一个 task 由新会话执行，它的 `init` 写入新 `owner`，接续靠 `.agent-loop/progress.md` 的交接笔记。
+`revise`、pause、预算停止与 `disable` 不关闭 task，修复或恢复留在原会话。stop followup 在 task 关闭时提示交接与开新会话；
+这条约束由规则、宿主与调度工具遵守，Harness 不加会话切换的 guard。
 没有 owner 的 state 照旧处理。Cursor 会话绑定它读过 `task.md` 的每个项目，stop 与 preCompact 只检查这些项目，
 不扫描 workspace 里的其它项目；dsh 会话只看 payload `cwd` 这一个项目，与 CLI 默认 `--root` 一致。
 <a id="session-scope"></a>

@@ -152,14 +152,29 @@ class PagerCheckpointTest(unittest.TestCase):
         self.write_plan(2, "proposed")
         self.assertIn("plan_review", completion_gate(self.root) or "")
 
+    def test_ok_on_ask_human_hands_the_next_task_to_a_new_session(self) -> None:
+        self.review_with({"decision": "ask_human", "why": "scope question"})
+        message = completion_gate(self.root) or ""
+        self.assertIn("t1 is closed", message)
+        self.assertIn("page them", message)
+
+        self.reply("OK")
+        outcome = run_page(self.root)
+
+        self.assertIn("a new session initializes it", outcome["message"])
+
     def test_reviewer_stop_only_notifies(self) -> None:
         self.review_with({"decision": "stop", "why": "goal reached"})
-        self.assertIn("Notify the human", completion_gate(self.root) or "")
+        message = completion_gate(self.root) or ""
+        self.assertIn("t1 is closed", message)
+        self.assertIn("Notify the human", message)
 
         run_page(self.root)
 
         self.assertEqual([call[0] for call in self.calls()], ["notify"])
-        self.assertIsNone(completion_gate(self.root))
+        message = completion_gate(self.root) or ""
+        self.assertIn("t1 is closed", message)
+        self.assertNotIn("Notify the human", message)
 
     def test_without_pager_checkpoints_let_the_worker_stop(self) -> None:
         (self.root / ".agent-loop" / "pager.json").unlink()

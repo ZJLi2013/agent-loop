@@ -329,7 +329,8 @@ agent-loop-harness plan-review --plan-doc plan.md
 `plan-review` 拒绝再次运行 reviewer，直到 human 选择：用 `--continue --reason "<human 的原话>"` 再评审一次、带注记批准
 （`--waive`）、原样批准上一个已评审的 revision，或停止。task 验证通过后，配置的 reviewer 自动运行，解读证据并选择
 `continue`、`revise`、`ask_human` 或 `stop`；`revise` 把漏了收口的 task 退回给 worker，补完后重跑 verify 再审，
-每个 task 最多一次。提议的后继 task 需要按适用的批准策略显式激活。项目可以加
+每个 task 最多一次。提议的后继 task 需要按适用的批准策略显式激活，并在新会话里 init：task 关闭时 stop hook 提示
+写交接、请你开新会话；没有 reviewer 时还提示 `clean-task` 与 `disable`。项目可以加
 `.agent-loop/review-checklist.md` 写领域检查项；样例输入与实际输出能帮助 reviewer 判断这项工作是否度量了 Goal。
 
 ## 纠偏与 Goal Review

@@ -173,6 +173,8 @@ class AttentionRefreshTest(unittest.TestCase):
         _, state = load_runtime(self.root)
 
         self.assertIn("Reviewer chose continue -> t2", followup)
+        self.assertIn("start t2 in a new session", followup)
+        self.assertIn("Do not initialize another task in this session", followup)
         self.assertIsNone(pause_request(self.root))
         self.assertEqual(state["phase"], "verified")
 

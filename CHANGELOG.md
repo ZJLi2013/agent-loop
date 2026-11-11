@@ -86,6 +86,11 @@ invoke on-demand skills.
 
 ### Changed
 
+- Sessions switch only at task boundaries (#197): a task keeps one session from `init` to close, and the next task
+  starts in a new session. When a task closes (reviewer `continue`, `ask_human` or `stop`, or a valid verification
+  without a reviewer), the stop followup asks for the handoff and a new session instead of initializing the next task
+  here; without a reviewer it also asks for `clean-task` and `disable`. A pending pager checkpoint is shown alongside
+  instead of being hidden. Migration: a session that ran consecutive tasks now stops at each task boundary.
 - `write-for-humans` covers PR and issue bodies a human approves or decides: the decisions the human owns go in one
   numbered section, each with a recommendation and reason, and the part outside `<details>` is enough to decide.
 - `external-output-boundary` loads on demand (`alwaysApply: false`): Cursor keeps only its description, which names
