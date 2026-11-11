@@ -358,6 +358,21 @@ agent-loop-harness goal-review --decision continue --evidence "The failed test i
 
 证据支持时用 `replan` 或 `stop`。`continue` 不会绕过必需的计划修订。
 
+## 换会话继续同一个 task
+
+完成门禁只约束 init 时的会话（`owner`）。上下文过长开了新对话，或调度工具冷启动了新会话，要继续同一个 active task 时，
+新会话先从 `status` 读出旧会话与实例：
+
+```sh
+agent-loop-harness status   # state.owner、state.task_id、state.created_at
+agent-loop-harness handoff --from <state.owner> --task <state.task_id>@<state.created_at>
+```
+
+调用者的会话 id 按 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` 取。成功后 `owner` 是新会话，
+预算、暂停、验证与 review 记录不变，之后新会话未验证就完成会被拦下。以下情况拒绝且不改状态：`--from` 不是当前 owner、
+`--task` 不是当前实例（同名 task 重新 init 过也算）、没有会话 id 或等于 `--from`、有 run 或 task reviewer 正在跑。
+同一交接重复执行成功；换一个会话重放同一命令被拒绝。没有 `handoff` 的其他会话照旧不受门禁约束。
+
 ## Memory 与长任务观察
 
 把 agent-loop 仓库 `skills/agent-memory/templates/` 下的四个 Markdown 模板复制到

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import datetime as dt
 import os
 import re
 from pathlib import Path
@@ -124,6 +125,7 @@ def initialize(
     reviewer = load_reviewer(root)
     state_path = base / STATE_FILE
     successor = False
+    old: dict[str, Any] | None = None
     if state_path.exists():
         old = read_json(state_path)
         if old.get("active") and old.get("phase") not in {
@@ -206,75 +208,90 @@ def initialize(
                 if not ready:
                     raise HarnessError(reason or "plan review is incomplete")
 
-    created_at = utc_now()
-    config: dict[str, Any] = {
-        "version": 1,
-        "task_id": task_id,
-        "plan_doc": plan_doc,
-        "verifier": {
-            "argv": verifier_argv,
-            "files": verifier_files(root, verifier_argv),
-            "timeout_seconds": float(timeout_seconds),
-            "expect_regex": expect_regex,
-            "forbid_regex": forbid_regex,
-        },
-        "budget": {
-            "max_attempts": int(max_attempts),
-            "max_wall_seconds": float(max_wall_seconds),
-        },
-        "limits": {
-            "max_output_bytes": int(max_output_bytes),
-            "max_artifacts": int(max_artifacts),
-            "max_journal_entries": int(max_journal_entries),
-        },
-        "goal_review": {
-            "after_actions": int(goal_review_after_actions),
-            "after_seconds": float(goal_review_after_seconds),
-        },
-        "reviewer": reviewer,
-        "pager": load_pager(root),
-        "created_at": created_at,
-    }
-    phase = Phase.PROPOSED if review == "proposed" else Phase.READY
-    state: dict[str, Any] = {
-        "version": 1,
-        "task_id": task_id,
-        "active": True,
-        "phase": phase.value,
-        "plan_revision": revision,
-        "plan_review": review,
-        "verify_attempts": 0,
-        "wall_seconds_used": 0.0,
-        "current_run_id": None,
-        "last_run_id": None,
-        "last_outcome": None,
-        "actions_since_goal_review": 0,
-        "last_goal_review_at": created_at,
-        "last_goal_review": None,
-        "verified_fingerprint": None,
-        "stop_report_requested": False,
-        "owner": owner,
-        "config_sha256": config_digest(config),
-        "created_at": created_at,
-        "updated_at": created_at,
-    }
-    base.mkdir(parents=True, exist_ok=True)
-    atomic_write_json(base / CONFIG_FILE, config)
-    atomic_write_json(state_path, state)
-    (base / "artifacts").mkdir(exist_ok=True)
-    scratch.mkdir(parents=True, exist_ok=True)
-    with contextlib.suppress(OSError):
-        (base / PAUSE_FILE).unlink()
-    if review == "proposed":
-        request_pause(
-            root,
-            reason=f"{plan_doc} is awaiting Human Review",
-        )
-        _transition(state, Event.PAUSE_REQUESTED)
-        state["updated_at"] = utc_now()
+    with state_lock(root):
+        if (read_json(state_path) if state_path.exists() else None) != old:
+            raise HarnessError("Harness state changed during init; run init again")
+        created_at = _instance_time(old)
+        config: dict[str, Any] = {
+            "version": 1,
+            "task_id": task_id,
+            "plan_doc": plan_doc,
+            "verifier": {
+                "argv": verifier_argv,
+                "files": verifier_files(root, verifier_argv),
+                "timeout_seconds": float(timeout_seconds),
+                "expect_regex": expect_regex,
+                "forbid_regex": forbid_regex,
+            },
+            "budget": {
+                "max_attempts": int(max_attempts),
+                "max_wall_seconds": float(max_wall_seconds),
+            },
+            "limits": {
+                "max_output_bytes": int(max_output_bytes),
+                "max_artifacts": int(max_artifacts),
+                "max_journal_entries": int(max_journal_entries),
+            },
+            "goal_review": {
+                "after_actions": int(goal_review_after_actions),
+                "after_seconds": float(goal_review_after_seconds),
+            },
+            "reviewer": reviewer,
+            "pager": load_pager(root),
+            "created_at": created_at,
+        }
+        phase = Phase.PROPOSED if review == "proposed" else Phase.READY
+        state: dict[str, Any] = {
+            "version": 1,
+            "task_id": task_id,
+            "active": True,
+            "phase": phase.value,
+            "plan_revision": revision,
+            "plan_review": review,
+            "verify_attempts": 0,
+            "wall_seconds_used": 0.0,
+            "current_run_id": None,
+            "last_run_id": None,
+            "last_outcome": None,
+            "actions_since_goal_review": 0,
+            "last_goal_review_at": created_at,
+            "last_goal_review": None,
+            "verified_fingerprint": None,
+            "stop_report_requested": False,
+            "owner": owner,
+            "config_sha256": config_digest(config),
+            "created_at": created_at,
+            "updated_at": created_at,
+        }
+        base.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(base / CONFIG_FILE, config)
         atomic_write_json(state_path, state)
+        (base / "artifacts").mkdir(exist_ok=True)
+        scratch.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            (base / PAUSE_FILE).unlink()
+        if review == "proposed":
+            request_pause(
+                root,
+                reason=f"{plan_doc} is awaiting Human Review",
+            )
+            _transition(state, Event.PAUSE_REQUESTED)
+            state["updated_at"] = utc_now()
+            atomic_write_json(state_path, state)
     exclude_runtime_from_git(root)
     return config, state
+
+
+def _clock() -> dt.datetime:
+    return dt.datetime.now(dt.UTC)
+
+
+def _instance_time(previous: dict[str, Any] | None) -> str:
+    """created_at names the task instance, so a re-init must never reuse the previous value."""
+    now = _clock()
+    with contextlib.suppress(KeyError, TypeError, ValueError):
+        now = max(now, dt.datetime.fromisoformat(previous["created_at"]) + dt.timedelta(microseconds=1))
+    return now.isoformat(timespec="microseconds")
 
 
 def clean_scratch(root: Path) -> dict[str, Any]:
@@ -651,6 +668,49 @@ def disable(root: Path) -> dict[str, Any]:
 def owned_by_other(state: dict[str, Any], session_id: str | None) -> bool:
     owner = state.get("owner")
     return bool(owner and owner != session_id)
+
+
+def handoff_owner(
+    root: Path, *, from_session: str, task: str, to_session: str | None
+) -> dict[str, Any]:
+    if not to_session:
+        raise HarnessError("handoff needs the caller's session id; set AGENT_LOOP_SESSION_ID")
+    if to_session == from_session:
+        raise HarnessError(f"session {from_session} cannot hand a task off to itself")
+    state_path = harness_dir(root) / STATE_FILE
+    with state_lock(root):
+        _, state = load_runtime(root)
+        instance = f"{state['task_id']}@{state['created_at']}"
+        if not state.get("active"):
+            raise HarnessError(f"task {instance} is not active")
+        if task != instance:
+            raise HarnessError(f"--task {task} is not the active task {instance}")
+        last = state.get("handoff") or {}
+        if state.get("owner") == to_session and (last.get("from"), last.get("to")) == (
+            from_session,
+            to_session,
+        ):
+            return state
+        if state.get("owner") != from_session:
+            raise HarnessError(
+                f"task {instance} is owned by {state.get('owner')}, not {from_session}"
+            )
+        if state.get("current_run_id"):
+            raise HarnessError(
+                f"run {state['current_run_id']} of task {state['task_id']} is in progress; "
+                "hand off after it ends"
+            )
+        running = state.get("review_running")
+        if running and pid_alive(int(running["pid"])):
+            raise HarnessError(
+                f"task reviewer for {state['task_id']} is running; hand off after its decision"
+            )
+        now = utc_now()
+        state["owner"] = to_session
+        state["handoff"] = {"from": from_session, "to": to_session, "at": now}
+        state["updated_at"] = now
+        atomic_write_json(state_path, state)
+        return state
 
 
 def completion_gate(root: Path, session_id: str | None = None) -> str | None:

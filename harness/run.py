@@ -20,6 +20,7 @@ from harness.core import (  # noqa: E402
     HarnessError,
     clean_scratch,
     disable,
+    handoff_owner,
     initialize,
     load_runtime,
     pause_request,
@@ -144,6 +145,11 @@ def build_parser() -> argparse.ArgumentParser:
     pause.add_argument("--reason", required=True)
     pause.add_argument("--require-revision", action="store_true")
     commands.add_parser("resume", help="resume after plan review")
+    handoff = commands.add_parser(
+        "handoff", help="move the active task's owner from another session to this one"
+    )
+    handoff.add_argument("--from", dest="from_session", required=True, metavar="SESSION")
+    handoff.add_argument("--task", required=True, metavar="TASK@CREATED_AT")
     goal_review = commands.add_parser(
         "goal-review", help="record attention refresh decision"
     )
@@ -255,6 +261,15 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.action == "resume":
             state = resume(root)
+            print(json.dumps(state, ensure_ascii=False, indent=2))
+            return 0
+        if args.action == "handoff":
+            state = handoff_owner(
+                root,
+                from_session=args.from_session,
+                task=args.task,
+                to_session=_session_id(),
+            )
             print(json.dumps(state, ensure_ascii=False, indent=2))
             return 0
         if args.action == "goal-review":

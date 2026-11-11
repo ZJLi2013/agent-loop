@@ -6,6 +6,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Owner handoff: `agent-loop-harness handoff --from <old session> --task <task_id>@<created_at>` moves an active task's
+  `owner` to the calling session, so the completion gate follows the task into a new conversation. It refuses a wrong
+  owner or instance, a missing or identical session id, and a running run or reviewer; it changes nothing else. `init`
+  now writes under `.harness/lock` and refuses if the state changed since it was read, and `created_at` carries
+  microseconds and always moves past the previous instance. See the usage guide's section on switching sessions.
+
 - Codex reviewer entry point: `.agent-loop/reviewer.json` can be `{"argv": ["python", "-m", "adapters.codex_review"]}`
   in every project, with no paths. It runs `codex exec` from the project root (through WSL on Windows) with the
   generated prompt on stdin and extra arguments from `AGENT_LOOP_CODEX_ARGS`; `--prompt` / `--out` run a free-form
