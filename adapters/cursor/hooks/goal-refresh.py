@@ -10,23 +10,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
-from harness.compaction import record_compaction  # noqa: E402
-from adapters.core import has_active_harness  # noqa: E402
-from adapters.cursor.session_scope import roots, session_id  # noqa: E402
-
-LARGE_CONTEXT_WINDOW = 1_000_000
+from harness.compaction import LARGE_CONTEXT_WINDOW, record_compaction  # noqa: E402
+from adapters.cursor.session_scope import session_id  # noqa: E402
 
 
 def output_for(raw: str) -> str:
     try:
         payload = json.loads(raw or "{}")
         if isinstance(payload, dict):
-            record_compaction(session_id(payload))
             window = payload.get("context_window_size")
+            if not isinstance(window, int):
+                window = None
+            record_compaction(session_id(payload), window)
             if (
-                has_active_harness(roots(payload), session_id(payload))
-                and payload.get("is_first_compaction") is True
-                and isinstance(window, int)
+                payload.get("is_first_compaction") is True
+                and window is not None
                 and window < LARGE_CONTEXT_WINDOW
             ):
                 return json.dumps(

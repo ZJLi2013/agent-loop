@@ -5,12 +5,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness.compaction import compacted
+from harness.compaction import handoff_mode
 from adapters.protocol import HookAction, HookEvent, HookRequest, HookResponse
-from harness.core import HarnessError, completion_gate, owned_by_other
+from harness.core import HarnessError, completion_gate
 from harness.project import LEGACY_RUNTIME_DIR, RUNTIME_DIR, memory_dir, task_file, worktree_memory
-from harness.protocol import Phase
-from harness.storage import STATE_FILE, harness_dir, read_json
 
 TRIGGER = "task.md"
 STORES = ("facts.md", "episodes.md", "lessons.md")
@@ -148,21 +146,6 @@ def memory_context(task_path: Path) -> str | None:
     return "\n\n".join(parts)
 
 
-def has_active_harness(
-    roots: tuple[Path, ...], session_id: str | None = None
-) -> bool:
-    for root in roots:
-        try:
-            state = read_json(harness_dir(root) / STATE_FILE)
-            if state.get("phase") != Phase.VERIFIED.value and not owned_by_other(
-                state, session_id
-            ):
-                return True
-        except HarnessError:
-            pass
-    return False
-
-
 def handle(request: HookRequest) -> HookResponse:
     if request.event == HookEvent.TOOL_USED:
         task_path = _find_path(request.tool_input)
@@ -174,12 +157,7 @@ def handle(request: HookRequest) -> HookResponse:
         return HookResponse()
 
     if request.event == HookEvent.STOP and request.status == "completed":
-        if os.environ.get("AGENT_LOOP_SESSION_HOST"):
-            handoff = "host"
-        elif compacted(request.session_id):
-            handoff = "new_session"
-        else:
-            handoff = None
+        handoff = handoff_mode(request.session_id)
         messages = []
         for root in request.workspace_roots:
             task = task_file(root)

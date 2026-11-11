@@ -50,22 +50,30 @@ class CompactionHandoffTest(unittest.TestCase):
             handle(request)
         return gate.call_args.args[2]
 
-    def test_pre_compact_marks_the_session_without_a_harness(self) -> None:
-        self.assertFalse(compaction.compacted(self.session))
+    def test_pre_compact_marks_the_session_and_its_window(self) -> None:
+        env = {"AGENT_LOOP_SESSION_HOST": ""}
+        with mock.patch.dict(os.environ, env):
+            self.assertIsNone(compaction.handoff_mode(self.session))
 
-        _goal_refresh().output_for(
-            json.dumps({"conversation_id": self.session, "workspace_roots": [str(self.root)]})
-        )
+            _goal_refresh().output_for(
+                json.dumps({"conversation_id": self.session, "workspace_roots": [str(self.root)]})
+            )
+            self.assertEqual(compaction.handoff_mode(self.session), "new_session")
 
-        self.assertTrue(compaction.compacted(self.session))
-        self.assertFalse(compaction.compacted(None))
+            _goal_refresh().output_for(
+                json.dumps({"conversation_id": self.session, "context_window_size": 300_000})
+            )
+            self.assertEqual(compaction.handoff_mode(self.session), "new_session_1m")
+            self.assertIsNone(compaction.handoff_mode(None))
 
     def test_stop_passes_the_handoff_mode_to_the_gate(self) -> None:
         env = {"AGENT_LOOP_SESSION_HOST": ""}
         self.assertIsNone(self.stop_mode(env))
 
-        compaction.record_compaction(self.session)
+        compaction.record_compaction(self.session, compaction.LARGE_CONTEXT_WINDOW)
         self.assertEqual(self.stop_mode(env), "new_session")
+        compaction.record_compaction(self.session, 300_000)
+        self.assertEqual(self.stop_mode(env), "new_session_1m")
         self.assertEqual(self.stop_mode({"AGENT_LOOP_SESSION_HOST": "1"}), "host")
 
     def verify_payload(self, host: str) -> dict[str, object]:
@@ -90,11 +98,12 @@ class CompactionHandoffTest(unittest.TestCase):
 
     def test_verify_hands_a_compacted_session_off_to_a_new_session(self) -> None:
         initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
-        compaction.record_compaction(self.session)
+        compaction.record_compaction(self.session, 300_000)
 
         handoff = str(self.verify_payload("").get("handoff"))
 
         self.assertIn("in a new session", handoff)
+        self.assertIn("pick a 1M-context model", handoff)
         self.assertIn("Do not initialize another task in this session", handoff)
 
 

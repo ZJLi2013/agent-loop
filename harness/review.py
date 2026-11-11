@@ -322,9 +322,14 @@ def _next_step(handoff: str, next_task: str | None) -> str:
             f"End your turn: the host decides whether {following} continues in this session "
             "or a new one and sends the next step. Do not initialize another task in this turn."
         )
+    larger = (
+        ", and to pick a 1M-context model for it because this session's smaller window compacted"
+        if handoff == "new_session_1m"
+        else ""
+    )
     return (
         f"This session has been compacted, so make your final reply tell the human to start "
-        f"{following} in a new session. Do not initialize another task in this session."
+        f"{following} in a new session{larger}. Do not initialize another task in this session."
     )
 
 
