@@ -73,8 +73,7 @@ class GoalRefreshHookTest(unittest.TestCase):
                 "is_first_compaction": True,
             }
         )
-        with patch.object(HOOK, "has_active_harness", return_value=True):
-            output = json.loads(HOOK.output_for(payload))
+        output = json.loads(HOOK.output_for(payload))
 
         self.assertEqual(output, {})
 
@@ -85,51 +84,26 @@ class GoalRefreshHookTest(unittest.TestCase):
                 "is_first_compaction": False,
             }
         )
-        with patch.object(HOOK, "has_active_harness", return_value=True):
-            output = json.loads(HOOK.output_for(payload))
+        output = json.loads(HOOK.output_for(payload))
 
         self.assertEqual(output, {})
 
-    def test_compact_leaves_other_sessions_alone(self) -> None:
+    def test_small_context_compaction_notifies_without_a_harness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            initialize(
-                root,
-                task_id="t1",
-                verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
-            )
-            state_path = root / ".harness" / "state.json"
-            state = json.loads(state_path.read_text(encoding="utf-8"))
-            state["owner"] = "A"
-            state_path.write_text(json.dumps(state), encoding="utf-8")
-            task = root / ".agent-loop" / "task.md"
-            task.parent.mkdir(parents=True)
-            task.write_text("# Tasks\n", encoding="utf-8")
-            payload = {
-                "conversation_id": "B",
-                "workspace_roots": [str(root)],
-                "tool_input": {"path": str(task)},
-            }
-            with patch.object(
-                session_scope, "_SCOPES", root / "session-cache"
-            ):
-                session_scope.bind(payload)
-                output = json.loads(
-                    HOOK.output_for(
-                        json.dumps(
-                            {
-                                "conversation_id": "B",
-                                "workspace_roots": [str(root)],
-                                "context_window_size": 300_000,
-                                "is_first_compaction": True,
-                            }
-                        )
+            output = json.loads(
+                HOOK.output_for(
+                    json.dumps(
+                        {
+                            "conversation_id": "no-harness",
+                            "workspace_roots": [directory],
+                            "context_window_size": 300_000,
+                            "is_first_compaction": True,
+                        }
                     )
                 )
-                request = pause_request(root)
+            )
 
-        self.assertEqual(output, {})
-        self.assertIsNone(request)
+        self.assertIn("1M-context model", output["user_message"])
 
 
 if __name__ == "__main__":

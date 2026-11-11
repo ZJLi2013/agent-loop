@@ -152,6 +152,14 @@ class PagerCheckpointTest(unittest.TestCase):
         self.write_plan(2, "proposed")
         self.assertIn("plan_review", completion_gate(self.root) or "")
 
+    def test_session_handoff_does_not_hide_the_pager_checkpoint(self) -> None:
+        self.review_with({"decision": "ask_human", "why": "scope question"})
+
+        message = completion_gate(self.root, None, "new_session") or ""
+
+        self.assertIn("t1 is closed", message)
+        self.assertIn("page them", message)
+
     def test_reviewer_stop_only_notifies(self) -> None:
         self.review_with({"decision": "stop", "why": "goal reached"})
         self.assertIn("Notify the human", completion_gate(self.root) or "")

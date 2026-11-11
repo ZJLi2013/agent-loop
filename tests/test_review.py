@@ -90,6 +90,9 @@ class TaskBoundaryReviewTest(unittest.TestCase):
     def test_without_reviewer_verified_task_completes(self) -> None:
         self.init(None)
         self.assertIsNone(completion_gate(self.root))
+        handoff = completion_gate(self.root, None, "new_session") or ""
+        self.assertIn("no reviewer is configured", handoff)
+        self.assertIn("disable", handoff)
         with self.assertRaisesRegex(HarnessError, "no reviewer configured"):
             run_review(self.root)
 

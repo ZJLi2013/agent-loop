@@ -653,7 +653,23 @@ def owned_by_other(state: dict[str, Any], session_id: str | None) -> bool:
     return bool(owner and owner != session_id)
 
 
-def completion_gate(root: Path, session_id: str | None = None) -> str | None:
+def _verified_followup(
+    root: Path,
+    config: dict[str, Any],
+    state: dict[str, Any],
+    state_path: Path,
+    handoff: str | None,
+) -> str | None:
+    messages = [
+        review_followup(root, config, state, state_path, handoff),
+        page_followup(root, config, state),
+    ]
+    return "\n\n".join(message for message in messages if message) or None
+
+
+def completion_gate(
+    root: Path, session_id: str | None = None, handoff: str | None = None
+) -> str | None:
     state_path = harness_dir(root) / STATE_FILE
     if not state_path.exists():
         return None
@@ -695,9 +711,7 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
             None if reviewed and review.get("decision") else verifier_drift(root, config)
         )
         if phase == Phase.VERIFIED and reviewed and not changed:
-            return review_followup(
-                root, config, state, state_path
-            ) or page_followup(root, config, state)
+            return _verified_followup(root, config, state, state_path, handoff)
 
         plan_ready, plan_reason = plan_can_run(root, config, state)
         if not plan_ready:
@@ -720,9 +734,7 @@ def completion_gate(root: Path, session_id: str | None = None) -> str | None:
                 not changed
                 and state.get("verified_fingerprint") == workspace_fingerprint(root)
             ):
-                return review_followup(
-                    root, config, state, state_path
-                ) or page_followup(root, config, state)
+                return _verified_followup(root, config, state, state_path, handoff)
             _transition(state, Event.EVIDENCE_STALE)
             state["verified_fingerprint"] = None
             state["last_outcome"] = "stale"

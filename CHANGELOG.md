@@ -86,6 +86,14 @@ invoke on-demand skills.
 
 ### Changed
 
+- Session switching (#196): a task never switches sessions mid-task; after it closes, the session switches only
+  when it has grown heavy (context at half its window or more, a cold cache that costs more to resume than a fresh
+  session, or a compaction). `task-state` states the criteria. Cursor preCompact now marks the session for every
+  session id and records its window; when a marked session closes a task, the stop followup asks for the handoff and
+  a new session instead of initializing the next task here, and to pick a 1M-context model when the window was
+  smaller. The first-compaction hint to switch to a 1M-context model no longer requires an active Harness. A host that sets `AGENT_LOOP_SESSION_HOST` gets a handoff and the end of the
+  turn at every close, and decides itself. A pending pager checkpoint is shown alongside the review followup instead
+  of being hidden. Unmarked sessions without a host behave as before.
 - `write-for-humans` sets the language of PRs and issues: Chinese titles, bodies and comments in the human's own
   repositories, English by default elsewhere, and whatever language the human names when they name one.
 - `write-for-humans` covers PR and issue bodies a human approves or decides: the decisions the human owns go in one
