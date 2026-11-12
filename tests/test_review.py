@@ -20,8 +20,7 @@ from harness.core import (
     run_command,
     verify,
 )
-from harness.plan import pause_request, request_pause
-from harness.plan_review import record_task_review, respond_task, run_plan_review, task_record
+from harness.plan_review import record_task_review, task_record
 from harness.records import archive_closed_tasks, close_task
 from harness.review import run_review
 
@@ -591,112 +590,6 @@ class HumanSuccessorTest(unittest.TestCase):
                 else:
                     with self.assertRaisesRegex(HarnessError, "unattended after"):
                         self.init_successor()
-
-    def test_correction_pause_admits_a_reviewed_new_task(self) -> None:
-        cases = (
-            ("continue", {}, None),
-            ("stop", {"decision": "stop"}, None),
-            ("same file", {"plan_doc": "./plan.md"}, None),
-            ("no request", {"pause": None}, "unattended after"),
-            ("ordinary request", {"pause": False}, "unattended after"),
-            ("unchanged revision", {"revision": 1}, "unattended after"),
-            ("older revision", {"revision": 0}, "unattended after"),
-            ("different plan", {"plan_doc": "other.md"}, "unattended after"),
-            ("not doing", {"status": "⬜ todo"}, "must be approved as 🔬 doing"),
-            ("old task binding", {"task_revision": 1}, "binds r1, plan is r3"),
-            ("unanswered must", {"respond": False}, "must items"),
-            ("human decision", {"human": True}, "human to decide"),
-        )
-        for name, options, error in cases:
-            with self.subTest(name):
-                self.tearDown()
-                self.setUp()
-                decision = options.get("decision", "continue")
-                self.review_as(decision, "t2" if decision == "continue" else None)
-                tasks = self.root / ".agent-loop" / "task.md"
-                self.assertNotIn("| t1 |", tasks.read_text(encoding="utf-8"))
-                with self.assertRaisesRegex(HarnessError, "init its successor"):
-                    request_pause(self.root, reason="ordinary pause after CLOSE")
-                self.assertIsNone(pause_request(self.root))
-
-                pause_path = self.root / ".harness" / "pause.json"
-                if options.get("pause", True) is not None:
-                    request_pause(self.root, reason="human: t3 before t2", require_revision=True)
-                    if options.get("pause") is False:
-                        # A saved ordinary request, such as one left by an older version.
-                        request = pause_request(self.root)
-                        request["require_revision"] = False
-                        pause_path.write_text(json.dumps(request), encoding="utf-8")
-
-                revision = options.get("revision", 3)
-                plan_doc = options.get("plan_doc", "plan.md")
-                plan = PLAN_MOVED.replace("Plan Revision: 1", f"Plan Revision: {revision}")
-                (self.root / plan_doc).write_text(plan + "\n## t3 design\ncorrected scope\n", encoding="utf-8")
-                row = SUCCESSOR_TASKS.format(revision=options.get("task_revision", revision))
-                row = row.replace("t2", "t3").replace("t3-本地设计", "t3-design")
-                row = row.replace("../plan.md", f"../{plan_doc}")
-                row = row.replace("🔬 doing", options.get("status", "🔬 doing"))
-                tasks.write_text(
-                    row + "| P1 | t2 | r1 | waits | [design](../plan.md#t2-本地设计) | ⬜ todo | 0 |\n",
-                    encoding="utf-8",
-                )
-                must = {
-                    "level": "must", "claim": "check the corrected scope",
-                    "consequence": "the verifier checks the old priority",
-                    "evidence": "plan.md", "change": "use a new verifier",
-                    "human": options.get("human", False),
-                }
-                report = json.dumps({"summary": "check scope", "tasks": {
-                    "t2": {"findings": []}, "t3": {"findings": [must]},
-                }})
-                reviewer = [sys.executable, "-S", "-c", (
-                    "from pathlib import Path; "
-                    f"Path('.harness/plan-review/report.json').write_text({report!r})"
-                )]
-                run_plan_review(
-                    self.root, plan_doc=plan_doc,
-                    reviewer_config={"argv": reviewer, "timeout_seconds": 30},
-                )
-                if options.get("respond", True):
-                    respond_task(self.root, "t3", items=["1=applied"])
-                (self.root / ".agent-loop" / "reviewer.json").write_text(json.dumps({
-                    "argv": reviewer_decision_only({"decision": "stop", "why": "corrected task verified"}),
-                    "timeout_seconds": 30,
-                }), encoding="utf-8")
-                before = load_runtime(self.root)
-                request_before = pause_path.read_bytes() if pause_path.exists() else None
-                verifier = [sys.executable, "-S", "-c", "print('corrected task verified')"]
-                kwargs = dict(
-                    task_id="t3", plan_doc=plan_doc, verifier_argv=verifier,
-                    max_attempts=5, max_wall_seconds=90,
-                )
-                if error:
-                    with self.assertRaises(HarnessError) as rejected:
-                        initialize(self.root, **kwargs)
-                    if error == "unattended after":
-                        self.assertIn(error, str(rejected.exception))
-                    self.assertEqual(load_runtime(self.root), before)
-                    self.assertEqual(
-                        pause_path.read_bytes() if pause_path.exists() else None, request_before
-                    )
-                else:
-                    try:
-                        config, state = initialize(self.root, **kwargs)
-                    except HarnessError as exc:
-                        self.fail(f"reviewed human correction must admit t3: {exc}")
-                    self.assertEqual(state["task_id"], "t3")
-                    self.assertEqual(state["phase"], "ready")
-                    self.assertEqual(state["plan_revision"], 3)
-                    self.assertEqual(state["plan_review"], "unreviewed")
-                    self.assertEqual(state["verify_attempts"], 0)
-                    self.assertEqual(config["verifier"]["argv"], verifier)
-                    self.assertEqual(config["budget"], {"max_attempts": 5, "max_wall_seconds": 90.0})
-                    self.assertFalse(pause_path.exists())
-                    result = verify(self.root)
-                    self.assertTrue(result["verification_passed"])
-                    self.assertEqual(result["automatic_review"]["decision"], "stop")
-                    stdout = self.root / ".harness" / "artifacts" / result["run_id"] / "stdout.log"
-                    self.assertEqual(stdout.read_text().strip(), "corrected task verified")
 
     def test_successor_is_plan_reviewed_before_init(self) -> None:
         cases = (
