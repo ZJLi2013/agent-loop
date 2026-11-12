@@ -96,6 +96,8 @@ invoke on-demand skills.
   of being hidden. Unmarked sessions without a host behave as before.
 - `write-for-humans` sets the language of PRs and issues: Chinese titles, bodies and comments in the human's own
   repositories, English by default elsewhere, and whatever language the human names when they name one.
+  Auto-fix follows it: Codex writes the pull request title, body and stop comment in Chinese, and `run.ps1` posts its
+  own comments in Chinese.
 - `write-for-humans` covers PR and issue bodies a human approves or decides: the decisions the human owns go in one
   numbered section, each with a recommendation and reason, and the part outside `<details>` is enough to decide.
 - `external-output-boundary` loads on demand (`alwaysApply: false`): Cursor keeps only its description, which names
