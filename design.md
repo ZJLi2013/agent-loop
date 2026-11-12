@@ -114,7 +114,7 @@ task 行按读它的操作定义，主线表的行只有五格，不属于任何
 | guard | 拦哪些操作 | 执行它的函数 | 契约测试 |
 |---|---|---|---|
 | revision 一致 | init：plan `Plan Revision` ≠ task `rN` 时拒绝；exec、verify、gate 的 plan 检查、Goal Review `--decision continue`：plan `Plan Revision` 须等于 `state.plan_revision`（不等时 exec / verify / gate 写 `require_revision` 的 pause），也须等于 task `rN`（不等时写普通 pause），continue 不满足即拒绝；resume：plan `Plan Revision` ≠ task `rN` 时拒绝，通过后把它写进 `state.plan_revision` | `core.initialize`；`plan.plan_can_run`（经 `run_command`、`completion_gate`、`attention.record_goal_review`）；`plan.resume` | `test_harness_pause.py`：`test_init_rejects_task_bound_to_another_revision`、`test_human_correction_requires_new_approved_revision` |
-| 纠偏要求新 revision：pause 带 `require_revision` 时，`Plan Revision` 大于 `state.plan_revision` | resume、Goal Review `--decision continue`：拒绝 | `plan.resume`；`attention.record_goal_review` | `test_harness_pause.py`：`test_human_correction_requires_new_approved_revision` |
+| 纠偏要求新 revision：pause 带 `require_revision` 时，`Plan Revision` 大于 `state.plan_revision` | resume、Goal Review `--decision continue`：拒绝；下一 task 的 init：未消费的 `require_revision` 请求、本次 `plan_doc` 与上一个 task 是同一文件且其 `Plan Revision` 大于上一个 state 的 `plan_revision` 时，视同 human 批准，不再要求等于 `next_task`、`stop` 后也可 init；不满足时无人值守守卫照旧。init 写入新 config / state 后删请求，任何拒绝都保留 | `plan.resume`；`attention.record_goal_review`；`plan.has_revised_plan_pause`（经 `core.initialize`） | `test_harness_pause.py`：`test_human_correction_requires_new_approved_revision`；init 放行的回归测试在 #203 的提交 `586ecfe` |
 | `Plan Review` 是 `approved` 或 `unreviewed` | init：`proposed` 时以 `PAUSED` 起步并写 pause；exec、verify、gate 的 plan 检查：写 pause；resume、Goal Review `--decision continue`：拒绝 | `core.initialize`；`plan.plan_can_run`（同上）；`plan.resume` | `test_harness_pause.py`：`test_proposed_plan_starts_paused`；`test_page.py`：`test_proposed_plan_is_paged_and_ok_approves_and_resumes` |
 | task 有有效的 plan review（配置了 reviewer 且绑定 plan 时）：最后一条记录对应当前 `plan_doc`（没有 `plan_doc` 字段的记录算对应）、`source` 不是 `task_review`、之后没有 `--again`；`must` 全部回应；有 human 项时有不早于该 review 的 `--approve` | init：未满足且 `Plan Review` 是 `approved`、task 不是 reviewer 选的后继时拒绝，要求先改回 `proposed`；其余情况当场跑 plan reviewer 再判，仍不满足即拒绝；exec、verify：写 pause；resume：未满足时当场跑 plan reviewer，仍不满足即拒绝，满足了而 `Plan Review` 是 `approved` 时改回 `proposed` 并拒绝。init 与 resume 还要求有 human 项时 `Plan Review` 不是 `unreviewed` | `plan_review.plan_review_ready`（经 `core.initialize`、`run_command`、`plan.resume`） | `test_plan_review.py`：`test_must_items_need_an_answer_before_init`、`test_human_items_wait_for_the_human`、`test_approved_plan_cannot_skip_missing_review`、`test_proposed_plan_is_reviewed_before_human_resume`、`test_task_id_reused_by_another_plan_is_reviewed_again`、`test_records_from_before_the_protocol_still_read`；`test_review.py`：`test_successor_is_plan_reviewed_before_init` |
 | 没有 pause request（`.harness/pause.json`） | exec、verify：拒绝并转 `PAUSED`；运行中的命令：runner 轮询到即中断；task review：拒绝；gate：只发 Goal Review 提示或 pager followup | `plan.pause_request`（经 `run_command`、`runner.execute_process`、`review.run_review`、`completion_gate`） | `test_harness_pause.py`：`test_pause_interrupts_a_running_process` |
@@ -309,9 +309,12 @@ plan reviewer 另查新增持久状态或读写边界的 task 是否带模块契
 
 task 验证通过后，下一步由 reviewer 提议，worker 不给自己的下一步拍板。init 只要求 task 是 human 批准的
 `🔬 doing`，不要求等于 reviewer 的提议。未经 human 批准（`Plan Review: unreviewed`）时只能 init reviewer 指名的 task：
-`continue` 的 `next_task`，或 `ask_human` 附带的不受该问题影响的 `next_task`；`stop` 后不能 init，
-唯一例外是主线交接：`task.md` 的主线一节为 `Mainline Review: approved`，上一个 task 的 plan 是紧挨 `▶ next`
-前的 `✅ done` 行，本次 init 的 plan 是 `▶ next` 行的 plan。plan review 与 `🔬 doing` 检查照旧。
+`continue` 的 `next_task`，或 `ask_human` 附带的不受该问题影响的 `next_task`；`stop` 后不能 init。
+两个例外：主线交接，即 `task.md` 的主线一节为 `Mainline Review: approved`，上一个 task 的 plan 是紧挨 `▶ next`
+前的 `✅ done` 行，本次 init 的 plan 是 `▶ next` 行的 plan；human 纠偏，即有未消费的 `pause --require-revision`
+请求，且同一份 plan 的 revision 已高于上一个 task 的（判定见上表「纠偏要求新 revision」）。plan review 与 `🔬 doing` 检查照旧。
+纠偏后的新 task 只经 init 开工，`resume` 不切换 task。init 不持状态锁，纠偏判定只读 `.harness/pause.json` 与 plan，
+不新增写者；与 init 并发的 `pause` 不在保证内。
 两类调度都由确定性边界触发，不用 LLM 判断是否需要 review：
 
 | 时刻 | 调用 |

@@ -27,6 +27,7 @@ from harness.journal import (
 )
 from harness.plan import (
     PAUSE_FILE,
+    has_revised_plan_pause,
     pause_request,
     plan_can_run,
     plan_metadata,
@@ -157,7 +158,11 @@ def initialize(
                         f"reviewer sent {old.get('task_id')} back; finish its CLOSE and verify "
                         "before starting another task"
                     )
-                attended = not plan_doc or plan_metadata(root, plan_doc)[1] == "approved"
+                attended = (
+                    not plan_doc
+                    or plan_metadata(root, plan_doc)[1] == "approved"
+                    or has_revised_plan_pause(root, old_config, old, plan_doc)
+                )
                 handoff = (
                     not attended
                     and prior_review["decision"] == "stop"

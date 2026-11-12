@@ -87,6 +87,26 @@ def pause_request(root: Path) -> dict[str, Any] | None:
     return read_json(path)
 
 
+def has_revised_plan_pause(
+    root: Path,
+    config: dict[str, Any],
+    state: dict[str, Any],
+    plan_doc: str | None,
+) -> bool:
+    request = pause_request(root)
+    old_plan_doc = config.get("plan_doc")
+    old_revision = state.get("plan_revision")
+    if not (
+        request and request.get("require_revision")
+        and plan_doc and old_plan_doc and old_revision is not None
+    ):
+        return False
+    if plan_location(root, plan_doc) != plan_location(root, str(old_plan_doc)):
+        return False
+    revision, _ = plan_metadata(root, plan_doc)
+    return revision > int(old_revision)
+
+
 def _task_eligibility_error(root: Path, state: dict[str, Any]) -> str | None:
     if (
         state.get("plan_revision") is not None
