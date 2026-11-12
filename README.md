@@ -68,7 +68,7 @@ cd agent-loop
 python -m pip install .
 python examples/minimal-project/prepare.py ../agent-loop-demo
 cd ../agent-loop-demo
-agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
+agent-loop-harness init --task fractional-mean --plan-doc plan.md -- python -B -m unittest -v
 agent-loop-harness verify
 ```
 

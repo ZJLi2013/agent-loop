@@ -30,7 +30,7 @@ Keep using the interpreter/environment into which you installed the package.
 ## 2. Lock the verifier and observe a real failure
 
 ```sh
-agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
+agent-loop-harness init --task fractional-mean --plan-doc plan.md -- python -B -m unittest -v
 agent-loop-harness verify
 ```
 

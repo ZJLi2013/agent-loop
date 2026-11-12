@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -283,6 +284,8 @@ class LeftoversTest(unittest.TestCase):
             "plans/a/cache/x_t3.pyc": "",
             "plans/a/cache/y.pyc": "",
             "plans/b/plan.md": "copy `verify_t1.py` for t11\n",
+            "plans/b/plan-archive.md": "",
+            "plans/b/sub-exp/t3.md": "",
         }
         for name, text in files.items():
             path = self.runtime / name
@@ -297,11 +300,53 @@ class LeftoversTest(unittest.TestCase):
             leftovers(self.root),
             [
                 {"path": ".agent-loop/plans/a/cache/", "why": "closed Goal plan plans/a/plan.md, closed task t3"},
+                {"path": ".agent-loop/plans/a/plan-archive.md", "why": "closed Goal plan plans/a/plan.md"},
                 {"path": ".agent-loop/plans/a/replay.json", "why": "closed Goal plan plans/a/plan.md"},
+                {"path": ".agent-loop/plans/a/sub-exp/", "why": "closed Goal plan plans/a/plan.md, closed task t3"},
                 {"path": ".agent-loop/verify_g7p2.py", "why": "closed task p2"},
                 {"path": ".agent-loop/verify_t3.py", "why": "closed task t3"},
             ],
         )
+
+    def test_done_plan_outside_agent_loop_reports_only_untracked_files(self) -> None:
+        mainline = (
+            "## 主线\n\n| Goal | 问题 | 退出条件 | 状态 | plan |\n|---|---|---|---|---|\n"
+            "| out | a | a | ✅ done | [plan](../exps/cache/plan.md) |\n"
+            "| top | a | a | ✅ done | [plan](../plan.md) |\n"
+            "| in | a | a | ✅ done | [plan](plans/in/plan.md) |\n"
+        )
+        tracked = {
+            ".agent-loop/task.md": mainline,
+            ".agent-loop/plans/in/plan.md": "",
+            "exps/cache/plan.md": "",
+            "exps/cache/notes.md": "",
+            "plan.md": "",
+        }
+        untracked = {
+            ".agent-loop/plans/in/run.log": "",
+            "exps/cache/run.log": "",
+            "exps/cache/plan-archive.md": "",
+            "exps/cache/sub-exp/a.md": "",
+            "scratch.txt": "",
+        }
+        inside = {"path": ".agent-loop/plans/in/run.log", "why": "closed Goal plan plans/in/plan.md"}
+        outside = [
+            {"path": "exps/cache/plan-archive.md", "why": "closed Goal plan exps/cache/plan.md"},
+            {"path": "exps/cache/run.log", "why": "closed Goal plan exps/cache/plan.md"},
+            {"path": "exps/cache/sub-exp/", "why": "closed Goal plan exps/cache/plan.md"},
+        ]
+        for repo in (True, False):
+            with self.subTest(git=repo), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                for name, text in {**tracked, **untracked}.items():
+                    (root / name).parent.mkdir(parents=True, exist_ok=True)
+                    (root / name).write_text(text, encoding="utf-8")
+                if repo:
+                    git = ["git", "-C", temp, "-c", "user.name=t", "-c", "user.email=t@t"]
+                    subprocess.run([*git, "init", "-q"], check=True)
+                    subprocess.run([*git, "add", *tracked], check=True)
+                    subprocess.run([*git, "commit", "-q", "-m", "init"], check=True)
+                self.assertEqual(leftovers(root), sorted([inside, *(outside if repo else [])], key=lambda i: i["path"]))
 
     def test_active_harness_keeps_its_locked_verifier_out(self) -> None:
         config = {"verifier": {"files": {".agent-loop/plans/a/cache/y.pyc": "digest"}}}
