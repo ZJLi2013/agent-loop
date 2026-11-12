@@ -248,7 +248,7 @@ Experiment Log
 Harness 参数叫 `plan_doc`，不关心文件名是 feature、exp 还是其它名字。
 
 task CLOSE 时，Experiment Log 的多轮记录合并成 task 结论并入脉络的当前阶段行，换方向时开新行；读数、链接与
-已收口内容进入 linked archive，不继续占用活跃表。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。Goal CLOSE / pivot 时冻结 plan 为 as-built。sub-exp 不删，但只按 evidence 指针读取；
+已收口内容进入 linked archive，不继续占用活跃表。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。Goal CLOSE / pivot 时冻结 plan 为 as-built。task CLOSE 不删 sub-exp，只按 evidence 指针读取；主线行改 `✅ done` 时 archive 与 sub-exp 的关键点并进头部后删除，冻结后 plan 目录只剩 plan document（条款归 `work-planning` 的主线交接）；
 run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit。closed task 与旧交接快照同样移出活跃
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 

@@ -27,6 +27,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 - [交接笔记不加「未完事项」「授权」](handoff-note-replay.md)：两段式回放里现有四项已让接手会话处理对在等的事与「不合并」，#193 不改规则；重开条件。
 - [纠正只记一处、第二次起草](correction-replay.md)：human 纠正写进宿主日志或 `[纠正]` lesson 之一，第二次起草规则改动；改动前后的回放，真实会话里的一次观察，以及信号按原文计数会漏同义。
 - [暂停与恢复共用一份 task 判定](pause-resume-eligibility.md)：#177 的补充修正依据，对照 kubectl 与 Argo Workflows 的 pause / resume。
+- [语义名与冻结后的 plan 目录](semantic-names-replay.md)：完成的 Goal 冻结后 plan 目录只剩 plan document，耐久结论与否定发现先上提；改动前后的回放，以及命名一句为什么只是把现有做法写成规则。
 - [Gate 只摆设计与结论](plan-gate-replay.md)：plan 模板加「设计」一节与执行细节分隔线，Gate 问题先给设计与结论；判断类默认 agent 判断一句为什么不加。
 - [按需 skill 与通用 rule 的迁出清单](skill-migration.md)：七个 skill 与两条 rule 为什么迁到私有 pack、各自的依赖，以及核心里删掉的点名。
 
