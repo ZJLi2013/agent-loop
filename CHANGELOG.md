@@ -305,6 +305,12 @@ invoke on-demand skills.
 
 ### Fixed
 
+- Harness `init --evidence-file PATH` (repeatable) declares task outputs read by the verifier (#200), so
+  regenerating an existing result file no longer triggers verifier drift. Each declaration must resolve to a
+  verifier file argument; invalid declarations leave state and config unchanged. Undeclared verifier files stay
+  locked, and evidence freshness still follows the workspace fingerprint's existing scope. For an active task,
+  disable and init again with the declarations; verifier drift errors now include this hint.
+
 - Task review rejects a successor whose plan-review record belongs to another task id before saving the decision
   (#174), so a case collision cannot bind unattended execution to a task that `init` refuses. Plan review selects
   task rows linked to the plan or files in its directory before reading their records; mainline rows and headers

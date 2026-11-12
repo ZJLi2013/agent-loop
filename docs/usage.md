@@ -247,11 +247,23 @@ plan review 建议。
 agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
 ```
 
-把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令、命令里指向工作区内文件的内容（含被 gitignore 的路径）与预算；之后改了 verifier 文件，
+把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令、命令里未声明为 evidence 的工作区内文件内容（含被 gitignore 的路径）与预算；之后改了 verifier 文件，
 `verify` 拒绝运行、已有证据转为 stale，要 disable 后重新 init 才能锁定新版本。工作经 `agent-loop-harness exec -- <command>` 执行，
 然后运行 `agent-loop-harness verify`。宿主的其他工具调用不在 runner 的硬控制边界之内。失败直接进入诊断与自修，
 evidence stale 直接要求重新验证；默认不按动作数或时间暂停。确需固定 attention refresh 时，用
 `--goal-review-actions N` 或 `--goal-review-minutes N` 显式开启。
+
+verifier 参数中若有 task 会生成或重写的文件，在 `init` 的 `--` 前用 `--evidence-file PATH` 显式声明；
+有多个文件就重复该参数。例如 `check_result.py` 读取 task 产出的 `result.log`：
+
+```sh
+agent-loop-harness init --task t1 --evidence-file result.log -- python check_result.py result.log
+```
+
+PATH 和 verifier 参数都相对项目 root 解析（也支持绝对路径），必须对应同一个文件路径；文件可以尚不存在。
+不匹配或指向目录时 `init` 失败，不写 state / config。声明后 `result.log` 不受 verifier 文件锁，旧结果存在时也能重写；
+它的新鲜度仍按 [workspace fingerprint 的范围](../design.md#verifier-file-lock) 检查，声明不会把被 gitignore 的文件加入该范围。
+未声明的 `check_result.py` 仍上锁，改动后 `verify` 会拒绝。若已有 task 因产出文件变化被拒，先 `disable`，再带声明重新 `init`。
 
 ## 可选的独立 reviewer
 
