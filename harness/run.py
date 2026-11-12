@@ -98,6 +98,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     init.add_argument("--expect-regex")
     init.add_argument("--forbid-regex")
+    init.add_argument(
+        "--evidence-file",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="task output read by the verifier; must match a verifier file argument (repeatable)",
+    )
     init.add_argument("verifier", nargs=argparse.REMAINDER)
 
     execute = commands.add_parser("exec", help="run and journal one command")
@@ -170,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
                 root,
                 task_id=args.task,
                 verifier_argv=_command(args.verifier),
+                evidence_files=args.evidence_file,
                 plan_doc=args.plan_doc,
                 timeout_seconds=args.timeout,
                 max_attempts=args.max_attempts,
