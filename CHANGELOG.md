@@ -101,6 +101,12 @@ invoke on-demand skills.
   smaller. The first-compaction hint to switch to a 1M-context model no longer requires an active Harness. A host that sets `AGENT_LOOP_SESSION_HOST` gets a handoff and the end of the
   turn at every close, and decides itself. A pending pager checkpoint is shown alongside the review followup instead
   of being hidden. Unmarked sessions without a host behave as before.
+- Acceptance evidence stays in the Experiment Log: verification readings, merge-and-deploy and first-use records, and
+  observation-window counts that only prove a task passed are not written into project docs and get no PR of their
+  own. When the evidence establishes or revises a lasting conclusion that later use, choices or judgement rely on,
+  that conclusion goes into the docs with the numbers and conditions it needs. `experiment-design` CLOSE,
+  `agent-memory`, the task reviewer prompt and `design.md` sources of truth say so; the reviewer no longer raises a
+  `must` for such evidence even when a task's acceptance asked for it in docs.
 - `write-for-humans` sets the language of PRs and issues: Chinese titles, bodies and comments in the human's own
   repositories, English by default elsewhere, and whatever language the human names when they name one.
   Auto-fix follows it: Codex writes the pull request title, body and stop comment in Chinese, and `run.ps1` posts its
