@@ -328,6 +328,90 @@ class VerifierLockTest(unittest.TestCase):
         self.assertEqual(verify(self.root)["outcome"], "pass")
         self.assertIsNone(completion_gate(self.root))
 
+    def cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-S", str(Path(__file__).resolve().parents[1] / "harness" / "run.py"),
+             "--root", str(self.root), *args],
+            capture_output=True,
+            text=True,
+        )
+
+    def test_declared_evidence_can_be_regenerated_and_still_goes_stale(self) -> None:
+        evidence = self.root / "result.log"
+        evidence.write_text("old\n")
+        # Both declarations resolve against --root, even when spelled differently.
+        result = self.cli(
+            "init", "--task", "t1", "--evidence-file", "./result.log",
+            "--evidence-file", "next.log", "--", sys.executable, "-S", "-c",
+            "import pathlib, sys; sys.exit(any(pathlib.Path(p).read_text().strip() != 'new' "
+            "for p in sys.argv[1:]))", str(evidence), "./next.log",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(load_runtime(self.root)[0]["verifier"]["files"], {})
+
+        result = self.cli(
+            "exec", "--", sys.executable, "-S", "-c",
+            "from pathlib import Path; Path('result.log').write_text('new\\n'); "
+            "Path('next.log').write_text('new\\n')",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.cli("verify")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["result"]["outcome"], "pass")
+        self.assertIsNone(completion_gate(self.root))
+
+        evidence.write_text("changed after verification\n")
+        self.assertIn("is stale", completion_gate(self.root) or "")
+        self.assertEqual(load_runtime(self.root)[1]["phase"], "failed")
+
+    def test_evidence_declaration_keeps_verifier_script_locked(self) -> None:
+        (self.root / "result.log").write_text("old\n")
+        self.ignored.write_text(
+            "import sys; sys.exit(open(sys.argv[1]).read().strip() != 'new')\n"
+        )
+        result = self.cli(
+            "init", "--task", "t1", "--evidence-file", "result.log", "--",
+            sys.executable, "-S", ".agent-loop/verify_t1.py", "result.log",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            set(load_runtime(self.root)[0]["verifier"]["files"]),
+            {".agent-loop/verify_t1.py"},
+        )
+        (self.root / "result.log").write_text("new\n")
+        self.ignored.write_text("print('OK')  # loosened\n")
+
+        result = self.cli("verify")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("verify_t1.py changed after init", result.stderr)
+        self.assertIn("--evidence-file", result.stderr)
+        self.assertEqual(load_runtime(self.root)[1]["verify_attempts"], 0)
+
+    def test_evidence_declaration_requires_a_verifier_file_argument(self) -> None:
+        (self.root / "result.log").write_text("old\n")
+        for declaration in ("result.log", "missing.log", ".agent-loop"):
+            with self.subTest(declaration=declaration):
+                result = self.cli(
+                    "init", "--task", "t1", "--evidence-file", declaration, "--",
+                    sys.executable, "-S", "-c", "pass", ".agent-loop",
+                )
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("must match a verifier file argument", result.stderr)
+                self.assertFalse((harness_dir(self.root) / "config.json").exists())
+                self.assertFalse((harness_dir(self.root) / "state.json").exists())
+
+    def test_invalid_evidence_declaration_preserves_existing_runtime(self) -> None:
+        self.init(self.ignored)
+        disable(self.root)
+        before = load_runtime(self.root)
+        result = self.cli(
+            "init", "--task", "t2", "--evidence-file", "typo.log", "--",
+            sys.executable, "-S", ".agent-loop/verify_t1.py", "result.log",
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("must match a verifier file argument", result.stderr)
+        self.assertEqual(load_runtime(self.root), before)
+
     def test_config_without_verifier_files_verifies_as_before(self) -> None:
         self.init(self.ignored)
         config_path = harness_dir(self.root) / "config.json"
