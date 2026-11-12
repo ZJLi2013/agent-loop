@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Hands one open auto-fix issue triaged as restores-contract to Codex and opens a pull request for its fix.
 
@@ -81,7 +81,7 @@ Invoke-Checked wsl -e bash -lc "cd '$wslWt' && codex exec --skip-git-repo-check 
 
 $stop = Join-Path $out 'stop.md'
 if (Test-Path $stop) {
-    [IO.File]::AppendAllText($stop, "`n`nAI use: written by Codex through the maintainer's local auto-fix command; not reviewed by a human before posting.`n", $utf8)
+    [IO.File]::AppendAllText($stop, "`n`nAI use：由 maintainer 本地的 auto-fix 命令启动 Codex 编写，发布前未经人工审阅。`n", $utf8)
     Invoke-Checked python $checker --title "Auto-fix stopped on #$Issue" $stop
     Invoke-Checked gh issue comment $Issue --repo $repo --body-file $stop
     Stop-Run "Codex declined the issue; see $stop"
@@ -100,7 +100,7 @@ Invoke-Checked git -C $wt push -q -u origin $branch
 $testSha = (Invoke-Checked git -C $wt rev-parse HEAD).Trim()
 $pr = (Invoke-Checked gh pr create --repo $repo --draft --base main --head $branch --label auto-fix --title $title --body-file $body | Select-Object -Last 1).Trim()
 if (Test-Checks $pr $testSha) {
-    Invoke-Checked gh pr comment $pr --body "The regression test passed on the unfixed code, so it does not reproduce #$Issue."
+    Invoke-Checked gh pr comment $pr --body "回归测试在未修复的代码上已经通过，没能复现 #$Issue。"
     Stop-Run "CI passed on the test-only commit; see $pr"
 }
 
@@ -110,7 +110,7 @@ Invoke-Checked git -C $wt commit -q -m $title
 Invoke-Checked git -C $wt push -q
 if (-not (Test-Checks $pr (Invoke-Checked git -C $wt rev-parse HEAD).Trim())) {
     $failed = Get-FailedChecks $pr
-    Invoke-Checked gh pr comment $pr --body "CI fails with the fix applied: $failed."
+    Invoke-Checked gh pr comment $pr --body "加上修复后 CI 失败：$failed。"
     Stop-Run "CI failed with the fix ($failed); see $pr"
 }
 
@@ -120,7 +120,7 @@ Invoke-Checked git -C $wt commit -q -m "Drop the #$Issue regression test after C
 Invoke-Checked git -C $wt push -q
 if (-not (Test-Checks $pr (Invoke-Checked git -C $wt rev-parse HEAD).Trim())) {
     $failed = Get-FailedChecks $pr
-    Invoke-Checked gh pr comment $pr --body "CI fails once the regression test is dropped: $failed."
+    Invoke-Checked gh pr comment $pr --body "删掉回归测试后 CI 失败：$failed。"
     Stop-Run "CI failed without the regression test ($failed); see $pr"
 }
 Invoke-Checked gh pr ready $pr
