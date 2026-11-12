@@ -349,8 +349,17 @@ agent-loop-harness plan-review --plan-doc plan.md
 agent-loop-harness pause --require-revision --reason "Goal changed"
 ```
 
-把计划更新为新 revision 并设为 proposed，同步 task 的 revision 与范围，配置了 reviewer 时取得 plan review，批准后运行
-`agent-loop-harness resume`。
+把同一份计划更新为更高 revision 并设为 proposed，同步纠偏后 task 的 revision 与范围，配置了 reviewer 时取得 plan review。
+回应所有 `must`；没有待 human 决定的项时可设为 `Plan Review: unreviewed`，有 human 决策时仍须批准。
+将新 task 绑定当前 revision 并标为唯一的 `🔬 doing`，用 `init` 配置它自己的 verifier 和预算：
+
+```sh
+agent-loop-harness init --task c --plan-doc plan.md -- python verify_c.py
+```
+
+未消费的 `--require-revision` 暂停请求加上同一计划的 revision 提升，允许新 task 替代上次 task reviewer 的 `next_task`
+或 `stop` 决定；task 状态、版本绑定和 plan review 准入仍须通过。`init` 成功写入新配置和状态后删除暂停请求，拒绝时保留。
+新 task 不用 `resume`；`resume` 只恢复原 task，不会切换 task，也不替换它的 verifier 和预算。
 
 有待处理的 Goal Review 时，记录证据与决定：
 

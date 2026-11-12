@@ -305,6 +305,12 @@ invoke on-demand skills.
 
 ### Fixed
 
+- A pending `pause --require-revision` lets `init` start a corrected task under an `unreviewed` plan after the
+  same plan's revision increases (#191), superseding the previous task reviewer's `next_task` or `stop` decision.
+  The new task still needs doing status, the current revision and a ready plan review. Rejected initialization
+  keeps the pause request; successful initialization consumes it and installs the new verifier and budgets.
+  Use `init` for a new task after correction; `resume` continues to address the original task.
+
 - Task review rejects a successor whose plan-review record belongs to another task id before saving the decision
   (#174), so a case collision cannot bind unattended execution to a task that `init` refuses. Plan review selects
   task rows linked to the plan or files in its directory before reading their records; mainline rows and headers
