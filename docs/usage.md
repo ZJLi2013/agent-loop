@@ -228,14 +228,14 @@ Harness 只把同时满足两条的表格行读作 task：至少 7 列，第一�
 
 ```markdown
 | P | id | task | 验收检查点 | 状态 | 失败 |
-| P1 | t3 | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
+| P1 | migrate-x-to-y | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
 ```
 
 改为
 
 ```markdown
 | P | id | rev | task | 验收检查点 | 状态 | 失败 |
-| P1 | t3 | r1 | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
+| P1 | migrate-x-to-y | r1 | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
 ```
 
 评审计划，然后把它设为 `Plan Review: approved`，并把一个 task 激活为 `🔬 doing`。配置了 reviewer 时，先按下文取得它的
@@ -244,7 +244,7 @@ plan review 建议。
 在工作项目根目录，初始化一个适合该项目 Goal 的 verifier：
 
 ```sh
-agent-loop-harness init --task t1 --plan-doc plan.md -- python -B -m unittest -v
+agent-loop-harness init --task fractional-mean --plan-doc plan.md -- python -B -m unittest -v
 ```
 
 把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令、命令里未声明为 evidence 的工作区内文件内容（含被 gitignore 的路径）与预算；之后改了 verifier 文件，
@@ -257,7 +257,7 @@ verifier 参数中若有 task 会生成或重写的文件，在 `init` 的 `--` 
 有多个文件就重复该参数。例如 `check_result.py` 读取 task 产出的 `result.log`：
 
 ```sh
-agent-loop-harness init --task t1 --evidence-file result.log -- python check_result.py result.log
+agent-loop-harness init --task fractional-mean --evidence-file result.log -- python check_result.py result.log
 ```
 
 PATH 和 verifier 参数都相对项目 root 解析（也支持绝对路径），必须对应同一个文件路径；文件可以尚不存在。
@@ -387,8 +387,8 @@ task 或已完成 Goal、又没被现行文档提到的文件，每项带 `path`
 
 ```json
 "leftovers": [
-  {"path": ".agent-loop/verify_t3.py", "why": "closed task t3"},
-  {"path": ".agent-loop/plans/g2/__pycache__/", "why": "closed Goal plan plans/g2/plan.md, closed task m4"}
+  {"path": ".agent-loop/verify_cache-format.py", "why": "closed task cache-format"},
+  {"path": ".agent-loop/plans/asset-cache/__pycache__/", "why": "closed Goal plan plans/asset-cache/plan.md, closed task cache-warmup"}
 ]
 ```
 

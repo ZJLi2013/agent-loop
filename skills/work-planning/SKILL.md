@@ -13,7 +13,8 @@ description: >-
 
 ## 一份 plan document
 
-默认只建一份文档，不区分 feature / exp：
+默认只建一份文档，不区分 feature / exp。Goal、plan 目录与 task id 用说明内容的短语义名（kebab-case，如
+`scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `P0` 优先级与 `rN` revision。
 
 ```markdown
 # <Goal 名称>
@@ -167,9 +168,10 @@ verifier 通过后：
 - 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
   开支线要 human 批准。
 
-Goal 完成或 pivot 时冻结 plan document 为 as-built；活跃头部只留最终 Goal、设计、当前结论、边界、脉络与
-archive index。sub-exp 不删，但不再默认加载。主线行改 `✅ done` 后，本 Goal plan 目录里的其余文件进入
-`leftovers`，按 CLOSE 第 4 步处理；暂停中的 Goal 不进。具体格式分别归
+Goal 完成或 pivot 时冻结 plan document 为 as-built。主线行改 `✅ done` 时，耐久结论上提到项目被跟踪的文档，
+否定发现进 memory 的 `rejected`；头部只留 Goal、当前结论、边界与脉络，`<plan>-archive.md` 与 sub-exp 里头部仍要的
+关键点并进头部，其余连同目录里的其它文件删除，冻结后 plan 目录只剩 plan document。这些文件此时进入 `leftovers`，
+按 CLOSE 第 4 步处理；暂停中的 Goal 不进。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
 
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。

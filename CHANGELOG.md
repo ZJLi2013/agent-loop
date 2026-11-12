@@ -86,6 +86,13 @@ invoke on-demand skills.
 
 ### Changed
 
+- Semantic names and frozen plan directories (#201): `work-planning` names Goals, plan directories and task ids by
+  content (kebab-case); numbers stay only in `P0` priorities and `rN` revisions, and the examples follow. When a Goal's
+  mainline row turns `✅ done`, durable findings move into tracked project docs, rejections into memory, and its plan
+  directory keeps only the plan document. `leftovers` now reports that Goal's `*-archive.md` and `sub-exp/`, and also
+  claims a done Goal's plan directory outside `.agent-loop/`, where only files git does not track are candidates and a
+  directory holding tracked files is never reported as one row.
+
 - Session switching (#196): a task never switches sessions mid-task; after it closes, the session switches only
   when it has grown heavy (context at half its window or more, a cold cache that costs more to resume than a fresh
   session, or a compaction). `task-state` states the criteria. Cursor preCompact now marks the session for every

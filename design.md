@@ -161,21 +161,23 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
   `cleanup_error` / `clean-task` 的 `error`，`progress.md` 保持原样、task 照常关闭。archive 已追加而 `progress.md` 未替换时，
   重跑按段内容去重，不重复追加。围栏代码块里的 `## ` 不算段首。
 - `leftovers(root)`：无状态，每次调用重算，只报不删。报出的文件同时满足三条：认领到已关闭记录、没被现行文档提到、不受保护。
-  - 认领：文件名（不含扩展名，不分大小写）含已关闭 task id，id 前不是字母、后不是字母数字（`verify_g7p2` 认领 `p2`，
-    `verify_t11` 不认领 `t1`）；或它最近的 plan 目录属于主线表里 `✅ done` 的 Goal。已关闭 task id 是 `archive/tasks.md`
-    的 id 减去 `task.md` 仍开着的 id，因为 id 跨 Goal 复用。plan 所在目录须是 `.agent-loop/` 的子目录；直接放在
-    `.agent-loop/` 下或它之外的 plan 不认领任何文件。
+  - 认领：文件名（不含扩展名，不分大小写）含已关闭 task id，id 前不是字母、后不是字母数字（`verify_2cache-format` 认领
+    `cache-format`，`verify_cache-formats` 不认领 `cache-format`）；或它最近的 plan 目录属于主线表里 `✅ done` 的 Goal。已关闭 task id 是 `archive/tasks.md`
+    的 id 减去 `task.md` 仍开着的 id，因为 id 跨 Goal 复用。plan 所在目录须是 `.agent-loop/` 的子目录，或项目根之内、
+    `.agent-loop/` 之外的目录（不是项目根本身）；直接放在 `.agent-loop/` 下或项目根的 plan 不认领任何文件。
+    `.agent-loop/` 之外的目录只认领 `✅ done` Goal 的，候选只取 `git ls-files --others`（未跟踪，含被忽略；`.git/`、
+    `.harness/` 下的除外），被跟踪文件是项目自己的；项目不是 git 仓库、没有提交或 git 失败时不认领这类目录。报出路径相对项目根。
   - 现行文档：`task.md`、`progress.md` 第一段、`memory/*.md`、`.agent-loop/*.json`、未完成主线行与 `task.md` 里至少六格、
     未关闭的表格行链接的 plan。「提到」是文件名或 `.agent-loop/` 相对路径原样出现：引用多数写成反引号里的文件名，不是链接。已关闭 Goal 的
     plan、`*-archive.md` 与 `archive/` 是历史，其中的提及不算。
   - 受保护：`.agent-loop/` 顶层的 `task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、
     `review-checklist.md`、`reports/`（各有自己的退役规则，不参与扫描）；主线行与上述未关闭表格行链接的 plan 文档、
-    `*-archive.md`、`sub-exp/` 与任意 `archive/` 下的文件；active Harness 的 config 锁定的 verifier 文件（删掉它会让
+    未完成 Goal 的 `*-archive.md` 与 `sub-exp/`（`✅ done` Goal 冻结后 plan 目录只留 plan document），任意 `archive/` 下的文件；active Harness 的 config 锁定的 verifier 文件（删掉它会让
     completion gate 判证据 stale）。锁定集合经 `harness.storage.load_runtime` 读：没有 `.harness/state.json` 或 Harness
     不 active 时为空；读不出或 `config_sha256` 不符时锁定集合未知，`leftovers` 返回空列表。`status` 先 `load_runtime`
     再调用它，state 损坏时 `status` 失败。
   - 目录合并只统计扫描集合里的文件：一个目录的扫描文件全部被报出时合并为该目录一行；顶层以外的受保护文件计入总数、
-    不计入报出数。每个条目按满足条件的最高祖先目录合并。
+    不计入报出数。`.agent-loop/` 之外的目录把被跟踪文件也计入总数，所以含被跟踪文件的目录不合并，只报其中的未跟踪文件。每个条目按满足条件的最高祖先目录合并。
 - 只报不删、不进 completion gate：Harness 分不清长期工具与一次性脚本，报出的条目挡不住完成。认领只看名字与 plan 目录：
   按名字之外的线索认领会把没写进文档的长期工具也报出来，所以不带已关闭标识的条目（例如迁到别的工作副本的支线目录）不报。
 
@@ -246,7 +248,7 @@ Experiment Log
 Harness 参数叫 `plan_doc`，不关心文件名是 feature、exp 还是其它名字。
 
 task CLOSE 时，Experiment Log 的多轮记录合并成 task 结论并入脉络的当前阶段行，换方向时开新行；读数、链接与
-已收口内容进入 linked archive，不继续占用活跃表。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。Goal CLOSE / pivot 时冻结 plan 为 as-built。sub-exp 不删，但只按 evidence 指针读取；
+已收口内容进入 linked archive，不继续占用活跃表。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。Goal CLOSE / pivot 时冻结 plan 为 as-built。task CLOSE 不删 sub-exp，只按 evidence 指针读取；主线行改 `✅ done` 时 archive 与 sub-exp 的关键点并进头部后删除，冻结后 plan 目录只剩 plan document（条款归 `work-planning` 的主线交接）；
 run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit。closed task 与旧交接快照同样移出活跃
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
@@ -471,6 +472,7 @@ def _linked_files(text: str, base: Path) -> set[Path]:
 
 def leftovers(root: Path) -> list[dict[str, str]]:
     """List .agent-loop files tied to closed tasks or Goals that no current document mentions."""
+    root = root.resolve()
     base = runtime_dir(root)
     if base.name != RUNTIME_DIR or not base.is_dir():
         return []
@@ -501,15 +503,24 @@ def leftovers(root: Path) -> list[dict[str, str]]:
         if cells and len(cells) >= 6 and not _closed(line):
             live_plans |= _linked_files(" | ".join(cells), tasks.parent)
     live_plans -= done_plans
-    # Only a plan's own directory under .agent-loop/ scopes its Goal; a plan at the top or outside scopes nothing.
-    plan_dirs = {plan.parent: plan for plan in live_plans if base in plan.parent.parents}
-    plan_dirs.update(
-        {
-            plan.parent: plan
-            for plan in done_plans
-            if base in plan.parent.parents and plan.parent not in plan_dirs
-        }
-    )
+    # Only a plan's own directory scopes its Goal; a plan directly in .agent-loop/, at the root or outside it scopes
+    # nothing. A directory outside .agent-loop/ needs git to tell the project's own files from leftovers.
+    tracked = untracked = None
+    if any(base not in plan.parent.parents and root in plan.parent.parents and plan.parent != base for plan in done_plans):
+        tracked = _git_files(root, "ls-files", "-z")
+        untracked = _git_files(root, "ls-files", "--others", "-z")
+
+    def scopes(directory: Path) -> bool:
+        if base in directory.parents:
+            return True
+        return tracked is not None and untracked is not None and root in directory.parents and directory != base
+
+    plan_dirs = {plan.parent: plan for plan in live_plans if scopes(plan.parent)}
+    plan_dirs.update({plan.parent: plan for plan in done_plans if scopes(plan.parent) and plan.parent not in plan_dirs})
+    outside = {d for d, plan in plan_dirs.items() if plan in done_plans and base not in d.parents}
+
+    def within_outside(path: Path) -> bool:
+        return any(d in path.parents for d in outside) and not {".git", ".harness"} & set(path.relative_to(root).parts)
 
     current = "\n".join(
         [
@@ -526,16 +537,18 @@ def leftovers(root: Path) -> list[dict[str, str]]:
         for path in base.rglob("*")
         if path.is_file() and path.relative_to(base).parts[0] not in RETIRED_ELSEWHERE
     ]
+    files += [path for path in untracked or () if within_outside(path)]
     plan_docs = done_plans | live_plans
     reasons: dict[Path, list[str]] = {}
     for path in files:
-        relative = path.relative_to(base)
+        relative = path.relative_to(base if base in path.parents else root)
         resolved = path.resolve()
+        owner = next((plan_dirs[d] for d in resolved.parents if d in plan_dirs), None)
         if (
             resolved in plan_docs
             or resolved in locked
-            or path.stem.endswith("-archive")
-            or {"sub-exp", ARCHIVE_DIR} & set(relative.parts[:-1])
+            or ARCHIVE_DIR in relative.parts[:-1]
+            or (owner not in done_plans and (path.stem.endswith("-archive") or "sub-exp" in relative.parts[:-1]))
         ):
             continue
         why = [
@@ -543,16 +556,15 @@ def leftovers(root: Path) -> list[dict[str, str]]:
             for task_id in sorted(closed)
             if re.search(rf"(?<![a-z]){re.escape(task_id)}(?![a-z0-9])", path.stem.lower())
         ]
-        owner = next((plan_dirs[d] for d in resolved.parents if d in plan_dirs), None)
         if owner in done_plans:
-            why.append(f"closed Goal plan {owner.relative_to(base).as_posix()}")
+            why.append(f"closed Goal plan {owner.relative_to(base if base in owner.parents else root).as_posix()}")
         if why and path.name not in current and relative.as_posix() not in current:
             reasons[path] = why
 
     totals: dict[Path, list[int]] = {}
-    for path in files:
+    for path in files + [path for path in tracked or () if within_outside(path)]:
         for parent in path.parents:
-            if parent == base:
+            if parent in (base, root):
                 break
             counts = totals.setdefault(parent, [0, 0])
             counts[0] += 1
@@ -561,11 +573,22 @@ def leftovers(root: Path) -> list[dict[str, str]]:
 
     report: dict[str, set[str]] = {}
     for path, why in reasons.items():
-        top = next((d for d in reversed(path.parents) if d in stale), None)
-        key = (
-            f"{RUNTIME_DIR}/{top.relative_to(base).as_posix()}/"
-            if top
-            else f"{RUNTIME_DIR}/{path.relative_to(base).as_posix()}"
-        )
-        report.setdefault(key, set()).update(why)
+        top = next((d for d in reversed(path.parents) if d in stale), path)
+        if base in path.parents:
+            key = f"{RUNTIME_DIR}/{top.relative_to(base).as_posix()}"
+        else:
+            key = top.relative_to(root).as_posix()
+        report.setdefault(key + ("/" if top != path else ""), set()).update(why)
     return [{"path": key, "why": ", ".join(sorted(whys))} for key, whys in sorted(report.items())]
+
+
+def _git_files(root: Path, *args: str) -> list[Path] | None:
+    """Files git lists under root, or None when root is not in a repository with a commit."""
+    try:
+        head = subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "-q", "HEAD"], capture_output=True)
+        listed = subprocess.run(["git", "-C", str(root), *args], capture_output=True)
+    except OSError:
+        return None
+    if head.returncode or listed.returncode:
+        return None
+    return [(root / name.decode("utf-8", "surrogateescape")).resolve() for name in listed.stdout.split(b"\0") if name]

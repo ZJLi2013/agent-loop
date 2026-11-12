@@ -25,11 +25,11 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 
 | P | id | rev | task | 验收检查点 | 状态 | 失败 |
 |---|---|---|---|---|---|---|
-| P0 | t7 | r2 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 📝 proposed | 0 |
-| P0 | t3 | r1 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 🚧 blocked t6 | 1 |
-| P0 | t6 | r2 | 修 Y 的 schema 漂移 | `validate.py` 退出码 0 | 🔬 doing | 0 |
-| P0 | t4 | r2 | 量 Y 的端到端延迟 | p50 ≤ 基线 1.1× | ⬜ todo | 0 |
-| P1 | t5 | — | 清理 X 的旧路径 | grep 不到 `legacy_x` | ⬜ todo | 0 |
+| P0 | y-migration | r2 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 📝 proposed | 0 |
+| P0 | migrate-x-to-y | r1 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 🚧 blocked y-schema-drift | 1 |
+| P0 | y-schema-drift | r2 | 修 Y 的 schema 漂移 | `validate.py` 退出码 0 | 🔬 doing | 0 |
+| P0 | y-e2e-latency | r2 | 量 Y 的端到端延迟 | p50 ≤ 基线 1.1× | ⬜ todo | 0 |
+| P1 | x-legacy-cleanup | — | 清理 X 的旧路径 | grep 不到 `legacy_x` | ⬜ todo | 0 |
 
 <!-- 每个 task 一行。范围、方案、分析一律写在它链接的设计/实验文档里。 -->
 
@@ -37,7 +37,7 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 
 | P | 候选 | 进入条件 |
 |---|---|---|
-| P1 | 量 Y 在大 batch 下的延迟 | t4 变绿后 |
+| P1 | 量 Y 在大 batch 下的延迟 | y-e2e-latency 变绿后 |
 
 ## Triggered
 
@@ -64,9 +64,9 @@ Mainline Review: approved
 
 | Goal | 问题 | 退出条件 | 状态 | plan |
 |---|---|---|---|---|
-| M1 | 成绩来源 | 逐任务 / global memory 的贡献各有结论 | ✅ done | [plan](plans/m1/plan.md) |
-| M2 | 成功信号消融 | 去掉成功信号后成绩变化有结论 | ▶ next | [plan](plans/m2/plan.md) |
-| M3 | 新任务泛化 | 未见任务上的成绩有结论 | ⬜ todo | |
+| score-sources | 成绩来源 | 逐任务 / global memory 的贡献各有结论 | ✅ done | [plan](plans/score-sources/plan.md) |
+| success-signal-ablation | 成功信号消融 | 去掉成功信号后成绩变化有结论 | ▶ next | [plan](plans/success-signal-ablation/plan.md) |
+| new-task-generalization | 新任务泛化 | 未见任务上的成绩有结论 | ⬜ todo | |
 ```
 
 状态只有 `✅ done`、`▶ next`、`⬜ todo`；至多一行 `▶ next`，且它是第一行非 `✅ done`。
