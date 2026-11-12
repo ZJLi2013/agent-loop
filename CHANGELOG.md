@@ -305,6 +305,12 @@ invoke on-demand skills.
 
 ### Fixed
 
+- Harness `init --evidence-file PATH` (repeatable) declares task outputs read by the verifier (#200), so
+  regenerating an existing result file no longer triggers verifier drift. Each declaration must resolve to a
+  verifier file argument; invalid declarations leave state and config unchanged. Undeclared verifier files stay
+  locked, and evidence freshness still follows the workspace fingerprint's existing scope. For an active task,
+  disable and init again with the declarations; verifier drift errors now include this hint.
+
 - A pending `pause --require-revision` lets `init` start a corrected task under an `unreviewed` plan after the
   same plan's revision increases (#191), superseding the previous task reviewer's `next_task` or `stop` decision.
   The new task still needs doing status, the current revision and a ready plan review. Rejected initialization

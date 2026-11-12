@@ -81,6 +81,7 @@ def initialize(
     *,
     task_id: str,
     verifier_argv: list[str],
+    evidence_files: list[str] | None = None,
     plan_doc: str | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
@@ -120,6 +121,7 @@ def initialize(
         raise HarnessError("Goal Review action and time thresholds cannot be negative")
 
     root = root.resolve()
+    locked_files = verifier_files(root, verifier_argv, evidence_files)
     base = harness_dir(root)
     scratch = task_dir(root, task_id)
     reviewer = load_reviewer(root)
@@ -218,7 +220,7 @@ def initialize(
         "plan_doc": plan_doc,
         "verifier": {
             "argv": verifier_argv,
-            "files": verifier_files(root, verifier_argv),
+            "files": locked_files,
             "timeout_seconds": float(timeout_seconds),
             "expect_regex": expect_regex,
             "forbid_regex": forbid_regex,
@@ -412,7 +414,8 @@ def run_command(
         if kind == "verify" and (changed := verifier_drift(root, config)):
             raise HarnessError(
                 f"verifier file {changed} changed after init; "
-                "disable and init again to lock the new verifier"
+                "disable and init again to lock the new verifier. "
+                "If this file is task output, init again with --evidence-file PATH."
             )
 
         requested = (

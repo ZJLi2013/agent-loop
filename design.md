@@ -138,8 +138,13 @@ workspace fingerprint 由 `harness/fingerprint.py` 的 `workspace_fingerprint` �
 <a id="verifier-file-lock"></a>
 verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprint 分开：
 
-- `verifier_files(root, argv)`：`argv` 中按 root 解析后落在 root 内的普通文件，返回相对 root 的 POSIX 路径到 SHA-256 的映射；
+- `verifier_files(root, argv, evidence_files=None)`：`argv` 中按 root 解析后落在 root 内、未声明为 evidence 的普通文件，
+  返回相对 root 的 POSIX 路径到 SHA-256 的映射；
   `init` 写进 `verifier.files`，由 `config_sha256` 锁住。不追踪 verifier import 的模块与 root 外的文件。
+- `init --evidence-file PATH` 可重复：显式声明 task 产出、verifier 读取的文件，不写进 `verifier.files`；
+  新鲜度仍按上述 workspace fingerprint 的范围检查。PATH 与 verifier 参数都按 root 解析，必须对应同一个文件路径，
+  文件可以尚不存在；不匹配或指向目录时 `init` 拒绝，不写 state / config。未声明的文件照旧上锁，
+  不按后缀、参数位置或是否被写过推断。verify 因文件变化拒绝时，提示 task 产出应在重新 init 时用 `--evidence-file` 声明。
 - `verifier_drift(root, config)`：逐个比对 `verifier.files` 的键，返回第一个缺失、不可读或摘要不符的路径，全部相符时返回 None；
   config 没有 `files` 时比对集合为空。
 - task review 与 gate 的比对期从 `init` 到 task reviewer 对这次 verify 的有效决定落盘，之后的 `--objection` 不复核。

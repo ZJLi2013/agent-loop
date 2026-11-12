@@ -4,6 +4,7 @@ import hashlib
 import subprocess
 from pathlib import Path
 
+from harness.errors import HarnessError
 from harness.storage import HARNESS_DIR
 
 # Other agents' scratch dirs can hold locked files (WinError 1920) and never carry evidence.
@@ -66,14 +67,32 @@ def _file_digest(path: Path) -> str | None:
         return None
 
 
-def verifier_files(root: Path, argv: list[str]) -> dict[str, str]:
+def verifier_files(
+    root: Path, argv: list[str], evidence_files: list[str] | None = None
+) -> dict[str, str]:
     root = root.resolve()
-    files: dict[str, str] = {}
+    paths: list[Path] = []
     for arg in argv:
         try:
-            path = (root / arg).resolve()
+            paths.append((root / arg).resolve())
+        except (OSError, ValueError):
+            continue
+    evidence: set[Path] = set()
+    for declared in evidence_files or []:
+        try:
+            path = (root / declared).resolve()
+            matches = path in paths and not path.is_dir()
+        except (OSError, ValueError):
+            matches = False
+        if not matches:
+            raise HarnessError(f"evidence file {declared!r} must match a verifier file argument")
+        evidence.add(path)
+
+    files: dict[str, str] = {}
+    for path in paths:
+        try:
             relative = path.relative_to(root).as_posix()
-            if not path.is_file():
+            if path in evidence or not path.is_file():
                 continue
         except (OSError, ValueError):
             continue
