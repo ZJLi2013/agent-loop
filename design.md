@@ -427,6 +427,7 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 |---|---|
 | 项目的长期事实与结论：行为与接口、测得的结果、约束、带理由的决策、否定发现 | 项目被跟踪的文档（README、设计文档、`docs/`、实验记录） |
 | 进行中 Goal 的边界、工作结论与脉络 | plan document |
+| 只证明 task 通过的验收证据：验证读数、合并上线与首次使用记录、观察窗口的计数 | plan document 的 Experiment Log（随它进 archive） |
 | active task、`rN`、候选与触发项 | `.agent-loop/task.md` |
 | closed task 与旧交接点 | `.agent-loop/archive/`（只按需读取） |
 | runtime phase、budget、当前 run | `.harness/state.json` |

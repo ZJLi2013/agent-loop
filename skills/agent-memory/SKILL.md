@@ -65,7 +65,7 @@ hook 覆盖不到的时刻（临时问一句、中途换方向），靠 `INDEX.m
 
 | 转换 | 写哪儿 | 不写会怎样 |
 |---|---|---|
-| task → `✅` | 结论先收口到项目文档；只有未来检索仍需要时，`episodes.md#experiments` 留一行指针 | 结论埋在 Experiment Log，或在两处形成两份真值 |
+| task → `✅` | 长期项目结论按 `experiment-design` CLOSE 第 1 项收口到项目文档，只证明通过的验收证据留在 Experiment Log；只有未来检索仍需要时，`episodes.md#experiments` 留一行指针 | 长期结论埋在 Experiment Log，或在两处形成两份真值 |
 | **假设被推翻** | `episodes.md#disproved` | **最贵也最容易丢**，下次还有人再试一遍 |
 | 方案被否决 | `episodes.md#rejected` | 三周后有人重提同一个方案 |
 | task → `🚧` | `episodes.md`：挡在什么上、解开条件 | 重排期时不知道它为什么还在那儿 |
@@ -90,7 +90,7 @@ hook 检测到超限会直接告警，届时把条目并粗（指向小节而不
 
 | 段 | 老化 | 处置 |
 |---|---|---|
-| `experiments` | 会老化 | task CLOSE 后先去重；Goal 关闭、结论已收口到项目文档后剪掉重复行 |
+| `experiments` | 会老化 | task CLOSE 后先去重；Goal 关闭、长期结论已收口到项目文档后剪掉重复行 |
 | `disproved` / `rejected` | **不老化** | 长期决定。删一条排除项，三周后就有人重提同一个方案 |
 
 给它设统一行数上限是错的——那会逼着删掉最该留的那部分。
