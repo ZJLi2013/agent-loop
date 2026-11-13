@@ -87,24 +87,30 @@ def pause_request(root: Path) -> dict[str, Any] | None:
     return read_json(path)
 
 
-def has_revised_plan_pause(
+def revision_source(
     root: Path,
-    config: dict[str, Any],
-    state: dict[str, Any],
+    *,
+    old_plan_doc: str | None,
+    old_revision: int | None,
     plan_doc: str | None,
-) -> bool:
-    request = pause_request(root)
-    old_plan_doc = config.get("plan_doc")
-    old_revision = state.get("plan_revision")
-    if not (
-        request and request.get("require_revision")
-        and plan_doc and old_plan_doc and old_revision is not None
-    ):
-        return False
+) -> dict[str, Any] | None:
+    """The recorded source of a Plan Revision increase, None when the revision did not increase."""
+    if not (plan_doc and old_plan_doc and old_revision is not None):
+        return None
     if plan_location(root, plan_doc) != plan_location(root, str(old_plan_doc)):
-        return False
+        return None
     revision, _ = plan_metadata(root, plan_doc)
-    return revision > int(old_revision)
+    if revision <= int(old_revision):
+        return None
+    request = pause_request(root)
+    if not (request and request.get("require_revision")):
+        raise HarnessError(
+            f"Plan Revision moved from {old_revision} to {revision} without a recorded source; a revision "
+            "increases only for a human correction or a Goal Review replan. If the human corrected the Goal, "
+            f'record it: pause --require-revision --reason "<human words>"; otherwise restore '
+            f"'Plan Revision: {old_revision}' and bind new tasks to r{old_revision}"
+        )
+    return {"from": int(old_revision), "to": revision, "reason": request["reason"], "at": utc_now()}
 
 
 def _task_eligibility_error(root: Path, state: dict[str, Any]) -> str | None:
@@ -133,7 +139,7 @@ def request_pause(
     if not state_path.exists():
         raise HarnessError("harness is not initialized")
     state = read_json(state_path)
-    if not state.get("active"):
+    if not state.get("active") and not require_revision:
         raise HarnessError("harness is disabled")
     if not require_revision:
         if error := _task_eligibility_error(root, state):
@@ -200,6 +206,7 @@ def resume(root: Path) -> dict[str, Any]:
         if reason := _task_eligibility_error(root, state):
             raise HarnessError(reason)
     plan_doc = config.get("plan_doc")
+    revision_source(root, old_plan_doc=plan_doc, old_revision=state.get("plan_revision"), plan_doc=plan_doc)
     if config.get("reviewer") and plan_doc:
         revision, review = current_plan(root, config)
         if revision is None:
@@ -250,6 +257,12 @@ def resume(root: Path) -> dict[str, Any]:
                 raise HarnessError(
                     "human correction requires Plan Revision to increase"
                 )
+        source = revision_source(
+            root,
+            old_plan_doc=config.get("plan_doc"),
+            old_revision=state.get("plan_revision"),
+            plan_doc=config.get("plan_doc"),
+        )
         if revision is not None and review not in {"approved", "unreviewed"}:
             raise HarnessError(
                 f"Plan Review must be approved or unreviewed, got {review}"
@@ -269,6 +282,8 @@ def resume(root: Path) -> dict[str, Any]:
         except TransitionError as exc:
             raise HarnessError(str(exc)) from exc
         state["plan_revision"] = revision
+        if source:
+            state["revision_source"] = source
         state["plan_review"] = review
         state["current_run_id"] = None
         state["verified_fingerprint"] = None

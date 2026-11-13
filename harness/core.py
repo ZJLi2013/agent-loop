@@ -27,12 +27,13 @@ from harness.journal import (
 )
 from harness.plan import (
     PAUSE_FILE,
-    has_revised_plan_pause,
     pause_request,
+    plan_location,
     plan_can_run,
     plan_metadata,
     request_pause,
     resume as resume,
+    revision_source,
     task_plan_revision,
 )
 from harness.page import load_pager, page_followup
@@ -127,8 +128,22 @@ def initialize(
     reviewer = load_reviewer(root)
     state_path = base / STATE_FILE
     successor = False
+    source = None
+    carried_source = None
     if state_path.exists():
         old = read_json(state_path)
+        old_config = read_json(base / CONFIG_FILE) if (base / CONFIG_FILE).exists() else {}
+        source = revision_source(
+            root,
+            old_plan_doc=old_config.get("plan_doc"),
+            old_revision=old.get("plan_revision"),
+            plan_doc=plan_doc,
+        )
+        if (
+            plan_doc and old_config.get("plan_doc")
+            and plan_location(root, plan_doc) == plan_location(root, str(old_config["plan_doc"]))
+        ):
+            carried_source = old.get("revision_source")
         if old.get("active") and old.get("phase") not in {
             Phase.VERIFIED.value,
             Phase.STOPPED.value,
@@ -143,7 +158,6 @@ def initialize(
                 f"task reviewer for {old.get('task_id')} is running; wait for its decision"
             )
         if old.get("active") and old.get("phase") == Phase.VERIFIED.value:
-            old_config = read_json(base / CONFIG_FILE)
             if old_config.get("reviewer"):
                 prior_review = old.get("review") or {}
                 if (
@@ -161,7 +175,7 @@ def initialize(
                 attended = (
                     not plan_doc
                     or plan_metadata(root, plan_doc)[1] == "approved"
-                    or has_revised_plan_pause(root, old_config, old, plan_doc)
+                    or source is not None
                 )
                 handoff = (
                     not attended
@@ -249,6 +263,7 @@ def initialize(
         "active": True,
         "phase": phase.value,
         "plan_revision": revision,
+        "revision_source": source or carried_source,
         "plan_review": review,
         "verify_attempts": 0,
         "wall_seconds_used": 0.0,
@@ -355,11 +370,7 @@ def run_command(
             raise HarnessError(f"runner is paused: {request['reason']}")
         plan_ready, plan_reason = plan_can_run(root, config, state)
         if not plan_ready:
-            request_pause(
-                root,
-                reason=plan_reason or "plan is not approved",
-                require_revision="revision changed" in (plan_reason or ""),
-            )
+            request_pause(root, reason=plan_reason or "plan is not approved")
             _transition(state, Event.PAUSE_REQUESTED)
             state["updated_at"] = utc_now()
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
@@ -732,11 +743,7 @@ def completion_gate(
 
         plan_ready, plan_reason = plan_can_run(root, config, state)
         if not plan_ready:
-            request_pause(
-                root,
-                reason=plan_reason or "plan is not approved",
-                require_revision="revision changed" in (plan_reason or ""),
-            )
+            request_pause(root, reason=plan_reason or "plan is not approved")
             _transition(state, Event.PAUSE_REQUESTED)
             state["verified_fingerprint"] = None
             state["updated_at"] = utc_now()
