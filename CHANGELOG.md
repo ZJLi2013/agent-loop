@@ -328,6 +328,9 @@ invoke on-demand skills.
 
 ### Fixed
 
+- A plan review whose plan revision or task bindings change while the reviewer runs is discarded without counting a
+  reviewer failure, also when the plan file is tracked by git and the workspace check sees the edit.
+
 - Task review prompts now report that `revise` has been used when a task was sent back on an earlier verify run
   (#208). Initial reviews and objections on the same verify run omit this notice; decision guards and review
   attempt limits are unchanged.
