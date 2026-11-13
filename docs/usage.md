@@ -334,12 +334,20 @@ agent-loop-harness plan-review --plan-doc plan.md
 该 id 的评审记录是否属于它；大小写冲突会使本次决策无效，并提示 reviewer 改名后重试，不会先保存无法开工的
 `continue`。已有评审记录保留。
 
-读报告，批准或修改计划，激活 task，再按上文初始化。plan reviewer 只给建议，不能批准计划；报告里没有
-`human: true` 项时 worker 不问你，回应 `must` 后写 `Plan Review: unreviewed` 开工。某个 revision 的每个 open task
-都已通过更早的 plan review 时，human 可以不再评审直接批准：`agent-loop-harness plan-review --plan-doc plan.md
---waive --reason "<human 的原话>"`，然后标记为 `approved`。连续 3 次 revise 结论，或连续 3 个 revision 没有实验时，
-`plan-review` 拒绝再次运行 reviewer，直到 human 选择：用 `--continue --reason "<human 的原话>"` 再评审一次、带注记批准
-（`--waive`）、原样批准上一个已评审的 revision，或停止。task 验证通过后，配置的 reviewer 自动运行，解读证据并选择
+每个 task 在它绑定的每个 Plan Revision 下审一次，一次调用审完所有未审的 task；同一 revision 内改设计不重审。
+报告里每个 task 最多 3 条 `must`、3 条 `suggest`。worker 逐条回应 `must`，`suggest` 可以跳过：
+
+```sh
+agent-loop-harness plan-review --plan-doc plan.md --respond <task> --item 1=applied --item 2=reject --reason "<事实>"
+```
+
+plan reviewer 只给建议，不能批准计划。报告里没有 `human: true` 项时 worker 不问你，回应 `must` 后写
+`Plan Review: unreviewed` 开工；有时由你决定，用 `--approve <task> --reason "<你的原话>"` 记录，再把计划标为
+`approved`。要某个 task 再审一次，用 `--again <task> --reason "<你的原话>"`。配置了 reviewer、没配 pager 时，
+Harness active 且计划是 `proposed`，stop hook 在审查走完前不让这一轮结束：审查在跑就等，有未审的 task 就要求跑
+`plan-review`，agent 能答的 `must` 没回应就要求 `--respond`；只剩 human 项时放行，同一 revision 审查失败两次时上报一次后放行。
+
+task 验证通过后，配置的 reviewer 自动运行，解读证据并选择
 `continue`、`revise`、`ask_human` 或 `stop`；`revise` 把漏了收口的 task 退回给 worker，补完后重跑 verify 再审，
 每个 task 最多一次。提议的后继 task 需要按适用的批准策略显式激活。task 执行中不换会话；关闭后会话变重才换
 （判据见 `task-state`「跨 session 交接」）：本会话压缩过时，stop hook 在关闭处提示写交接、请你开新会话，压缩时窗口小于 1M 的还请你给新会话选 1M 模型；
@@ -433,7 +441,7 @@ agent-loop 只发行环内的 skill。审 PR、写对外文章、做幻灯片这
 先完成 active task 再切版本；不要假设任意运行时 schema 都能跨版本恢复。
 
 在 harness 仓库里拉取 tags，检出选定版本，用同样的 `pip install` 命令重装；目录或 skill 有变化时重跑 Cursor sync 脚本，
-然后重启 Cursor。它的 junction 直接指向仓库，所以切分支也会改变 hooks 使用的代码与策略。
+然后重启 Cursor。安装的链接直接指向仓库，所以切分支也会改变 hooks 使用的代码与策略。
 
 卸载 Cursor 集成，在同一个仓库里运行：
 
