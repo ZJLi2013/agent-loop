@@ -82,8 +82,8 @@ Mainline Review: approved
 说明 consolidation 漏执行，先归档再 SELECT。
 
 `rev` 把 task 绑定到 plan document 的 `Plan Revision: N`，写作 `rN`；不属于 plan
-的维护项写 `—`。human 修改 Goal 后 revision 必须递增，旧 revision 的 task 逐项 blocked / dropped，
-不能继续执行。
+的维护项写 `—`。human 修改 Goal 后 revision 必须递增，旧 revision 的 task 逐项改绑新 `rN`（在新 revision 下
+重审一次）或 blocked / dropped，不能按旧 `rN` 继续执行。
 
 等待 review 时允许「若干 `📝 proposed` + 零行 doing」；除此之外，**`🔬 doing` 有且只有一行。**
 批准时最高优先级 proposed 转 doing，其余转 todo。跑到一半要改别的东西时，先挪 `🔬`

@@ -86,6 +86,14 @@ invoke on-demand skills.
 
 ### Changed
 
+- Plan review per revision and a stop gate for proposed plans: a plan review record carries the `Plan Revision` it
+  started under, so an open task bound to the current `rN` is reviewed again after the plan's revision moves (records
+  without the field count as needing review; a revision or binding change during the run records nothing). With
+  Harness active, no pager and a reviewer configured, the stop hook no longer lets a turn end while the plan is
+  `proposed` and its review is unfinished: it asks to wait for a running review, run `plan-review`, or answer the
+  agent's `must` items, lets items for the human through, and reports a review that failed twice for one revision
+  once. Adapters never suppress these repeated stop messages.
+
 - Semantic names and frozen plan directories (#201): `work-planning` names Goals, plan directories and task ids by
   content (kebab-case); numbers stay only in `P0` priorities and `rN` revisions, and the examples follow. When a Goal's
   mainline row turns `✅ done`, durable findings move into tracked project docs, rejections into memory, and its plan

@@ -36,7 +36,7 @@ from harness.plan import (
     task_plan_revision,
 )
 from harness.page import load_pager, page_followup
-from harness.plan_review import plan_review_ready, run_plan_review
+from harness.plan_review import plan_review_ready, run_plan_review, stop_followup
 from harness.protocol import Event, Phase, TransitionError, apply_event
 from harness.records import (
     active_task_status,
@@ -675,6 +675,15 @@ def _verified_followup(
     return "\n\n".join(message for message in messages if message) or None
 
 
+def _paused_followup(root: Path, config: dict[str, Any], state: dict[str, Any]) -> str | None:
+    if config.get("pager"):
+        return page_followup(root, config, state)
+    if not config.get("plan_doc") or not load_reviewer(root):
+        return None
+    runner = Path(__file__).with_name("run.py")
+    return stop_followup(root, str(config["plan_doc"]), f'python "{runner}" --root "{root.resolve()}"')
+
+
 def completion_gate(
     root: Path, session_id: str | None = None, handoff: str | None = None
 ) -> str | None:
@@ -701,12 +710,12 @@ def completion_gate(
                     f"{request['reason']}. Use work-planning and record "
                     "continue / replan / stop."
                 )
-            return page_followup(root, config, state)
+            return _paused_followup(root, config, state)
         if state.get("phase") in {
             Phase.PAUSED.value,
             Phase.PROPOSED.value,
         }:
-            return page_followup(root, config, state)
+            return _paused_followup(root, config, state)
 
         phase = Phase(str(state["phase"]))
         runner = Path(__file__).with_name("run.py")

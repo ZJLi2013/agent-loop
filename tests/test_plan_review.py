@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -11,9 +12,13 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
-from harness.core import HarnessError, initialize, load_runtime, resume
+from adapters.followup import claim_followup
+from harness.core import HarnessError, completion_gate, initialize, load_runtime, resume
+from harness.plan import request_pause
 from harness.plan_review import (
+    STOP_GATE_PREFIX,
     approve_task,
     plan_review_ready,
     respond_task,
@@ -68,13 +73,14 @@ class PlanReviewTest(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def write_tasks(self, *rows: tuple[str, str], revision: int = 1) -> None:
+    def write_tasks(self, *rows: tuple[str, ...], revision: int = 1) -> None:
         (self.root / ".agent-loop" / "task.md").write_text(
             "| P | id | rev | task | check | status | fail |\n"
             "|---|---|---|---|---|---|---|\n"
             + "".join(
-                f"| P0 | {task_id} | r{revision} | {task_id} 标题 | [设计](../plan.md#{task_id}-design) | {status} | 0 |\n"
-                for task_id, status in rows
+                f"| P0 | {task_id} | r{bound[0] if bound else revision} | {task_id} 标题 "
+                f"| [设计](../plan.md#{task_id}-design) | {status} | 0 |\n"
+                for task_id, status, *bound in rows
             ),
             encoding="utf-8",
         )
@@ -169,14 +175,39 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(sorted(result["tasks"]), ["t2"])
         self.assertNotIn("- t1：", self.prompt())
 
-    def test_design_changes_after_review_do_not_trigger_another_review(self) -> None:
+    def test_design_changes_within_a_revision_do_not_trigger_another_review(self) -> None:
         self.configure(reviewer_writing({"t1": [MUST]}))
         self.review()
-        self.write_plan(2, body="alpha, with the must item applied")
-        self.write_tasks(("t1", "🔬 doing"), revision=2)
+        self.write_plan(1, body="alpha, with the must item applied")
 
         self.assertEqual(self.review()["tasks"], {})
         self.assertEqual(self.calls(), "1")
+
+    def test_a_new_revision_reviews_the_tasks_bound_to_it(self) -> None:
+        self.configure(reviewer_writing({"t1": [], "t2": []}))
+        self.write_tasks(("t1", "📝 proposed"), ("t2", "📝 proposed"))
+        self.review()
+        self.write_plan(2)
+        self.write_tasks(("t1", "🔬 doing", 2), ("t2", "🚧 blocked", 1))
+
+        self.assertEqual(review_status(self.root, "t1", "plan.md"), "needs_review")
+        self.assertEqual(review_status(self.root, "t2", "plan.md"), "reviewed")
+        self.assertEqual(list(self.review()["tasks"]), ["t1"])
+        self.assertEqual(self.review()["tasks"], {})
+        self.assertEqual(self.calls(), "2")
+
+    def test_a_revision_bumped_during_the_review_records_nothing(self) -> None:
+        bump = "Path('plan.md').write_text(Path('plan.md').read_text().replace('Revision: 1', 'Revision: 2')); "
+        argv = reviewer_writing({"t1": []})
+        argv[-1] = argv[-1].replace("from pathlib import Path; ", "from pathlib import Path; " + bump)
+        self.configure(argv)
+
+        with mock.patch("harness.plan_review.workspace_fingerprint", return_value="same"):
+            with self.assertRaisesRegex(HarnessError, "changed during the review"):
+                self.review()
+
+        self.assertEqual(task_record(self.root, "t1")["reviews"], [])
+        self.assertFalse((self.root / ".harness" / "plan-review" / "failed.json").exists())
 
     def test_items_over_the_limit_are_dropped(self) -> None:
         self.configure(reviewer_writing({"t1": [MUST] * 4 + [SUGGEST] * 4}))
@@ -313,7 +344,8 @@ class PlanReviewTest(unittest.TestCase):
                 self.assertEqual(path.read_bytes(), before)
         self.assertEqual(self.calls(), "0")
 
-    def test_records_from_before_the_protocol_still_read(self) -> None:
+    def test_records_from_before_the_protocol_are_reviewed_once_more(self) -> None:
+        self.configure(reviewer_writing({"t1": []}))
         path = self.root / ".harness" / "plan-review" / "tasks" / "t1.json"
         path.parent.mkdir(parents=True)
         path.write_text(json.dumps({
@@ -324,8 +356,11 @@ class PlanReviewTest(unittest.TestCase):
             "again": [],
         }), encoding="utf-8")
 
-        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md")[0])
         self.assertEqual(task_record(self.root, "t1")["reviews"][0]["findings"][0]["level"], "suggest")
+        self.assertEqual(review_status(self.root, "t1", "plan.md"), "needs_review")
+        self.assertEqual(list(self.review()["tasks"]), ["t1"])
+        self.assertEqual(self.review()["tasks"], {})
+        self.assertEqual(self.calls(), "1")
 
     @unittest.skipUnless(shutil.which("git"), "git is required")
     def test_agent_state_stays_out_of_git_unless_already_tracked(self) -> None:
@@ -353,6 +388,92 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(ignored, [".agent-loop/task.md", ".harness/state.json"])
         self.assertEqual(status.split(), ["M", ".agent-loop/memory/facts.md"])
         self.assertEqual([entries.count("/.harness/"), entries.count("/.agent-loop/")], [1, 1])
+
+
+FAILING_REVIEWER = [sys.executable, "-S", "-c", "raise SystemExit(1)"]
+
+
+class StopGateTest(unittest.TestCase):
+    """t1 was reviewed and started under r1; a human correction bumps the plan to r2 and rebinds t1."""
+
+    tearDown = PlanReviewTest.tearDown
+    write_plan = PlanReviewTest.write_plan
+    write_tasks = PlanReviewTest.write_tasks
+    configure = PlanReviewTest.configure
+    review = PlanReviewTest.review
+    init = PlanReviewTest.init
+
+    def setUp(self, pager: bool = False) -> None:
+        PlanReviewTest.setUp(self)
+        if pager:
+            (self.root / ".agent-loop" / "pager.json").write_text(json.dumps({"argv": ["pager"]}), encoding="utf-8")
+        self.write_plan(1, review="unreviewed")
+        self.configure(reviewer_writing({"t1": []}))
+        self.init()
+        request_pause(self.root, reason="human correction", require_revision=True)
+        self.write_plan(2)
+        self.write_tasks(("t1", "🔬 doing"), revision=2)
+
+    def gate(self) -> str | None:
+        return completion_gate(self.root, None)
+
+    def test_an_unreviewed_revision_blocks_every_stop(self) -> None:
+        first, second = self.gate(), self.gate()
+
+        self.assertIn("plan-review --plan-doc", first or "")
+        self.assertEqual(first, second)
+        self.assertTrue(claim_followup("s", first) and claim_followup("s", second))
+        self.review()
+        self.assertIsNone(self.gate())
+
+    def test_a_running_review_is_waited_for(self) -> None:
+        marker = self.root / ".harness" / "plan-review" / "running.json"
+        marker.write_text(json.dumps({"run_id": "pr-live", "pid": os.getpid()}))
+
+        self.assertRegex(self.gate() or "", "pr-live .*in progress")
+
+    def test_must_items_for_the_agent_block_until_answered(self) -> None:
+        self.configure(reviewer_writing({"t1": [MUST]}))
+        self.review()
+
+        self.assertIn("--respond t1", self.gate() or "")
+        respond_task(self.root, "t1", items=["1=applied"])
+        self.assertIsNone(self.gate())
+
+    def test_items_for_the_human_let_the_stop_through(self) -> None:
+        self.configure(reviewer_writing({"t1": [{**MUST, "human": True}]}))
+        self.review()
+
+        self.assertIsNone(self.gate())
+
+    def test_repeated_review_failure_is_reported_once(self) -> None:
+        self.configure(FAILING_REVIEWER)
+        failed = self.root / ".harness" / "plan-review" / "failed.json"
+        with self.assertRaisesRegex(HarnessError, "plan review failed"):
+            self.review()
+        self.assertIn("plan-review --plan-doc", self.gate() or "")
+        with self.assertRaisesRegex(HarnessError, "plan review failed"):
+            self.review()
+
+        report = self.gate()
+        self.assertIn("failed 2 times", report or "")
+        self.assertNotIn(STOP_GATE_PREFIX, report or "")
+        self.assertIsNone(self.gate())
+        with self.assertRaisesRegex(HarnessError, "plan review failed"):
+            self.review()
+        self.assertIsNone(self.gate())
+        self.configure(reviewer_writing({"t1": []}))
+        self.review()
+        self.assertFalse(failed.exists())
+
+    def test_a_configured_pager_keeps_its_behaviour(self) -> None:
+        self.tearDown()
+        self.setUp(pager=True)
+        message = self.gate() or ""
+
+        self.assertIn("Human checkpoint plan_review", message)
+        self.assertNotIn(STOP_GATE_PREFIX, message)
+
 
 if __name__ == "__main__":
     unittest.main()

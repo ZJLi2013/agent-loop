@@ -14,7 +14,7 @@
 
 ## 要审的 task
 
-这些 task 是新增的，或设计在上次审查后改过；其余 task 已有结论，不再审。
+这些 task 是新增的、被要求重审的，或改绑到了当前 Plan Revision、还没在这个 revision 下审过；其余 task 已有结论，不再审。
 
 {tasks}
 

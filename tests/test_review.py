@@ -611,7 +611,7 @@ class HumanSuccessorTest(unittest.TestCase):
                 if legacy:
                     record_task_review(
                         self.root, "t2", findings=[], dropped=0, summary="", source="task_review",
-                        run_id=None, plan_doc="plan.md",
+                        run_id=None, plan_doc="plan.md", plan_revision=1,
                     )
                 self.human_decides(1, review)
                 if starts:
@@ -697,7 +697,7 @@ class MainlineHandoffTest(unittest.TestCase):
         (self.root / "next" / "plan.md").write_text(NEXT_PLAN, encoding="utf-8")
         record_task_review(
             self.root, "t2", findings=[must], dropped=0, summary="", source="plan_review", run_id=None,
-            plan_doc="next/plan.md",
+            plan_doc="next/plan.md", plan_revision=1,
         )
         with self.assertRaisesRegex(HarnessError, "must items"):
             self.start([DONE_A, NEXT_B])

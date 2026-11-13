@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,7 @@ from harness.errors import HarnessError
 from harness.findings import normalize_findings
 from harness.fingerprint import workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
-from harness.plan import plan_location
+from harness.plan import plan_location, plan_metadata
 from harness.project import render_prompt, review_checklist, task_file
 from harness.records import open_task_ids, task_row
 from harness.review import load_reviewer
@@ -25,6 +26,10 @@ from harness.storage import (
 
 PLAN_REVIEW_DIR = "plan-review"
 RUNNING_FILE = "running.json"
+FAILED_FILE = "failed.json"
+MAX_REVIEW_FAILURES = 2
+# Adapters never suppress a repeated stop message that carries this prefix.
+STOP_GATE_PREFIX = "[agent-loop stop gate]"
 TASK_RECORDS = "tasks"
 RESPONSES = ("applied", "skipped", "reject")
 DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
@@ -83,17 +88,44 @@ def _write(root: Path, record: dict[str, Any]) -> None:
     atomic_write_json(_record_path(root, record["task_id"]), record)
 
 
+def _row_revision(cells: list[str]) -> int | None:
+    match = re.fullmatch(r"r(\d+)", cells[2]) if len(cells) > 2 else None
+    return int(match.group(1)) if match else None
+
+
+def last_review(record: dict[str, Any]) -> dict[str, Any] | None:
+    return record["reviews"][-1] if record["reviews"] else None
+
+
+def open_musts(review: dict[str, Any]) -> tuple[list[str], list[str]]:
+    agent, human = [], []
+    for index, item in enumerate(review["findings"], start=1):
+        if item["level"] == "must" and str(index) not in review["responses"]:
+            (human if item["human"] else agent).append(str(index))
+    return agent, human
+
+
+def running_review(root: Path) -> dict[str, Any] | None:
+    running = _review_dir(root) / RUNNING_FILE
+    holder = read_json(running) if running.exists() else None
+    return holder if holder and pid_alive(int(holder["pid"])) else None
+
+
 def review_status(root: Path, task_id: str, plan_doc: str) -> str:
-    if task_row(root, task_id) is None:
+    cells = task_row(root, task_id)
+    if cells is None:
         return "missing"
     _, plan = _plan_path(root, plan_doc)
     record = task_record(root, task_id)
-    reviews = record["reviews"]
+    last = last_review(record)
     # Task ids restart across Goals; reviews recorded before plan_doc existed count for this plan.
     # Older versions recorded a task the task reviewer wrote as reviewed without running the plan reviewer.
-    if not reviews or reviews[-1].get("plan_doc", plan) != plan or reviews[-1].get("source") == "task_review":
+    if not last or last.get("plan_doc", plan) != plan or last.get("source") == "task_review":
         return "not_reviewed"
-    if any(item["at"] >= reviews[-1]["at"] for item in record["again"]):
+    if any(item["at"] >= last["at"] for item in record["again"]):
+        return "needs_review"
+    bound = _row_revision(cells)
+    if bound == plan_metadata(root, plan)[0] and last.get("plan_revision") != bound:
         return "needs_review"
     return "reviewed"
 
@@ -107,13 +139,10 @@ def plan_review_ready(
     if status in {"not_reviewed", "needs_review"}:
         return False, f"task {task_id} has no independent review"
     record = task_record(root, task_id)
-    last = record["reviews"][-1]
+    last = last_review(record)
     findings = last["findings"]
-    open_items = [
-        str(index)
-        for index, item in enumerate(findings, start=1)
-        if item["level"] == "must" and str(index) not in last["responses"]
-    ]
+    agent_items, human_items = open_musts(last)
+    open_items = sorted(agent_items + human_items, key=int)
     if open_items:
         return False, (
             f"answer the reviewer's must items {', '.join(open_items)} of task {task_id}: "
@@ -179,10 +208,12 @@ def record_task_review(
     source: str,
     run_id: str | None,
     plan_doc: str,
+    plan_revision: int,
 ) -> None:
     record = task_record(root, task_id)
     record["reviews"].append({
         "plan_doc": _plan_path(root, plan_doc)[1],
+        "plan_revision": plan_revision,
         "findings": findings,
         "dropped": dropped,
         "summary": summary,
@@ -215,12 +246,14 @@ def run_plan_review(
         ]
         if not pending:
             return {"summary": None, "tasks": {}}
+        revision = plan_metadata(root, relative)[0]
+        bindings = {task_id: _row_revision(task_row(root, task_id) or []) for task_id in pending}
 
         review_dir = _review_dir(root)
         review_dir.mkdir(parents=True, exist_ok=True)
         running = review_dir / RUNNING_FILE
-        holder = read_json(running) if running.exists() else None
-        if holder and pid_alive(int(holder["pid"])):
+        holder = running_review(root)
+        if holder:
             raise HarnessError(
                 f"plan review run {holder.get('run_id')} is in progress "
                 f"(pid {holder.get('pid')}); wait for it to finish"
@@ -283,16 +316,74 @@ def run_plan_review(
         atomic_write_json(run_dir / "result.json", result)
         append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
         prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
+        running.unlink(missing_ok=True)
+        failed = review_dir / FAILED_FILE
         if error or report is None:
-            running.unlink(missing_ok=True)
+            previous = read_json(failed) if failed.exists() else {}
+            same = previous.get("plan_doc") == relative and previous.get("plan_revision") == revision
+            atomic_write_json(failed, {
+                "plan_doc": relative,
+                "plan_revision": revision,
+                "count": previous["count"] + 1 if same else 1,
+                "error": error,
+                "run_id": run_id,
+                "reported": same and previous["reported"],
+            })
             raise HarnessError(f"plan review failed: {error}")
+        if plan_metadata(root, relative)[0] != revision or any(
+            _row_revision(task_row(root, task_id) or []) != bound for task_id, bound in bindings.items()
+        ):
+            raise HarnessError(
+                f"plan document {relative} or its task bindings changed during the review; run plan-review again"
+            )
         for task_id, entry in report["tasks"].items():
             record_task_review(
                 root, task_id, **entry, summary=report["summary"],
-                source="plan_review", run_id=run_id, plan_doc=relative,
+                source="plan_review", run_id=run_id, plan_doc=relative, plan_revision=revision,
             )
-        running.unlink(missing_ok=True)
+        failed.unlink(missing_ok=True)
         return report
+
+
+def stop_followup(root: Path, plan_doc: str, command: str) -> str | None:
+    """Caller holds state_lock."""
+    _, relative = _plan_path(root, plan_doc)
+    if plan_metadata(root, relative)[1] != "proposed":
+        return None
+    holder = running_review(root)
+    if holder:
+        return (
+            f"{STOP_GATE_PREFIX} plan review run {holder.get('run_id')} of {relative} is in progress; "
+            "wait for it to finish before ending the turn."
+        )
+    tasks = open_task_ids(root, plan_doc=relative)
+    pending = [task_id for task_id in tasks if review_status(root, task_id, relative) != "reviewed"]
+    if pending:
+        failed = _review_dir(root) / FAILED_FILE
+        failure = read_json(failed) if failed.exists() else None
+        revision = plan_metadata(root, relative)[0]
+        if failure and failure["plan_doc"] == relative and failure["plan_revision"] == revision \
+                and failure["count"] >= MAX_REVIEW_FAILURES:
+            if failure["reported"]:
+                return None
+            atomic_write_json(failed, {**failure, "reported": True})
+            return (
+                f"Plan review of {relative} r{revision} failed {failure['count']} times "
+                f"(last: {failure['error']}). Record it as a blocker with the errors, then stop."
+            )
+        return (
+            f"{STOP_GATE_PREFIX} {relative} is proposed and tasks {', '.join(pending)} have no review of "
+            f"this revision. Run it now: {command} plan-review --plan-doc \"{relative}\""
+        )
+    for task_id in tasks:
+        agent_items, _ = open_musts(last_review(task_record(root, task_id)))
+        if agent_items:
+            return (
+                f"{STOP_GATE_PREFIX} answer the reviewer's must items {', '.join(agent_items)} of task {task_id} "
+                f"before ending the turn: {command} plan-review --plan-doc \"{relative}\" --respond {task_id} "
+                "--item N=applied (or N=reject --reason \"<fact>\")"
+            )
+    return None
 
 
 def _journal_decision(root: Path, task_id: str, kind: str, entry: dict[str, Any]) -> None:
