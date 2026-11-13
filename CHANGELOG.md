@@ -320,6 +320,10 @@ invoke on-demand skills.
 
 ### Fixed
 
+- Task review prompts now report that `revise` has been used when a task was sent back on an earlier verify run
+  (#208). Initial reviews and objections on the same verify run omit this notice; decision guards and review
+  attempt limits are unchanged.
+
 - Harness `init --evidence-file PATH` (repeatable) declares task outputs read by the verifier (#200), so
   regenerating an existing result file no longer triggers verifier drift. Each declaration must resolve to a
   verifier file argument; invalid declarations leave state and config unchanged. Undeclared verifier files stay

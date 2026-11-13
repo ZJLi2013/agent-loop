@@ -69,6 +69,7 @@ def _prompt(
     state: dict[str, Any],
     previous: dict[str, Any],
     objection: str | None,
+    revised_run: str | None,
 ) -> str:
     evidence = f"{HARNESS_DIR}/artifacts/{state['last_run_id']}"
     inputs = []
@@ -97,6 +98,11 @@ def _prompt(
         )
     elif previous.get("error"):
         extra = f"\n## 上一次 review 无效\n\n{previous['error']}\n\n补齐后再写决策。\n"
+    if revised_run is not None and revised_run != previous["verify_run_id"]:
+        extra += (
+            "\n## 本 task 的退回记录\n\n"
+            "本 task 已退回过一次，`revise` 已用掉，本次只能在 `continue` / `ask_human` / `stop` 里选。\n"
+        )
     from harness.plan_review import task_record
 
     reviews = task_record(root, str(state["task_id"]))["reviews"]
@@ -202,7 +208,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         decision_path = review_dir / "decision.json"
         decision_path.unlink(missing_ok=True)
         (review_dir / "prompt.md").write_text(
-            _prompt(root, config, state, previous, objection), encoding="utf-8"
+            _prompt(root, config, state, previous, objection, revised_run), encoding="utf-8"
         )
 
         run_id = new_run_id()

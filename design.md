@@ -332,7 +332,9 @@ runner 与下一 task 初始化都被 guard 拒绝。reviewer 只读落盘证据
 仍分歧即 `ask_human`。
 `revise` 把漏了收口的 task 退回给它自己：Harness 不关闭、不清理 scratch，只放行 runner 与 verify，期间拒绝
 init 与 `clean-task`；重跑 verify 后自动再审。每个 task 只能退回一次：review 记录的 `revised_run` 记住被退回的
-verify run，跨 review 与 verify 保留，init 时清空。同一 verify 的异议重审仍可选 `revise`；更晚的 verify 再选 `revise`
+verify run，跨 review 与 verify 保留，init 时清空。更晚的 verify 的 task review prompt 会说明 `revise` 已用掉，
+本次只能选 `continue` / `ask_human` / `stop`；首次审查与同一 verify 的异议重审不加此说明。
+同一 verify 的异议重审仍可选 `revise`；更晚的 verify 再选 `revise`
 时本轮没有有效决策（不沿用上一轮的决策，它属于上一次 verify），按无效 review 重审，`MAX_REVIEWS` 次后交 human。
 调研见 [`study/multi_agent.md`](docs/study/planning-review/multi_agent.md)。
 
