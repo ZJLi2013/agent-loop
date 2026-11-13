@@ -71,13 +71,10 @@ All notable user-facing changes are documented here. This project follows Semant
   replay. The pull request states the decision as a contract, replays a few synthetic scenarios plus one control on
   the base branch and with the change, and records the model, inputs, and expected and observed actions. A check
   that the prompt contains a sentence is not evidence; wording that changes no decision needs no replay.
-- On-demand `code-to-uml-diagram` skill: a Mermaid class diagram of a class and its direct collaborators, with
+- `code-to-uml-diagram` skill: a Mermaid class diagram of a class and its direct collaborators, with
   inheritance, composition, injection and construct-then-register each read from one kind of source line, plus
-  one sequence diagram per key scenario whose participants come from the class diagram.
-- On-demand `research-to-paper` skill: an arXiv-style paper and an optional 10–15 s teaser from a closed research
-Goal, with every number traced to the experiment records. The agent builds teasers with onetake, whose usage notes
-the skill records; a human-recorded UI walkthrough uses a screen recorder such as Recordly. Usage documents how to
-invoke on-demand skills.
+  one sequence diagram per key scenario whose participants come from the class diagram. Usage documents how to
+  invoke the on-demand skills that packs provide.
 - dsh (DeepSeek Harness) enforced adapter: through dsh's `hooks-codex` bridge, a dsh worker is held by the
   completion gate until the task is verified, and the memory index is injected at session start.
   `scripts/sync-to-dsh.ps1` renders the always-apply rules into `$DSH_HOME/AGENTS.md` and links the skills into
@@ -242,25 +239,20 @@ invoke on-demand skills.
   contract or an invariant's test is missing, and `minimal-code` routes such a change there instead of treating the
   structure as speculative abstraction.
 - The CLOSE self-audit decides the fate of what the task created on a remote node: containers, checkouts, venvs
-  and build directories, run outputs, and images and weights pulled only for it are classified by the `remote-exec`
-  storage tiers; one-off ones are deleted and kept ones go into `facts.md` with their path and purpose. Only the
+  and build directories, run outputs, and images and weights pulled only for it are classified into the Hot / Warm /
+  Cold storage tiers; one-off ones are deleted and kept ones go into `facts.md` with their path and purpose. Only the
   container names and work directories recorded in the handoff note are claimed, so shared caches and other users'
   containers are never touched. The handoff note records those container names and work directories.
 - Durable records have a home. A plan document inside `.harness/` is rejected by `init`, `resume` and
   `plan-review`. Auto-Stop Reports, overnight reports and pending `⚠️ 待确认` items go into the processed
-  project's `.agent-loop/progress.md` handoff. `remote-exec` reads and records GPU occupancy in `facts.md`.
-  Evidence that must outlive the runtime is copied into the per-run table instead of citing `runs.jsonl` lines or
+  project's `.agent-loop/progress.md` handoff. Evidence that must outlive the runtime is copied into the per-run table instead of citing `runs.jsonl` lines or
   `artifacts/`, which Harness truncates and prunes. `experiment-design` states that gitignored document
   directories are outside the evidence fingerprint.
 - A task design lives in the plan document (a heading section that starts with the task id) or a linked sub-exp,
   never under `.harness/tasks/`, which is deleted when the task closes. The task reviewer is told so when it writes
   the next task, and the plan reviewer asks for a revision when a design sits there.
-- `remote-exec`: the agent picks the node itself by the section 2 score instead of asking the human. Before
-  scoring it excludes GPUs that `rocm-smi --showpids` shows busy or that another project's handoff note claims,
-  and records the chosen node and GPUs in its own handoff. The batch-run report follows the target project's
-  output format (for example one card per repo) when the project defines one.
-- The plan document keeps one append-only `## 脉络` table, one row per closed task and per `Plan Revision`, saying
-  which next command or Goal change each step caused. Whoever makes the decision writes the row; CLOSE, replan and
+- The plan document keeps one append-only `## 脉络` table saying which next command or Goal change each stage
+  caused (row granularity in the entry above). Whoever makes the decision writes the row; CLOSE, replan and
   Goal freeze keep it. It replaces the `下一步决策` section and the task pointer rows in the Experiment Log, and the
   task reviewer puts its caveats in the `review` field instead of 「当前结论」.
 - A change made only to test a hypothesis stays in the experiment kit (flag, monkeypatch or scratch entry point)
@@ -270,12 +262,6 @@ invoke on-demand skills.
   keeps the task failed and points directly to the locked verifier.
 - Cursor's first `preCompact` hook event tells the user when a context window below one million tokens compacts
   and suggests switching to a 1M-context model. Compaction no longer pauses the Harness for Goal Review.
-- `upstream-contribute` looks for the upstream's own agent skills. A PR-writing skill shapes the body and its
-  checks run before posting. When the upstream ships a review skill, the PR opens as a draft, the agent runs that
-  skill from the upstream default branch, fixes the findings that hold up, answers the ones that do not in the PR
-  body with evidence, and then tells the user to mark it ready.
-- Following up an upstream PR, the agent may fix and verify on its own, but pushes, replies and thread
-  resolutions wait for the user; `autopilot` replies and resolves threads by default.
 - Experiment scripts stay only while a kept script, the next approved task, or another Goal consumes them; scripts
   reused across Goals become stable entries with tests. One-off scripts are deleted once their parameters and input
   construction rules are in the document, and Goal CLOSE deletes those referenced only by that Goal's documents.
@@ -291,9 +277,9 @@ invoke on-demand skills.
   run again; the next `exec` runs normally. Each run directory now starts with `start.json`. A task or plan
   reviewer whose process is gone no longer blocks another review.
 
-- Plan review is per task instead of per Plan Revision, and each task is reviewed once: when it first appears,
-  all unreviewed tasks go to the reviewer in one call, and later design edits do not trigger another review
-  (`plan-review --again <task>` asks for one). Reviewer items follow a must / suggest protocol: `must` means the
+- Plan review records are per task: all unreviewed tasks go to the reviewer in one call, and design edits within
+  the same Plan Revision do not trigger another review (`plan-review --again <task>` asks for one; a new revision
+  does, see the first entry of this section). Reviewer items follow a must / suggest protocol: `must` means the
   task goes the wrong way, reaches a wrong conclusion or wastes an expensive run if ignored, and needs a stated
   consequence and evidence, otherwise it counts as `suggest`; at most 3 of each are kept. The executor answers
   every `must` with `plan-review --respond <task> --item N=applied` or `N=reject --reason "<fact>"` before
@@ -415,7 +401,6 @@ invoke on-demand skills.
   session. State written before this change has no owner and is handled as before.
 - A Cursor conversation is bound to every project whose task list it reads, not only the first one, so the
   completion gate follows work that moves to another project in the same workspace.
-- `gen-ppt` connectors drawn with `arrow()` render with an arrowhead.
 
 ## [0.1.0] - 2026-10-12
 

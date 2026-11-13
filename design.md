@@ -339,7 +339,7 @@ verify run，跨 review 与 verify 保留，init 时清空。更晚的 verify �
 本次只能选 `continue` / `ask_human` / `stop`；首次审查与同一 verify 的异议重审不加此说明。
 同一 verify 的异议重审仍可选 `revise`；更晚的 verify 再选 `revise`
 时本轮没有有效决策（不沿用上一轮的决策，它属于上一次 verify），按无效 review 重审，`MAX_REVIEWS` 次后交 human。
-调研见 [`study/multi_agent.md`](docs/study/planning-review/multi_agent.md)。
+调研见 [`docs/study/planning-review/multi_agent.md`](docs/study/planning-review/multi_agent.md)。
 
 ### Human checkpoints on the phone
 
@@ -404,22 +404,29 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 |---|---|
 | `harness/runner.py` | subprocess、process-tree kill、timeout、输出采集 |
 | `harness/journal.py` | 有界 artifacts 与 `runs.jsonl` |
+| `harness/storage.py` | 原子 JSON 写入、状态锁、`load_runtime` 的 config 摘要校验 |
+| `harness/project.py` | `.agent-loop/` 与 memory 目录解析、reviewer prompt 渲染 |
 | `harness/plan.py` | plan metadata、task revision、pause / resume / Goal Review guard |
-| `harness/plan_review.py` | plan reviewer：report 校验与 revision 去重；prompt 在 `harness/prompts/plan_review.md` |
+| `harness/attention.py` | Goal Review 计时与 `goal-review` 决定的落盘 |
+| `harness/plan_review.py` | plan reviewer：按 task 与 Plan Revision 记录、report 校验、stop 门；prompt 在 `harness/prompts/plan_review.md` |
 | `harness/review.py` | task 边界 reviewer：执行、决策校验与 follow-up；prompt 在 `harness/prompts/task_review.md` |
-| `harness/records.py` | reviewer 决策后把 closed task 移出 active backlog，并保留 archive |
-| `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录 |
+| `harness/records.py` | reviewer 决策后把 closed task 移出 active backlog，并保留 archive；`leftovers` |
+| `harness/scratch.py` | task 临时目录 `.harness/tasks/<id>/` 与 `strays` |
+| `harness/fingerprint.py` | 工作树指纹，排除 runtime 与其它 agent 的目录；verifier 文件锁 |
+| `harness/compaction.py` | 会话压缩标记与窗口大小，决定 task 关闭时的交接方式 |
 | `harness/page.py` | human 检查点经 pager 发到手机，回复映射成 Harness 动作 |
 | `harness/protocol.py` | state / event / transition；不依赖平台 |
 | `adapters/protocol.py` | 平台无关的 hook request / response |
 | `adapters/core.py` | 子项目发现、memory、Goal Review、completion gate 的事件处理 |
 | `adapters/followup.py` | 同一会话的重复 followup 去重 |
 | `adapters/codex_review.py` | Codex CLI reviewer 入口（Windows 经 WSL）：`reviewer.json` 不写路径，Codex 参数取 `AGENT_LOOP_CODEX_ARGS` |
-| `adapters/cursor/hooks/` | Cursor payload / output codec |
+| `adapters/cursor/session_scope.py` | Cursor 会话绑定的项目（见[会话归属](#session-scope)） |
+| `adapters/cursor/hooks/` | Cursor payload / output codec（`memory-lookup`、`harness-stop`、preCompact 的 `goal-refresh`） |
 | `adapters/dsh/hooks/` | dsh `hooks-codex` 桥接的 payload / output codec（`Stop`、`SessionStart`） |
 | `scripts/sync-to-cursor.ps1` | 安装 user-level adapter |
 | `scripts/sync-to-dsh.ps1` | 把 always-apply rules 拼成 `$DSH_HOME/AGENTS.md` |
-| `scripts/install-skills.py` | 两个宿主的 skill 链接：agent-loop 自己的 skill 加 `~/.agent-loop/packs.txt` 登记的包，跨来源查重名与 `requires`；不认识任何具体的包 |
+| `scripts/install-skills.py` | 两个宿主的 skill 与 rule 链接：agent-loop 自己的加 `~/.agent-loop/packs.txt` 登记的包，跨来源查重名与 `requires`；不认识任何具体的包 |
+| `scripts/uninstall-from-cursor.ps1` | 只删指向 agent-loop 或已登记包的链接与 hooks 接线 |
 
 `harness/core.py` 只保留兼容 façade 与 orchestration，不再容纳平台 hook 或大段底层实现。
 
@@ -482,28 +489,29 @@ plan、task、progress、archive、memory 与 `.harness/` 都不是项目事实�
 agent-loop/
 ├── design.md                 # 架构唯一定义
 ├── README.md                 # 安装、最短使用路径、文档入口
-├── rules/agent-loop.mdc      # 最小状态路由 + 不变量
+├── rules/                    # 常驻 rule：agent-loop.mdc 是最小状态路由 + 不变量
 ├── harness/
 │   ├── protocol.py           # Stable Kernel
-│   ├── storage.py            # 原子 JSON / lock
-│   ├── runner.py             # subprocess adapter
-│   ├── journal.py            # execution evidence
-│   ├── plan.py               # Plan Revision / pause gate
-│   ├── records.py            # closed-task archive
-│   ├── prompts/              # reviewer prompts（Policy 文本）
 │   ├── core.py               # orchestration façade
-│   └── run.py                # CLI
+│   ├── run.py                # CLI
+│   ├── prompts/              # reviewer prompts（Policy 文本）
+│   └── *.py                  # 其余模块各自的职责见 Adapters 表
 ├── skills/                   # Policies
 ├── tools/
-│   └── pager/                # 独立包：邮件往返；Harness 只经 CLI 调用
+│   └── pager/                # 独立包：邮件或飞书往返；Harness 只经 CLI 调用
 ├── adapters/
 │   ├── protocol.py           # platform-neutral hook boundary
 │   ├── core.py               # shared hook actions
 │   ├── followup.py           # per-session followup dedupe
 │   ├── codex_review.py       # Codex CLI reviewer entry point
-│   ├── cursor/hooks/         # Cursor codec
+│   ├── cursor/               # Cursor codec 与会话绑定
 │   └── dsh/hooks/            # dsh (hooks-codex bridge) codec
-└── docs/study/               # 按 feature 分目录的调研与设计依据，不承担当前架构定义
+├── scripts/                  # 宿主安装 / 卸载与安装冒烟
+├── tests/                    # 契约测试
+├── examples/minimal-project/ # quickstart 与安装冒烟用的示例项目
+└── docs/
+    ├── usage.md、quickstart.md
+    └── study/                # 按 feature 分目录的调研与设计依据，不承担当前架构定义
 ```
 
 ## Non-goals

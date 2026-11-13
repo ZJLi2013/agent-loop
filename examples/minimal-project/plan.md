@@ -7,14 +7,25 @@ Plan Review: approved
 
 Fix the arithmetic mean without changing the empty-input contract.
 
+## Design
+
+Switch `average` from integer to true division and keep the empty-input error. Sample output: `average([1, 2])`
+returns `1.5`. Not done: no change to the tests or the empty-input check. Acceptance: both tests in
+`test_average.py` pass under the locked verifier and the evidence is fresh.
+
 ## Current conclusion
 
 The example uses integer division, so the fractional-mean test should fail.
 This fixture is pre-approved for the walkthrough; review your own project plans before execution.
 
-## Next decision
+## Thread
 
-Run the tests, inspect the failure, fix the implementation, and verify again.
+| Stage | Question | Conclusion | What it changed |
+|---|---|---|---|
+| fractional-mean | Does true division fix fractional means? | Pending | Run the tests, inspect the failure, fix, verify again |
+
+---
+Execution details below; the human need not read them.
 
 ## fractional-mean Fix fractional means
 
@@ -26,4 +37,3 @@ the empty-input error. Acceptance: both tests pass and the evidence is fresh.
 | Exp | Hypothesis | Status | Evidence | Conclusion |
 |---|---|---|---|---|
 | 1 | True division preserves fractional means and rejects empty input | Pending | test_average.py | — |
-

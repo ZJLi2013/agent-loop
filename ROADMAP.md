@@ -30,8 +30,8 @@ Order of work:
    common pieces — budget declarations, evidence on disk, project memory, heartbeat, pager, and an advisory
    reviewer. **Entry routing:** the agent proposes a mode for a new Goal against the promotion conditions, and
    the human decides.
-3. **Cost-proportionate brake** (done, confirmation side). Warn, without blocking, when a plan is sent back for
-   revision 3 times in a row or 3 revisions pass without an experiment.
+3. **Bounded review cost** (done, confirmation side). Each task is plan-reviewed once per Plan Revision it is
+   bound to, with at most three `must` and three `suggest` items; design edits within a revision trigger no review.
 4. **Promotion to confirmation mode.** A branch that meets the promotion conditions is handed over in the
    existing plan format — a proposed Goal and first task with one unverified hypothesis, acceptance checkpoint,
    failure route and budget — and enters the unchanged plan review and human approval. In exploration mode an
@@ -59,7 +59,7 @@ hypothesis generation or tournament ranking, and self-improvement of the Harness
 - add a task decision contract (`pass`, `fail_to`, `budget`) and block `READY` until all three are valid;
 - add a supported macOS/Linux sync path;
 - add installer dry-run and diagnostics;
-- publish minimal-project and policy/adapter examples;
+- publish policy/adapter examples beyond `examples/minimal-project`;
 - define compatibility fixtures for future Cursor hook payload changes.
 
 ## Later
