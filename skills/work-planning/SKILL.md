@@ -125,7 +125,9 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
 
 ## Human correction
 
-只问进展时读 task、journal 与 evidence 回答，不自动改 revision。形成 Goal / scope / 优先级修改后：
+只问进展时读 task、journal 与 evidence 回答，不自动改 revision。`Plan Revision` 只在两处递增：这里的 human 纠偏，
+与 Goal Review 的 `replan`。往下拆 task、更新当前结论或脉络、按 must 改设计都不升版，新 task 绑当前 `rN`；
+Harness 拒绝没有 `pause --require-revision` 或 replan 记录的升版。形成 Goal / scope / 优先级修改后：
 
 1. `pause --require-revision --reason "<纠偏>"`；
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed，脉络追加一行旧 Goal → 新 Goal 及原因；

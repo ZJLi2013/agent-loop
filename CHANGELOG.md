@@ -86,6 +86,12 @@ invoke on-demand skills.
 
 ### Changed
 
+- A Plan Revision increase needs a recorded source: `pause --require-revision` (a human correction, also allowed after
+  the task closed or was disabled) or a Goal Review `replan`. `init` and `resume` refuse an increase without one and
+  keep the pause; the pause Harness writes itself when it sees the revision change no longer counts as a source. The
+  accepted source (from / to / reason) is kept in `state.json` as `revision_source`. `work-planning` and `task-state`
+  now say that splitting off tasks, updating conclusions, or applying must items does not bump the revision.
+
 - Plan review per revision and a stop gate for proposed plans: a plan review record carries the `Plan Revision` it
   started under, so an open task bound to the current `rN` is reviewed again after the plan's revision moves (records
   without the field count as needing review; a revision or binding change during the run records nothing). With
