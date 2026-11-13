@@ -317,6 +317,14 @@ def run_plan_review(
         append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
         prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
         running.unlink(missing_ok=True)
+        # Edits to the plan or its bindings while the reviewer runs void its input, not its run: they are
+        # checked before any failure is counted, since the fingerprint check also sees them.
+        if plan_metadata(root, relative)[0] != revision or any(
+            _row_revision(task_row(root, task_id) or []) != bound for task_id, bound in bindings.items()
+        ):
+            raise HarnessError(
+                f"plan document {relative} or its task bindings changed during the review; run plan-review again"
+            )
         failed = review_dir / FAILED_FILE
         if error or report is None:
             previous = read_json(failed) if failed.exists() else {}
@@ -330,12 +338,6 @@ def run_plan_review(
                 "reported": same and previous["reported"],
             })
             raise HarnessError(f"plan review failed: {error}")
-        if plan_metadata(root, relative)[0] != revision or any(
-            _row_revision(task_row(root, task_id) or []) != bound for task_id, bound in bindings.items()
-        ):
-            raise HarnessError(
-                f"plan document {relative} or its task bindings changed during the review; run plan-review again"
-            )
         for task_id, entry in report["tasks"].items():
             record_task_review(
                 root, task_id, **entry, summary=report["summary"],

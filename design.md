@@ -61,7 +61,7 @@ agent-loop 只维护三类公开保证：
 
 | 维度 | 身份 | 取值 | 谁能改 | 存在哪 | 契约测试 |
 |---|---|---|---|---|---|
-| task 实例 | [task 行](#task-row)第二格的 task id，按原字符串匹配；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`；或 task 行的 `rN` 等于 plan 当前 revision 而最后一次 review 的 `plan_revision` 不同，含没有该字段的旧记录）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；审查失败计数（同 plan 与 revision 累加，`reported` 表示已上报）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；`.harness/plan-review/failed.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
+| task 实例 | [task 行](#task-row)第二格的 task id，按原字符串匹配；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`；或 task 行的 `rN` 等于 plan 当前 revision 而最后一次 review 的 `plan_revision` 不同，含没有该字段的旧记录）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；审查失败计数（reviewer 失败时写入，同 plan 与 revision 累加、换了就从 1 起；审查期间输入变更不动它；审查成功删除；stop 门上报后把 `reported` 置真，同一记录不再上报）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；`.harness/plan-review/failed.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
 | 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `files`（`argv` 指向的工作区内文件的 SHA-256，含被 gitignore 的路径）/ `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py`、`tests/test_review.py` |
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；按 reviewer 开工只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
 | 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
@@ -285,7 +285,9 @@ Harness 不自动回收。占用标记的进程已不在时，exec / verify / ga
 
 plan review 的单位是 task 与 Plan Revision：task 在它绑定的每个 revision 下审一次，一次调用审完链接到本 plan
 （或其目录内已有文件）、未关闭且未审或需重审的 task；同一 revision 内改设计不重审，暂留旧 `rN` 的 task 不重审。
-记录写 reviewer 启动时的 revision，reviewer 返回时 revision 或 task 绑定已变就不写记录。
+记录写 reviewer 启动时的 revision，reviewer 返回时 revision 或 task 绑定已变就不写记录，也不动失败计数：
+这一判定先于「reviewer 失败 / 改了工作区」，因为 workspace fingerprint 同样看得到这些编辑。做法同乐观并发控制的版本
+校验（如 HTTP `If-Match` 不符返回 412）：输入过期要求重来，不算执行失败。
 最后一次 review、未回应的 `must`（按是否交 human 分组）与正在跑的审查只由 `harness/plan_review.py` 的
 `last_review` / `open_musts` / `running_review` 读取，准入、启动与 stop 门共用，各自只定出口；哪些表格行是 task 行见[状态模型](#task-row)。
 human 可用 `plan-review --again` 要求重审。记录的身份与准入 guard 见[状态模型](#guards)。
