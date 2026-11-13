@@ -380,7 +380,14 @@ agent-loop-harness init --task c --plan-doc plan.md -- python verify_c.py
 revision 只因 human 纠偏（`pause --require-revision`）或 Goal Review `replan` 递增。同一计划的 revision 比上次 task 或当前
 task 记录的高、却没有这样的暂停请求时，`init` 与 `resume` 都拒绝，提示记下纠偏或把 header 改回原值；Harness 因 revision
 变化自动写的暂停不算来源。task 已 `disable` 时仍可发起 `--require-revision`，供下一次 `init` 使用。接受升版时，来源
-（from / to / reason）写进 `state.json` 的 `revision_source`，未升版的后继 task 沿用它。
+（from / to / reason / at）与新的 `plan_revision` 在同一次 state 写入里记下，之后才删暂停请求；未升版的后继 task 沿用它，
+换计划时清空。它只保留最近一次升版的来源，不是历史审计。
+
+这道检查有三条边界：
+
+- 只比较同一计划文件与上一次记录的 revision；换计划或没有旧值时不检查。
+- reason 照原样记下，Harness 不核实它是否是 human 原话。
+- 不回溯：在这道检查之前已经存在的无来源升版不处理。
 
 未消费的 `--require-revision` 暂停请求加上同一计划的 revision 提升，允许新 task 替代上次 task reviewer 的 `next_task`
 或 `stop` 决定；task 状态、版本绑定和 plan review 准入仍须通过。`init` 成功写入新配置和状态后删除暂停请求，拒绝时保留。
