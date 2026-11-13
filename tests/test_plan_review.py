@@ -12,7 +12,6 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from adapters.followup import claim_followup
 from harness.core import HarnessError, completion_gate, initialize, load_runtime, resume
@@ -196,18 +195,38 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(self.review()["tasks"], {})
         self.assertEqual(self.calls(), "2")
 
-    def test_a_revision_bumped_during_the_review_records_nothing(self) -> None:
-        bump = "Path('plan.md').write_text(Path('plan.md').read_text().replace('Revision: 1', 'Revision: 2')); "
+    def reviewer_changing(self, edit: str) -> None:
         argv = reviewer_writing({"t1": []})
-        argv[-1] = argv[-1].replace("from pathlib import Path; ", "from pathlib import Path; " + bump)
+        argv[-1] = argv[-1].replace("from pathlib import Path; ", f"from pathlib import Path; {edit}; ")
         self.configure(argv)
 
-        with mock.patch("harness.plan_review.workspace_fingerprint", return_value="same"):
-            with self.assertRaisesRegex(HarnessError, "changed during the review"):
-                self.review()
+    def assert_review_discarded(self) -> None:
+        failed = self.root / ".harness" / "plan-review" / "failed.json"
+        failed.parent.mkdir(parents=True, exist_ok=True)
+        failed.write_text(json.dumps({
+            "plan_doc": "plan.md", "plan_revision": 1, "count": 1, "error": "x", "run_id": "r", "reported": False,
+        }))
+        before = failed.read_bytes()
+
+        with self.assertRaisesRegex(HarnessError, "changed during the review"):
+            self.review()
 
         self.assertEqual(task_record(self.root, "t1")["reviews"], [])
-        self.assertFalse((self.root / ".harness" / "plan-review" / "failed.json").exists())
+        self.assertEqual(failed.read_bytes(), before)
+
+    def test_a_revision_bumped_during_the_review_records_nothing(self) -> None:
+        self.reviewer_changing(
+            "Path('plan.md').write_text(Path('plan.md').read_text().replace('Revision: 1', 'Revision: 2'))"
+        )
+        self.assert_review_discarded()
+
+    def test_a_binding_changed_during_the_review_records_nothing(self) -> None:
+        task_md = ".agent-loop/task.md"
+        self.reviewer_changing(
+            f"Path({task_md!r}).write_text(Path({task_md!r}).read_text(encoding='utf-8')"
+            ".replace('| r1 |', '| r2 |'), encoding='utf-8')"
+        )
+        self.assert_review_discarded()
 
     def test_items_over_the_limit_are_dropped(self) -> None:
         self.configure(reviewer_writing({"t1": [MUST] * 4 + [SUGGEST] * 4}))
