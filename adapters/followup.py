@@ -5,11 +5,13 @@ import re
 import tempfile
 from pathlib import Path
 
+from harness.plan_review import STOP_GATE_PREFIX
+
 _MARKERS = Path(tempfile.gettempdir()) / "agent-loop-followups"
 
 
 def claim_followup(session_id: str | None, message: str) -> bool:
-    if session_id is None:
+    if session_id is None or STOP_GATE_PREFIX in message:
         return True
     stable_message = re.sub(r"\d+\.\d+s remain", "*s remain", message)
     digest = hashlib.sha256(stable_message.encode()).hexdigest()

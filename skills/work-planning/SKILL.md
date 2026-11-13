@@ -90,7 +90,8 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    这个 task 关闭前不拆后续 task。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。task 行链接它的设计：plan 里以
    task id 开头的标题段，或 plan 目录下的独立文件；CLOSE 只归档前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
-4. 配置 reviewer 时，提交后运行 `plan-review`：每个 task 只在第一次出现时审一次，设计之后再改也不重审。
+4. 配置 reviewer 时，提交后在同一轮运行 `plan-review`，不留到下一轮：task 在它绑定的每个 revision 下审一次，
+   同一 revision 内改设计不重审。Harness 启用、未配 pager 时，plan 停在 `proposed` 而审查没做完，stop hook 不放行。
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
 5. 逐条回应 `must`：照改后 `plan-review --respond <task> --item N=applied`；只在与事实不符时
    `--item N=reject --reason "<事实>"`，只驳一次。`suggest` 酌情改或跳过，不必回应。不回审。
@@ -130,7 +131,8 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
 2. 更新 plan Goal / 边界，revision +1、review 改 proposed，脉络追加一行旧 Goal → 新 Goal 及原因；
 3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
    标注集）在 plan 里逐项标 keep / revise / drop，human 提出的按第 1 步处理；旧标注能否作证据见
-   `experiment-design` 的验收门。新 task 绑定新 `rN`；
+   `experiment-design` 的验收门。新 task 绑定新 `rN`；保留的 task 核对设计后改绑新 `rN`，因此重审一次，
+   暂留旧 `rN` 的 blocked task 不重审；
 4. 独立 plan review 后按 Gate 第 5 步恢复唯一 doing，再 `resume`；task reviewer 选了 `ask_human` / `stop`
    而 human 决定开新 task 时，human 把它批为 `🔬 doing` 后直接 `init`，不用 `disable`。
 
