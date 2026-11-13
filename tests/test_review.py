@@ -459,6 +459,51 @@ class ReviseTest(unittest.TestCase):
             review = verify(self.root)["automatic_review"]
             self.assertEqual((review["decision"], review["error"]), ("revise", None))
 
+    def test_review_prompt_reports_revise_exhaustion_only_after_new_verify(self) -> None:
+        notice = "本 task 已退回过一次，`revise` 已用掉，本次只能在 `continue` / `ask_human` / `stop` 里选。"
+        cases = (
+            ("new verify rejects revise", False, REVISE),
+            ("new verify accepts continue", False, CONTINUE),
+            ("same verify objection keeps revise", True, REVISE),
+        )
+        for name, objection, decision in cases:
+            with self.subTest(name):
+                self.tearDown()
+                self.setUp()
+                self.init(reviewer_sequence(REVISE, decision, CONTINUE), run_verifier=False)
+                first = verify(self.root)["automatic_review"]
+                prompt_path = self.root / ".harness" / "review" / "prompt.md"
+                self.assertEqual((first["decision"], first["error"]), ("revise", None))
+                self.assertEqual(first["revised_run"], first["verify_run_id"])
+                self.assertNotIn(notice, prompt_path.read_text(encoding="utf-8"))
+
+                if objection:
+                    second = run_review(self.root, objection="the default is in usage.md")["review"]
+                    self.assertEqual(second["verify_run_id"], first["verify_run_id"])
+                    self.assertEqual((second["decision"], second["error"]), ("revise", None))
+                    self.assertEqual(second["attempts"], 2)
+                    self.assertNotIn(notice, prompt_path.read_text(encoding="utf-8"))
+                    continue
+
+                second = verify(self.root)["automatic_review"]
+                self.assertNotEqual(second["verify_run_id"], first["verify_run_id"])
+                self.assertEqual(second["revised_run"], first["verify_run_id"])
+                self.assertEqual(second["attempts"], 1)
+                if decision == REVISE:
+                    self.assertIsNone(second["decision"])
+                    self.assertIn("once per task", second["error"])
+                else:
+                    self.assertEqual((second["decision"], second["error"]), ("continue", None))
+                self.assertIn(notice, prompt_path.read_text(encoding="utf-8"))
+
+                if decision == REVISE:
+                    retry = run_review(self.root)["review"]
+                    self.assertEqual((retry["decision"], retry["error"]), ("continue", None))
+                    self.assertEqual(retry["attempts"], 2)
+                    prompt = prompt_path.read_text(encoding="utf-8")
+                    self.assertIn(notice, prompt)
+                    self.assertIn(second["error"], prompt)
+
 
 CONTINUE = {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
 PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 脉络\nt2\n"
