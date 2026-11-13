@@ -381,7 +381,7 @@ revision 只因 human 纠偏（`pause --require-revision`）或 Goal Review `rep
 task 记录的高、却没有这样的暂停请求时，`init` 与 `resume` 都拒绝，提示记下纠偏或把 header 改回原值；Harness 因 revision
 变化自动写的暂停不算来源。task 已 `disable` 时仍可发起 `--require-revision`，供下一次 `init` 使用。接受升版时，来源
 （from / to / reason / at）与新的 `plan_revision` 在同一次 state 写入里记下，之后才删暂停请求；未升版的后继 task 沿用它，
-换计划时清空。它只保留最近一次升版的来源，不是历史审计。
+换计划时清空。事后要查「当前这一版从哪来」的人或 agent 读它；它只保留最近一次升版的来源，不是历史审计。
 
 这道检查有三条边界：
 
