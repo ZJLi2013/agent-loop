@@ -1,8 +1,8 @@
 # Cursor 上的按需规则：加载边界与 `minimal-code` 的回放设计
 
-`minimal-code` 在 Cursor IDE 与 Cursor SDK 本地 agent 上改按需，用原生的 description 规则（`alwaysApply: false`、只写 `description`），
-再在常驻的 `agent-loop` 路由表加一行指向它；glob、`AGENTS.md`、hook 都满足不了「改代码前读、只诊断时也读、无关请求不读」三条中的至少一条。
-按需版本是否成立，由下面的后继设计经 Cursor SDK 本地 agent 回放判定；此前在 dsh + Codex 上的回放读数不作 Cursor 的证据。
+`minimal-code` 在 Cursor 上留常驻：最好的按需做法（description 规则 + 常驻路由行）经 Cursor SDK 本地 agent 回放，改代码请求里
+agent 没读规则就改了文件，不满足「改代码前读」（[回放结果](#回放结果)）。glob、`AGENTS.md`、hook 都满足不了「改代码前读、只诊断时也读、
+无关请求不读」三条中的至少一条。此前在 dsh + Codex 上的回放读数不作 Cursor 的证据。
 
 ## 加载边界
 
@@ -45,8 +45,17 @@
 未核实：
 
 - description 规则在 Cursor 上对 Q 的误读率。dsh + Codex 回放里改后 Q 1/2，但那里规则以 `AGENTS.md` 生成清单的形式出现，夹具又要求把回复写进 `reply.md`，两处都与 Cursor 路径不同。
-- SDK 的认证来源：switchboard 创建 agent 时不显式传 `apiKey`，回放脚本复用同一进程环境；在 switchboard 之外运行时要先确认凭据可用。
 - IDE 与 SDK 的模型选择可能不同；回放固定为 switchboard 默认模型（`claude-opus-5-5`、effort `medium`），结论只对该模型成立。
+
+## 回放结果
+
+2026-11-17，`@cursor/sdk` 1.3.0，`claude-opus-5-5`（effort `medium`），`settingSources: ["project"]`，按下面的后继设计执行。
+
+- 改后 S 不通过：分支 `rules/minimal-code-cursor` 的 `e01e74c` 上 description 与路由行都在，agent 跑 pytest、读 `calc.py`、编辑、再跑 pytest，
+  没有一个工具调用读 `.cursor/rules/minimal-code.mdc`。
+- base S 通过：只改了 `calc.py`，pytest 通过。
+- 验收要求改后每格 2/2，这一次已判定不通过，其余调用没有跑；D、Q 与 description 在 Cursor 上的误读率未测。
+- 读规则可观察：SDK 事件流里每个工具调用都带返回内容与完成顺序。
 
 ## 后继设计
 
@@ -63,7 +72,9 @@ task `minimal-code-cursor-replay`：同一组合成场景，经 Cursor SDK 本�
 
 1. 新建临时目录作夹具根，把被测版本 `rules/` 下全部 `.mdc` 逐字节拷进 `<根>/.cursor/rules/`（与 switchboard worker 的同步方式相同）。
 2. `Agent.create({ model: { id: "claude-opus-5-5", params: [{ id: "effort", value: "medium" }] }, local: { cwd: <根>, settingSources: ["project"] } })`。只取 `"project"`，与 worker 的 `["project", "user"]` 不同：本机 `~/.cursor/rules` 装着常驻版 `minimal-code`，带上 user 层会污染两个 arm。
-3. `send` 请求，收集事件流到 run 结束，保存全部工具调用（名称、输入、顺序）与最终回复到 `replay-mc-cursor.json`。
+3. `send` 请求，收集事件流到 run 结束，保存全部工具调用（名称、输入、返回内容、成功状态、完成顺序）与最终回复到 `replay-mc-cursor.json`。
+
+两个 arm 的进程环境都设 `PYTHONDONTWRITEBYTECODE=1`、`PYTEST_ADDOPTS=-p no:cacheprovider`，正常跑测试不在夹具里留产物。
 
 **夹具：** `<根>/calc.py`
 
@@ -89,20 +100,21 @@ def test_mean():
 
 **事件顺序判定（脚本自动判，不看 agent 自述）：**
 
-- 「读规则」：任一工具调用的输入里出现 `minimal-code.mdc` 或规则名 `minimal-code`（文件读取、shell 或规则拉取工具都算）。
-- 「改动」：运行结束后夹具根相对初始内容的差异（`.cursor/` 除外），以及写类工具调用。
-- S 通过：只改了 `calc.py`、`pytest` 通过、无新文件；改后 arm 另要求第一次写类调用之前已有「读规则」。
+- 「读规则」：一个成功的工具调用返回了被测版本 `minimal-code` 的全部正文；搜索、输入里提到规则名、失败的读取都不算。
+- 「改动」：运行结束后夹具根相对初始内容的差异（`.cursor/` 除外），以及写类工具调用；有差异却没有写类调用时，按第一次 shell 调用算修改。
+- S 通过：只改了 `calc.py`、`pytest` 通过、无新文件；改后 arm 另要求「读规则」先于第一次修改完成。
 - D 通过：零改动、零写类调用、回复指出分母多减了 1；改后 arm 另要求出现「读规则」。
 - Q 通过：零改动；改后 arm 另要求没有「读规则」。base 的 Q 只判零改动。
 - 无效调用：SDK 报错或无最终回复；同一格最多补跑一次，仍无效记为失败。
 
-**验收：** 改后 S / D / Q 每格 2/2 通过，且 S、D 不劣于 base；常驻规则恰三条（`agent-loop`、`when-to-stop`、`write-for-humans`）。locked verifier 读 `replay-mc-cursor.json`，按上面口径重判并核对改后 arm 的规则哈希等于分支头。
+**验收：** 同一最终规则版本下改后 S / D / Q 每格 2/2 通过，且 S、D 不劣于 base；常驻规则恰三条（`agent-loop`、`when-to-stop`、`write-for-humans`）。locked verifier 读 `replay-mc-cursor.json`，按上面口径重判并核对改后 arm 的规则哈希等于分支头。
 
 **失败去向：**
 
-- 只有 Q 失败：改一次 description，重跑改后的 S、Q 各 2 次；仍失败 → `minimal-code` 留常驻，结论写进本文与 plan，交 task review 决定 Goal 收口。
+- 只有 Q 失败：改一次 description，以新版本重跑改后的 S、D、Q 各 2 次；仍失败 → `minimal-code` 留常驻，结论写进本文与 plan，交 task review 决定 Goal 收口。
 - S 或 D 失败：description 触发不到受约束动作，留常驻，不再改措辞，交 task review。
 - base 自身 S 或 D 不通过：夹具或模型不足以区分，停下交 task review，不用改后结果下结论。
 - 预检拿不到 SDK 凭据：按环境错误自修（复用 switchboard 进程的凭据来源），2 次不通即停交 review。
 
-**预算：** 预检 2 次（base、改后各跑一次 S，确认事件流里看得到工具调用与规则读取）+ 正式 12 次（2 arm × 3 场景 × 2）+ 可能的 description 修订 4 次，合计 ≤ 18 次调用；墙钟 ≤ 90 分钟。
+**预算：** 正式 12 次（2 arm × 3 场景 × 2），最先跑的 base、改后各一次 S 兼作预检（确认事件流里看得到返回内容与顺序），有效即计入；
+可能的 description 修订 6 次；合计 ≤ 18 次调用，无效补跑也占预算；墙钟 ≤ 90 分钟。
