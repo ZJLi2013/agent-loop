@@ -4,7 +4,8 @@
 
 A skill pack is a directory with a pack.toml; ~/.agent-loop/packs.txt lists the packs, repository checkouts
 and active profiles of this machine. Formats and the rules below are in docs/usage.md#skill-packs.
-On dsh, rules are not linked: the always-apply ones are written into $DSH_HOME/AGENTS.md.
+On dsh, rules are not linked: $DSH_HOME/AGENTS.md gets the always-apply ones in full and lists the on-demand ones
+with their description and path.
 Exits 1 when any skill or rule was skipped or any input could not be read.
 """
 
@@ -185,21 +186,33 @@ def git_state(entry: Entry) -> str:
     return f"   behind={behind} dirty={'?' if dirty is None else 'yes' if dirty else 'no'}"
 
 
-def always_apply_body(path: Path) -> str | None:
+def read_rule(path: Path) -> tuple[str, str] | None:
+    """("always", body) or ("on-demand", description); None for a rule without frontmatter or description."""
     text = path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
     match = re.match(r"---\n(.*?)\n---\n(.*)\Z", text, re.S)
-    if match and re.search(r"^alwaysApply:\s*true\s*$", match.group(1), re.M):
-        return match.group(2).strip()
-    return None
+    if not match:
+        return None
+    if re.search(r"^alwaysApply:\s*true\s*$", match.group(1), re.M):
+        return "always", match.group(2).strip()
+    description = re.search(r"^description:\s*(.+?)\s*$", match.group(1), re.M)
+    return ("on-demand", description.group(1).strip("'\"")) if description else None
 
 
 def write_agents(home: Path, rules: list[Entry], errors: list[str]) -> None:
     # One writer per home: sync-to-dsh.ps1 and a direct run must not overlap.
+    bodies, on_demand = [], []
     try:
-        bodies = [b for b in (always_apply_body(r.src) for r in sorted(rules, key=lambda r: r.name)) if b is not None]
+        for r in sorted(rules, key=lambda r: r.name):
+            kind, text = read_rule(r.src) or (None, "")
+            if kind == "always":
+                bodies.append(text)
+            elif kind == "on-demand":
+                on_demand.append(f"- `{r.src.resolve()}`：{text}")
     except OSError as exc:
         errors.append(f"AGENTS.md not written, cannot read a rule: {exc}")
         return
+    if on_demand:
+        bodies.append("## 按需规则\n\n下面的规则只在描述的那一刻适用；到那一刻先读全文。\n\n" + "\n".join(on_demand))
     agents = home / "AGENTS.md"
     try:
         if agents.exists():
@@ -218,7 +231,7 @@ def write_agents(home: Path, rules: list[Entry], errors: list[str]) -> None:
     except OSError as exc:
         errors.append(f"AGENTS.md not written: {exc}")
         return
-    print(f"Wrote {agents} from {len(bodies)} always-apply rules")
+    print(f"Wrote {agents} from {len(bodies) - bool(on_demand)} always-apply rules, listing {len(on_demand)} on-demand")
 
 
 def main(argv: list[str] | None = None) -> int:

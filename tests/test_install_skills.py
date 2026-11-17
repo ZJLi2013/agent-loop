@@ -404,7 +404,7 @@ class InstallRulesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue(self.linked("z.mdc", self.pack / "rules"))
 
-    def test_dsh_agents_from_selected_always_apply_rules(self) -> None:
+    def test_dsh_agents_inline_always_apply_rules_and_list_on_demand_ones(self) -> None:
         self.home.mkdir()
         agents = self.home / "AGENTS.md"
         agents.write_text("my notes", encoding="utf-8")
@@ -412,7 +412,9 @@ class InstallRulesTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         backups = list(self.home.glob("AGENTS.md.backup-*"))
         self.assertEqual([b.read_text(encoding="utf-8") for b in backups], ["my notes"])
-        expected = f"{install.AGENTS_MARKER}\n\nA\n\nZ\n"
+        on_demand = self.checkout.joinpath("rules", "b.mdc").resolve()
+        expected = (f"{install.AGENTS_MARKER}\n\nA\n\nZ\n\n## 按需规则\n\n下面的规则只在描述的那一刻适用；到那一刻先读全文。\n\n"
+                    f"- `{on_demand}`：d\n")
         self.assertEqual(agents.read_bytes().decode("utf-8"), expected)
         self.assertFalse((self.home / "rules").exists())
 

@@ -47,6 +47,8 @@ class SyncToDshTest(unittest.TestCase):
         agents = self.agents()
         self.assertIn("Keep task state in task.md.", agents)
         self.assertNotIn("CONDITIONAL_ONLY", agents)
+        self.assertNotIn("conditional.mdc", agents)
+        self.assertNotIn("## 按需规则", agents)
         self.assertNotIn("alwaysApply", agents)
         linked = self.home / "skills" / "demo" / "SKILL.md"
         self.assertEqual(linked.read_bytes(), self.skill.read_bytes())

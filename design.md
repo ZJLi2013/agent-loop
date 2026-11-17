@@ -429,7 +429,7 @@ provider 配置。同一个 dsh 可以用 DeepSeek 当 worker，也可以用强�
 | `adapters/cursor/hooks/` | Cursor payload / output codec（`memory-lookup`、`harness-stop`、preCompact 的 `goal-refresh`） |
 | `adapters/dsh/hooks/` | dsh `hooks-codex` 桥接的 payload / output codec（`Stop`、`SessionStart`） |
 | `scripts/sync-to-cursor.ps1` | 安装 user-level adapter |
-| `scripts/sync-to-dsh.ps1` | 把 always-apply rules 拼成 `$DSH_HOME/AGENTS.md` |
+| `scripts/sync-to-dsh.ps1` | 把 always-apply rules 拼成 `$DSH_HOME/AGENTS.md`，末尾列出按需 rules 的 description 与路径 |
 | `scripts/install-skills.py` | 两个宿主的 skill 与 rule 链接：agent-loop 自己的加 `~/.agent-loop/packs.txt` 登记的包，跨来源查重名与 `requires`；不认识任何具体的包 |
 | `scripts/uninstall-from-cursor.ps1` | 只删指向 agent-loop 或已登记包的链接与 hooks 接线 |
 

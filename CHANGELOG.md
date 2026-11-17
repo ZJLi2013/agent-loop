@@ -131,8 +131,10 @@ All notable user-facing changes are documented here. This project follows Semant
   numbered section, each with a recommendation and reason, and the part outside `<details>` is enough to decide.
 - `external-output-boundary` loads on demand (`alwaysApply: false`): Cursor keeps only its description, which names
   the moment it applies (a PR, issue or comment in someone else's repository, a public post), and the `agent-loop`
-  routing table points to it. **Migration:** dsh's generated `AGENTS.md` takes only always-apply rules, so it no
-  longer contains these checks; on dsh, run them by hand before publishing.
+  routing table points to it. On dsh the generated `AGENTS.md` lists it with the other on-demand rules.
+- On-demand rules are reachable on dsh (#220): the generated `AGENTS.md` keeps the always-apply rules in full and
+  ends with a list of the selected on-demand ones, each with its description and absolute path, to be read at that
+  moment. An on-demand rule without a description is not listed. **Migration:** rerun `sync-to-dsh.ps1`.
 - Project memory is one per git clone, in the git directory outside every worktree: `<git-common-dir>/agent-loop/memory/`
   (`.git/agent-loop/memory/` in a plain clone). All worktrees of the clone, linked ones included, read and write it,
   and the hook, the task reviewer prompt and `leftovers` resolve it the same way. Projects outside git keep

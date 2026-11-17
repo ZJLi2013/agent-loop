@@ -66,7 +66,7 @@ profiles research,ops
 
 `sync-to-cursor.ps1` 与 `sync-to-dsh.ps1` 都调用 `scripts/install-skills.py`：先链 agent-loop 自己的 skill 与 rule，
 再链各包里选中的。Cursor 上包 skill 进 `~/.cursor/skills`，agent-loop 的仍在 `~/.cursor/skills-cursor`，两边的 rule
-都逐个链进 `~/.cursor/rules`；dsh 上 skill 都在 `$DSH_HOME/skills`，选中的 always-apply rule 拼进 `AGENTS.md`。
+都逐个链进 `~/.cursor/rules`；dsh 上 skill 都在 `$DSH_HOME/skills`，选中的 always-apply rule 拼进 `AGENTS.md`，按需 rule 在那里列出路径。
 也可以直接运行 `python scripts/install-skills.py --host cursor|dsh`。
 
 - **选择**：skill 不写 `profiles` 时总被选中，否则与 `profiles` 行有交集才选中。每个已装 skill 的 description 都常驻上下文，
@@ -104,8 +104,9 @@ dsh 需要 Node.js 24.2+；DeepSeek Harness Desktop 自带 dsh、Node 与 pnpm�
 powershell -ExecutionPolicy Bypass -File scripts/sync-to-dsh.ps1 -DshHome $HOME\.dsh
 ```
 
-dsh 不读 `.mdc`，脚本把选中的 always-apply rules（agent-loop 与包里的）去掉 frontmatter 后按文件名顺序拼成 `$DSH_HOME/AGENTS.md`，所有 profile 的会话
-都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
+dsh 不读 `.mdc`，脚本把选中的 always-apply rules（agent-loop 与包里的）去掉 frontmatter 后按文件名顺序拼成 `$DSH_HOME/AGENTS.md`，
+末尾一节列出选中的按需 rules，每条一行 description 与源文件绝对路径，agent 到那一刻再读全文；没有 description 的按需 rule 不列。
+所有 profile 的会话都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
 已有的手写 `AGENTS.md` 会先复制到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
 
 - `packs.txt`、`pack.toml` 或某个 rule 读不出、未选中或已删除条目的旧链接清理失败、写入失败时，`AGENTS.md` 保持上一次的内容。
