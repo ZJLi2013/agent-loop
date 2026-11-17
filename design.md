@@ -287,8 +287,10 @@ Harness 不自动回收。占用标记的进程已不在时，exec / verify / ga
 plan review 的单位是 task 与 Plan Revision：task 在它绑定的每个 revision 下审一次，一次调用审完链接到本 plan
 （或其目录内已有文件）、未关闭且未审或需重审的 task；同一 revision 内改设计不重审，暂留旧 `rN` 的 task 不重审。
 记录写 reviewer 启动时的 revision，reviewer 返回时 revision 或 task 绑定已变就不写记录，也不动失败计数：
-这一判定先于「reviewer 失败 / 改了工作区」，因为 workspace fingerprint 同样看得到这些编辑。做法同乐观并发控制的版本
+这一判定先于「reviewer 失败 / 改了输入」，因为输入检查同样看得到这些编辑。做法同乐观并发控制的版本
 校验（如 HTTP `If-Match` 不符返回 412）：输入过期要求重来，不算执行失败。
+「改了输入」只看 reviewer 的输入：plan document、`task.md`、review 检查表与待审 task 行链接的文件，前后内容摘要不同即
+作废 report 并计一次失败；项目里其他文件的变化（另一个写者在同项目并发编辑）只在结果里列成 `warning`，不作废、不计失败。
 最后一次 review、未回应的 `must`（按是否交 human 分组）与正在跑的审查只由 `harness/plan_review.py` 的
 `last_review` / `open_musts` / `running_review` 读取，准入、启动与 stop 门共用，各自只定出口；哪些表格行是 task 行见[状态模型](#task-row)。
 human 可用 `plan-review --again` 要求重审。记录的身份与准入 guard 见[状态模型](#guards)。

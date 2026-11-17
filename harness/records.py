@@ -97,6 +97,18 @@ def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
     ]
 
 
+def task_links(root: Path, task_ids: list[str]) -> set[Path]:
+    path = task_file(root)
+    if not path.exists():
+        return set()
+    return {
+        target
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if _task_id(line) in task_ids
+        for target in _linked_files(line, path.parent)
+    }
+
+
 def task_row(root: Path, task_id: str) -> list[str] | None:
     path = task_file(root)
     if not path.exists():

@@ -7,11 +7,11 @@ from typing import Any
 
 from harness.errors import HarnessError
 from harness.findings import normalize_findings
-from harness.fingerprint import workspace_fingerprint
+from harness.fingerprint import dirty_files, file_digests
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_location, plan_metadata
 from harness.project import render_prompt, review_checklist, task_file
-from harness.records import open_task_ids, task_row
+from harness.records import open_task_ids, task_links, task_row
 from harness.review import load_reviewer
 from harness.runner import execute_process
 from harness.storage import (
@@ -274,7 +274,13 @@ def run_plan_review(
             encoding="utf-8",
         )
 
-        before = workspace_fingerprint(root)
+        inputs = sorted(
+            {relative, task_file(root).resolve().relative_to(root).as_posix()}
+            | {path.relative_to(root).as_posix() for path in task_links(root, pending) if path.is_relative_to(root)}
+            | ({checklist.resolve().relative_to(root).as_posix()} if (checklist := review_checklist(root)) else set())
+        )
+        inputs_before = file_digests(root, inputs)
+        dirty_before = dirty_files(root)
         run_id = new_run_id()
         run_dir = harness_dir(root) / "artifacts" / run_id
         run_dir.mkdir(parents=True)
@@ -294,8 +300,19 @@ def run_plan_review(
             if execution["outcome"] == "pass"
             else (None, f"plan reviewer {execution['outcome']}")
         )
-        if before != workspace_fingerprint(root):
-            report, error = None, "plan reviewer modified the workspace"
+        # Only the reviewer's inputs void its report: other writers may edit the rest of the project meanwhile.
+        inputs_after = file_digests(root, inputs)
+        if changed := [path for path in inputs if inputs_before[path] != inputs_after[path]]:
+            report, error = None, f"plan reviewer inputs changed during the review: {', '.join(changed)}"
+        dirty_after = dirty_files(root)
+        others = sorted(
+            path for path in dirty_before.keys() | dirty_after.keys()
+            if path not in inputs and dirty_before.get(path) != dirty_after.get(path)
+        )
+        warning = (
+            f"files outside the reviewer's inputs changed during the review: {', '.join(others)}"
+            if others else None
+        )
     except BaseException:
         running.unlink(missing_ok=True)
         raise
@@ -312,13 +329,14 @@ def run_plan_review(
             **execution,
             "report": report,
             "error": error,
+            "warning": warning,
         }
         atomic_write_json(run_dir / "result.json", result)
         append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
         prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
         running.unlink(missing_ok=True)
         # Edits to the plan or its bindings while the reviewer runs void its input, not its run: they are
-        # checked before any failure is counted, since the fingerprint check also sees them.
+        # checked before any failure is counted, since the input check also sees them.
         if plan_metadata(root, relative)[0] != revision or any(
             _row_revision(task_row(root, task_id) or []) != bound for task_id, bound in bindings.items()
         ):
@@ -344,7 +362,7 @@ def run_plan_review(
                 source="plan_review", run_id=run_id, plan_doc=relative, plan_revision=revision,
             )
         failed.unlink(missing_ok=True)
-        return report
+        return {**report, "warning": warning} if warning else report
 
 
 def stop_followup(root: Path, plan_doc: str, command: str) -> str | None:
