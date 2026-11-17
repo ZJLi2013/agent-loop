@@ -29,6 +29,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 - [暂停与恢复共用一份 task 判定](pause-resume-eligibility.md)：#177 的补充修正依据，对照 kubectl 与 Argo Workflows 的 pause / resume。
 - [Cursor 上的按需规则](cursor-rule-loading.md)：IDE 与 SDK 本地 agent 的规则加载边界，`minimal-code` 的最佳按需做法（description 规则加常驻路由行）经 SDK 回放在改代码请求上没读到规则，因此留常驻。
 - [语义名与冻结后的 plan 目录](semantic-names-replay.md)：完成的 Goal 冻结后 plan 目录只剩 plan document，耐久结论与否定发现先上提；改动前后的回放，以及命名一句为什么只是把现有做法写成规则。
+- [reviewer 先判方向](reviewer-direction-replay.md)：现行 plan review prompt 在 #176 三个误向案例的合成夹具上已先判方向，措辞改动不做；换路线标 `human: true` 一项未引出。
 - [Gate 只摆设计与结论](plan-gate-replay.md)：plan 模板加「设计」一节与执行细节分隔线，Gate 问题先给设计与结论；判断类默认 agent 判断一句为什么不加。
 - [按需 skill 与通用 rule 的迁出清单](skill-migration.md)：七个 skill 与两条 rule 为什么迁到私有 pack、各自的依赖，以及核心里删掉的点名。
 
