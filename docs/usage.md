@@ -106,6 +106,8 @@ powershell -ExecutionPolicy Bypass -File scripts/sync-to-dsh.ps1 -DshHome $HOME\
 
 dsh 不读 `.mdc`，脚本把选中的 always-apply rules（agent-loop 与包里的）去掉 frontmatter 后按文件名顺序拼成 `$DSH_HOME/AGENTS.md`，
 末尾一节列出选中的按需 rules，每条一行 description 与源文件绝对路径，agent 到那一刻再读全文；没有 description 的按需 rule 不列。
+清单里的 description 是安装时的快照，按需正文不复制，会话按源路径读当时的版本；rule 改动、切换 profile 或 checkout 挪位置后
+重跑，否则清单可能与源文件不一致或路径失效，agent 读不到时如实报告，不猜内容。
 所有 profile 的会话都会加载它；这是生成文件，rules 改动后重跑。skills 逐个链接到 `$DSH_HOME/skills/`，那里的其他 skill 不动。
 已有的手写 `AGENTS.md` 会先复制到带时间戳的备份；同名的普通 skill 目录不动，报冲突并以非零退出。
 
