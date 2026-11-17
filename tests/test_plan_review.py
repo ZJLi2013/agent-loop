@@ -228,6 +228,29 @@ class PlanReviewTest(unittest.TestCase):
         )
         self.assert_review_discarded()
 
+    def test_an_edit_outside_the_reviewer_inputs_keeps_the_review(self) -> None:
+        (self.root / "notes.md").write_text("draft\n", encoding="utf-8")
+        for argv in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "x"]):
+            subprocess.run(["git", *argv], cwd=self.root, check=True)
+        self.reviewer_changing("Path('notes.md').write_text('edited elsewhere\\n')")
+
+        report = self.review()
+
+        self.assertEqual(list(report["tasks"]), ["t1"])
+        self.assertIn("notes.md", report["warning"])
+        self.assertEqual(len(task_record(self.root, "t1")["reviews"]), 1)
+        self.assertFalse((self.root / ".harness" / "plan-review" / "failed.json").exists())
+
+    def test_an_edit_to_a_reviewer_input_voids_the_review(self) -> None:
+        self.reviewer_changing("Path('plan.md').write_text(Path('plan.md').read_text() + 'edited\\n')")
+
+        with self.assertRaisesRegex(HarnessError, "inputs changed during the review: plan.md"):
+            self.review()
+
+        self.assertEqual(task_record(self.root, "t1")["reviews"], [])
+        failed = json.loads((self.root / ".harness" / "plan-review" / "failed.json").read_text())
+        self.assertEqual(failed["count"], 1)
+
     def test_items_over_the_limit_are_dropped(self) -> None:
         self.configure(reviewer_writing({"t1": [MUST] * 4 + [SUGGEST] * 4}))
 

@@ -67,6 +67,32 @@ def _file_digest(path: Path) -> str | None:
         return None
 
 
+def file_digests(root: Path, paths: list[str]) -> dict[str, str | None]:
+    return {relative: _file_digest(root / relative) for relative in paths}
+
+
+def dirty_files(root: Path) -> dict[str, str | None]:
+    """Digest each file that differs from HEAD or is untracked; empty outside a git repo."""
+    root = root.resolve()
+    excludes = [f":(exclude){HARNESS_DIR}"] + [
+        f":(exclude,glob)**/{name}/**" for name in FOREIGN_RUNTIME_DIRS
+    ]
+    try:
+        listed = [
+            subprocess.run(
+                argv, cwd=root, check=True, capture_output=True
+            ).stdout.split(b"\0")
+            for argv in (
+                ["git", "diff", "--name-only", "-z", "--relative", "HEAD", "--", ".", *excludes],
+                ["git", "ls-files", "--others", "--exclude-standard", "-z", "--", ".", *excludes],
+            )
+        ]
+    except (OSError, subprocess.CalledProcessError):
+        return {}
+    paths = sorted({raw.decode("utf-8", errors="surrogateescape") for chunk in listed for raw in chunk if raw})
+    return file_digests(root, paths)
+
+
 def verifier_files(
     root: Path, argv: list[str], evidence_files: list[str] | None = None
 ) -> dict[str, str]:

@@ -83,6 +83,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Plan review voids a report only when one of the reviewer's inputs changed during the run (the plan document,
+  `task.md`, the review checklist, files linked from the reviewed task rows), and names those files in the error.
+  Edits elsewhere in the project, such as another writer's unrelated file, keep the report and appear as a `warning`
+  listing the paths, without counting toward the reviewer failure limit.
+
 - A Plan Revision increase needs a recorded source: `pause --require-revision` (a human correction, also allowed after
   the task closed or was disabled) or a Goal Review `replan`. `init` and `resume` refuse an increase without one and
   keep the pause; the pause Harness writes itself when it sees the revision change no longer counts as a source. The
