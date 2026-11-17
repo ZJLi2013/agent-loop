@@ -27,7 +27,7 @@ class DshHooksTest(unittest.TestCase):
         markers = Path(self.tmp.name) / "markers"
         markers.mkdir()
         self.env = {**os.environ, "TEMP": str(markers), "TMP": str(markers), "TMPDIR": str(markers),
-                    "PYTHONIOENCODING": "cp1252"}
+                    "PYTHONIOENCODING": "cp1252", "AGENT_LOOP_SESSION_HOST": ""}
 
     def hook(self, name: str, payload: dict[str, object]) -> dict[str, object]:
         result = subprocess.run(
