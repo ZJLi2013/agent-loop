@@ -95,7 +95,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
 5. 逐条回应 `must`：照改后 `plan-review --respond <task> --item N=applied`；只在与事实不符时
    `--item N=reject --reason "<事实>"`，只驳一次。`suggest` 酌情改或跳过，不必回应。不回审。
-   reviewer 能定时（判据见 `when-to-stop` 的「问 human 之前先过 reviewer」）不问 human，直接进第 6 步；
+   reviewer 能定时（判据见 `when-to-stop` 的「问 human 之前先自己判断，再过 reviewer」）不问 human，直接进第 6 步；
    否则用平台的结构化提问能力给 human：`approve / revise / continue automatically`。问题里先给 plan 的「设计」与
    「当前结论」，再附逐 task 意见与回应；task 的执行步骤不进问题。
    带 `human: true` 的 must 由 human 选，用 human 原话 `plan-review --approve <task> --reason` 记下；
