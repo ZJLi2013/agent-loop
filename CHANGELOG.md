@@ -83,6 +83,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Before anything goes to the human, including a "suggest fixing / to confirm" item in a closing message, the agent
+  checks five conditions in `when-to-stop`: root cause located, one fix (or evidence choosing it), reversible, no
+  change to acceptance, within its authority. When all hold it fixes the item and reports it as fixed; otherwise it
+  names the failing condition. `task-state` runs the check before writing handoff notes, nightly reports and closing
+  messages. Migration: none.
+
 - Plan review voids a report only when one of the reviewer's inputs changed during the run (the plan document,
   `task.md`, the review checklist, files linked from the reviewed task rows), and names those files in the error.
   Edits elsewhere in the project, such as another writer's unrelated file, keep the report and appear as a `warning`
