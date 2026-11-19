@@ -23,11 +23,12 @@ description: >-
 | 项目入口 readme | 项目根 `readme.md` | 每项目一份 | 从宏观到微观：长线方向、当前 Goal、当前实验项目与进展，各一句并链到 plan 或实验记录 | task 清单与状态（只在 `task.md`）、设计 | Goal 或长线方向变化时 |
 | `task.md` | `.agent-loop/task.md` | 每项目一份 | 主线、task 行（状态、`rN`、检查点、预算、失败计数）、候选 | 设计、读数、结论 | 状态转移时；closed 行进 archive |
 | plan document | `.agent-loop/plans/<goal>/plan.md` | 每 Goal 一份 | Goal、设计、当前结论、脉络、每个 task 一个以 task id 开头的设计段、Experiment Log | 项目长期事实的唯一副本 | Goal 开始时建；完成时冻结 |
-| `<plan>-archive.md`、`sub-exp/<id>.md` | plan 同目录 | 按需 | 已关闭 task 的设计与证据；并行的独立实验 | 新 task 的设计 | CLOSE 写 archive；Goal 冻结时并进头部后删 |
+| `sub-exp/<id>.md` | plan 同目录 | 按需 | 并行的独立实验 | 新 task 的设计 | Goal 冻结时并进头部后删 |
 | 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`） | 每个研究问题一份，按问题命名 | 确立的结论、支撑数据与它的位置、怎么重跑 | task 状态与进度、预算、以 task id 命名的文件或标题、待 human 选的选项、下一步与设计 | task CLOSE 时写入（`experiment-design` CLOSE 第 1 项） |
 
 子实验、子 feature 是同一 plan 里的一个 task 设计段，不另起 plan，也不另起项目文档；新 Goal 才有新 plan。
 待 human 选的做法走结构化提问（`when-to-stop`），不进任何文档。
+task 关闭时 Harness 删掉它的设计段，不留 archive；要留下的结论写进当前结论、Experiment Log 或项目实验记录。
 
 ```markdown
 # <Goal 名称>
@@ -46,7 +47,6 @@ Plan Review: proposed
 <现在为真的判断，每条对应它证实或推翻的设计要素；设计中就明确写未验证>
 
 ## 脉络
-逐 task 的 evidence 见 [archive](<plan>-archive.md)。
 
 | 阶段 | 问了什么 | 结论 | 带来的改变 |
 |---|---|---|---|
@@ -68,10 +68,10 @@ Plan Review: proposed
 
 「脉络」是阶段之间、Plan Revision 之间因果的唯一归属，下一步动作就是最后一行的「带来的改变」。
 task 边界上把本 task 并入当前阶段行（task 范围与结论）；下一条命令换方向（新问题、假设被推翻而要换做法、replan、
-human 纠偏、stop）时才开新行。plan review 与批准不单独占行，除非改变了方向。逐 task 的读数与链接写进 Experiment Log，随它进 archive。
+human 纠偏、stop）时才开新行。plan review 与批准不单独占行，除非改变了方向。逐 task 的读数与链接写进 Experiment Log。
 谁做决定谁当场写：task 边界由 reviewer 写（未配置时由 worker），Goal Review 与 human 纠偏由执行 RECONCILE 的
-agent 写 human 的决定。已结束的阶段行只追加更正行，不改写；CLOSE、replan 与 Goal 冻结都不归档它。旧的逐 task 行
-原样移进 `<plan>-archive.md` 的「脉络原文」、在脉络里合并成阶段行，不算改写。
+agent 写 human 的决定。已结束的阶段行只追加更正行，不改写；CLOSE、replan 与 Goal 冻结都不删它。旧的逐 task 行
+在脉络里合并成阶段行，不算改写。
 
 单个实验直接追加到 Experiment Log。只有同一 Goal 下出现多个独立实验、详细日志遮蔽稳定头部、
 或需要并行维护时，才拆 linked `sub-exp/<id>.md`；结论与链接始终回填 plan document。
@@ -102,7 +102,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    那次 plan review 就是独立架构评审：目标是否每个概念一个 owner、第一版该不做什么，修正记进 plan。
    这个 task 关闭前不拆后续 task。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。task 行链接它的设计：plan 里以
-   task id 开头的标题段，或 plan 目录下的独立文件；CLOSE 只归档前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
+   task id 开头的标题段，或 plan 目录下的独立文件；CLOSE 只删除前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
 4. 配置 reviewer 时，提交后在同一轮运行 `plan-review`，不留到下一轮：task 在它绑定的每个 revision 下审一次，
    同一 revision 内改设计不重审。Harness 启用、未配 pager 时，plan 停在 `proposed` 而审查没做完，stop hook 不放行。
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。
@@ -166,8 +166,7 @@ CLOSE 分两段：
 verifier 通过后：
 
 1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」，把它并入脉络的当前阶段行，换方向时开新行；
-2. active Experiment Log 只保留未闭合决策；已收口行改为 `promoted / superseded / archived`，
-   移到 linked archive，由脉络上方的 archive 指针指向；
+2. Experiment Log 的已收口行改为 `promoted / superseded`，留到 Goal 冻结；
 3. 通知 `task-state` 归档 closed task（`progress.md` 的旧交接段由 Harness 在 CLOSE 时移进 archive），通知
    `agent-memory` 只保留未来仍会改变选择的结论、`disproved / rejected` 与证据指针；
 4. 本 task 的临时文件（kit、workspace、本地 run 目录、job 清单、PR 草稿、task 专用 verifier）都放
@@ -186,7 +185,7 @@ verifier 通过后：
   开支线要 human 批准。
 
 Goal 完成或 pivot 时冻结 plan document 为 as-built。主线行改 `✅ done` 时，耐久结论上提到项目被跟踪的文档，
-否定发现进 memory 的 `rejected`；头部只留 Goal、当前结论、边界与脉络，`<plan>-archive.md` 与 sub-exp 里头部仍要的
+否定发现进 memory 的 `rejected`；头部只留 Goal、当前结论、边界与脉络，sub-exp 里头部仍要的
 关键点并进头部，其余连同目录里的其它文件删除，冻结后 plan 目录只剩 plan document。这些文件此时进入 `leftovers`，
 按 CLOSE 第 4 步处理；暂停中的 Goal 不进。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
@@ -195,5 +194,5 @@ active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则
 
 项目配置了 reviewer 时，写脉络行归 reviewer：锁定 verifier 通过后 Harness 自动运行
 `harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。
-标 done、把关闭 task 的标题段移到 plan 同目录的 `<plan>-archive.md`、改写指向它们的链接由 Harness 在
-reviewer 决定落盘后完成，reviewer 与 worker 都不手工搬。
+标 done、删除关闭 task 的标题段、把指向它们的链接改成纯文字由 Harness 在
+reviewer 决定落盘后完成，reviewer 与 worker 都不手工删。

@@ -467,7 +467,7 @@ PLAN_WITH_T1 = (
     + '\n<a id="t1-design"></a>\n### t1 本地设计\ninput\n### t1 boundary review\nok\n'
     + "### t2 本地设计\nnext\n"
 )
-PLAN_MOVED = PLAN_HEAD + "\nt1 已归档：[plan-archive.md](plan-archive.md)\n### t2 本地设计\nnext\n"
+PLAN_MOVED = PLAN_HEAD + "\n### t2 本地设计\nnext\n"
 PLAN_TASKS = (
     REWRITTEN_TASKS.replace("| — |", "| r1 |")
     .replace("| first | check |", "| first | [设计](../plan.md#t1-design) |")
@@ -740,44 +740,23 @@ class CloseTaskTest(unittest.TestCase):
         (self.runtime / "sub-exp" / "x.md").write_text(
             "见 [t1 设计](../plan.md#t1-design)。\n", encoding="utf-8"
         )
-        (self.runtime / "plan-archive.md").write_text(
-            "### t0 boundary review\n\n下一步见 [t1](plan.md#t1-design)。\n", encoding="utf-8"
-        )
 
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def section(self, doc: Path, target: str) -> str:
-        name, _, anchor = target.partition("#")
-        text = (doc.parent / name).read_text(encoding="utf-8") if name else doc.read_text(encoding="utf-8")
-        start = text.index(f'<a id="{anchor}"></a>')
-        end = text.find("<a id=", start + 1)
-        return text[start:] if end < 0 else text[start:end]
-
-    def test_harness_closes_task_moves_sections_and_keeps_links_resolving(self) -> None:
-        self.assertIn("### t1 本地设计\n输入见", self.section(self.runtime / "plan.md", "#t1-design"))
-
-        close_task(self.root, ".agent-loop/plan.md", "t1", "reviewed ok")
+    def test_harness_closes_task_drops_its_sections_and_unlinks_them(self) -> None:
+        close_task(self.root, ".agent-loop/plan.md", "t1")
 
         plan = (self.runtime / "plan.md").read_text(encoding="utf-8")
-        archive = (self.runtime / "plan-archive.md").read_text(encoding="utf-8")
         rows = (self.runtime / "archive" / "tasks.md").read_text(encoding="utf-8")
         other = (self.runtime / "sub-exp" / "x.md").read_text(encoding="utf-8")
-        self.assertIn("| t1 | r1 | 甲 | [设计](../plan-archive.md#t1-design)；通过 | ✅ done |", rows)
-        self.assertNotIn("### t1 本地设计", plan)
-        self.assertIn("## 脉络\n| t1 | 甲 | [t1 设计](plan-archive.md#t1-design) | 做 t2 |", plan)
-        self.assertIn("t1 的设计、结果与 review 依据见 [归档](plan-archive.md#t1-design)。", plan)
-        self.assertIn("输入见 [t2 设计](plan.md#t2-design)。", archive)
-        self.assertIn("### t1 boundary review\n\nreviewed ok", archive)
-        self.assertIn("下一步见 [t1](#t1-design)。", archive)
-        self.assertIn("[t1 设计](../plan-archive.md#t1-design)", other)
-        for doc, target in (
-            (self.runtime / "plan.md", "plan-archive.md#t1-design"),
-            (self.runtime / "archive" / "tasks.md", "../plan-archive.md#t1-design"),
-            (self.runtime / "sub-exp" / "x.md", "../plan-archive.md#t1-design"),
-        ):
-            self.assertIn("### t1 本地设计\n输入见", self.section(doc, target))
-        self.assertIn('<a id="t2-design"></a>', self.section(self.runtime / "plan-archive.md", "plan.md#t2-design"))
+        self.assertIn("| t1 | r1 | 甲 | 设计；通过 | ✅ done |", rows)
+        self.assertNotIn("t1 本地设计", plan)
+        self.assertIn("## 脉络\n| t1 | 甲 | t1 设计 | 做 t2 |", plan)
+        self.assertIn('<a id="t2-design"></a>\n### t2 本地设计\nnext\n', plan)
+        self.assertIn("[设计](plan.md#t2-design)", (self.runtime / "task.md").read_text(encoding="utf-8"))
+        self.assertEqual(other, "见 t1 设计。\n")
+        self.assertEqual(list(self.runtime.rglob("*-archive.md")), [])
 
 
 if __name__ == "__main__":

@@ -35,8 +35,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    {task_id} 仍在回答当前阶段的问题时，把它并入最后一行（task 范围与结论），不新开行；下一条命令换方向
    （新问题、假设被推翻而要换做法、要 replan、human 纠偏、stop）时才追加一行。脉络格子不写读数与链接；{task_id} 的读数与文档链接写进
    Experiment Log，不写 `.harness/runs.jsonl` 行号或 `artifacts/` 路径：它们会被截断与删除。
-   当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写进 `review` 字段。
-   标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，你不要做。
+   当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写成 findings，不写进 plan。
+   标 done、删掉 {task_id} 的设计段、把指向它的链接改成纯文字都由 Harness 做，你不要做；要留下的结论与证据位置写进当前结论与 Experiment Log。
    下一个 task 已在列表里、且设计已审过时，不改写它，也不给它加交接或核验步骤；要新 task 时（取自
    `task.md` 的 Candidates 就删掉那一行），写好一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
    失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。设计写成 plan document 里以 task id
@@ -59,7 +59,6 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    选 `ask_human` 时，`why` 写你推荐的选项与理由；若有不受这个问题影响的 task，写进 `next_task`；human 不在时 executor 会先做它。
    上面若列出了开工前的审查意见与回应，核对被驳回的 `must` 驳得是否成立。
 4. 只改 plan document 与 task 列表；不改代码，不跑实验。task 列表保持原有表格、一行一个 task、原有状态词。
-   本次 review 的推理与依据写进 `review` 字段，Harness 把它归档到 {task_id} 名下。
 
 ## 意见门槛
 
@@ -79,5 +78,5 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 把下面的 JSON 写到 `{decision_file}`：
 
 ```json
-{"decision": "continue | revise | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}], "review": "<本 task 的 review 依据>"}
+{"decision": "continue | revise | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}]}
 ```

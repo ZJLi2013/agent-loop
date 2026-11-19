@@ -92,12 +92,18 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
-- `work-planning` owns one table of a Goal's documents (#233): `task.md`, the plan document, its archive and
-  sub-exp, and the project's tracked experiment record, each with location, count, contents, forbidden contents and
-  when it is written or retired. A sub-experiment is a task design section in the same plan, not a new plan or
+- `work-planning` owns one table of a Goal's documents (#233): the project entry readme (long-term direction, then
+  the current Goal, then the current experiment; no task list), `task.md`, the plan document, its sub-exp, and the
+  project's tracked experiment record, each with location, count, contents, forbidden contents and when it is
+  written or retired. A sub-experiment is a task design section in the same plan, not a new plan or
   project document; the experiment record holds one research question's conclusions, data and how to rerun it, never
   task status, budgets, pending human choices or next steps. `experiment-design` no longer sends design and next
   steps to project documents, and no longer lets the plan document double as the experiment record.
+
+- Task CLOSE deletes the task's design sections from the plan instead of moving them to `<plan>-archive.md` (#233).
+  Links in `.agent-loop/` that pointed at the deleted anchors become plain text. The task reviewer's decision no
+  longer has a `review` field; a decision that still carries one is accepted and the field is ignored. Existing
+  `*-archive.md` files are left in place and are still history for `leftovers`.
 
 - Before anything goes to the human, including a "suggest fixing / to confirm" item in a closing message, the agent
   checks five conditions in `when-to-stop`: root cause located, one fix (or evidence choosing it), reversible, no

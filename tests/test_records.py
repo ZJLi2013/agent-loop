@@ -202,7 +202,7 @@ class DesignLocationTest(unittest.TestCase):
     def test_init_refuses_the_topic_layout_and_close_retires_the_fixed_one(self) -> None:
         plan_doc = ".agent-loop/plans/x/plan.md"
         self.link("plans/x/plan.md#data-cleanup-a1")
-        with self.assertRaisesRegex(HarnessError, "CLOSE archives only those"):
+        with self.assertRaisesRegex(HarnessError, "CLOSE removes only those"):
             initialize(
                 self.root, task_id="a1", plan_doc=plan_doc,
                 verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
@@ -210,11 +210,10 @@ class DesignLocationTest(unittest.TestCase):
 
         self.link("plans/x/plan.md#a1-data-cleanup")
         self.assertIsNone(design_location_error(self.root, "a1", plan_doc))
-        close_task(self.root, plan_doc, "a1", None)
+        close_task(self.root, plan_doc, "a1")
         plan = (self.root / plan_doc).read_text(encoding="utf-8")
-        archive = (self.runtime / "plans" / "x" / "plan-archive.md").read_text(encoding="utf-8")
         self.assertNotIn("id design", plan)
-        self.assertIn("id design", archive)
+        self.assertFalse((self.runtime / "plans" / "x" / "plan-archive.md").exists())
 
 
 LEFTOVER_TASKS = """# Tasks
