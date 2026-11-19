@@ -160,7 +160,9 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
   计算，lint 用 console script 名，升级 agent-loop 不让已通过的证据 stale。`config.json` 的 `lint` 记
   `enabled`、`base`（init 时的 `HEAD`）与 `version`；`--lint off` 只记 `enabled: false`，argv 不变。console script 不在 PATH 上
   或项目不是有提交的 git 仓库时 `init` 拒绝，不写 state / config。`initialize` 是唯一写者，`lint` 子命令只读。
+  Python 的 `initialize(..., lint=False)` 默认不开，默认开只在 CLI 上。
 - 范围：相对 `base` 改过的与未被忽略的未跟踪 `.md`，不含 `.harness/` 与 `.agent-loop/`；同一 init 周期内 `base` 不动。
+  没有 `.harness/config.json` 或其中没有 `lint.base` 时（在 Harness 外单独跑），`base` 取当前 `HEAD`。
 - 检查：相对链接的目标存在（链接进 `.harness/` 或 `.agent-loop/` 直接判错，URL 只查格式）；未跟踪的文档逐个报出；
   本 task 写下的行（相对 `base` 新增或改过）不含 `待验证|待确认|在跑|预计|TBD|TODO`，被命中的那一行写 `<!-- lint: allow -->` 即豁免。
   fenced code 与行内 code 不查。有违规时退出 1、不运行原 verifier；否则运行原 verifier 并返回它的退出码。
