@@ -14,6 +14,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- Task review restates the experiment entry first (#237). When a task writes or changes a project experiment record,
+  the reviewer reads only the entry readme, writes `.harness/review/entry-restatement.md` (steps, data flow, training
+  and evaluation lists with their totals, terms, duplicates, pending choices and task status), and only then reads the
+  rest; gaps become one `must` with entry line numbers. The CLOSE self-audit asks the same of the entry and keeps its
+  step and data-flow skeleton when trimming.
 - `experiment-design` Phase 1 asks for a cheap probe before an expensive batch whose go / scope / method depends on
   an unverified premise. The design states the probe's size, its criterion, and the command for each outcome, or
   why no probe is run.

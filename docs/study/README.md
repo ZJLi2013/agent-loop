@@ -30,6 +30,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 - [Cursor 上的按需规则](cursor-rule-loading.md)：IDE 与 SDK 本地 agent 的规则加载边界，`minimal-code` 的最佳按需做法（description 规则加常驻路由行）经 SDK 回放在改代码请求上没读到规则，因此留常驻。
 - [语义名与冻结后的 plan 目录](semantic-names-replay.md)：完成的 Goal 冻结后 plan 目录只剩 plan document，耐久结论与否定发现先上提；改动前后的回放，以及命名一句为什么只是把现有做法写成规则。
 - [Gate 只摆设计与结论](plan-gate-replay.md)：plan 模板加「设计」一节与执行细节分隔线，Gate 问题先给设计与结论；判断类默认 agent 判断一句为什么不加。
+- [入口文档的逻辑可读性](close-readability.md)：实验线入口要让 human 只读它说出步骤、数据流与训练 / 评估用量；现行 CLOSE 检查只查多余，真实项目三版入口的证据与评测方法的选择（#237）。
 - [按需 skill 与通用 rule 的迁出清单](skill-migration.md)：七个 skill 与两条 rule 为什么迁到私有 pack、各自的依赖，以及核心里删掉的点名。
 
 初次阅读：设计沿革 → 业界实践 → 按 feature 进入。需要修改当前实现时，先读 `design.md` 与对应 owner，
