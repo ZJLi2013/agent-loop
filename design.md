@@ -158,14 +158,19 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
 
 - `init --lint on`（CLI 默认）把 `agent-loop-harness lint --changed --` 拼在 verifier argv 之前；`verifier.files` 只按原 argv
   计算，lint 用 console script 名，升级 agent-loop 不让已通过的证据 stale。`config.json` 的 `lint` 记
-  `enabled`、`base`（init 时的 `HEAD`）与 `version`；`--lint off` 只记 `enabled: false`，argv 不变。console script 不在 PATH 上
+  `enabled`、`base`（init 时的 `HEAD`）与 `version`（运行 `init` 的 agent-loop 包版本，从源码 checkout 运行、未安装时为 null），
+  与 config 其余字段同一次原子写入、同受 `config_sha256` 锁；`--lint off` 只记 `enabled: false`，argv 不变。console script 不在 PATH 上
   或项目不是有提交的 git 仓库时 `init` 拒绝，不写 state / config。`initialize` 是唯一写者，`lint` 子命令只读。
   Python 的 `initialize(..., lint=False)` 默认不开，默认开只在 CLI 上。
 - 范围：相对 `base` 改过的与未被忽略的未跟踪 `.md`，不含 `.harness/` 与 `.agent-loop/`；同一 init 周期内 `base` 不动。
   没有 `.harness/config.json` 或其中没有 `lint.base` 时（在 Harness 外单独跑），`base` 取当前 `HEAD`。
-- 检查：相对链接的目标存在（链接进 `.harness/` 或 `.agent-loop/` 直接判错，URL 只查格式）；未跟踪的文档逐个报出；
-  本 task 写下的行（相对 `base` 新增或改过）不含 `待验证|待确认|在跑|预计|TBD|TODO`，被命中的那一行写 `<!-- lint: allow -->` 即豁免。
-  fenced code 与行内 code 不查。有违规时退出 1、不运行原 verifier；否则运行原 verifier 并返回它的退出码。
+- 链接：查行内链接 `[text](target)`（含图片）与引用定义 `[id]: target`。带 scheme 的只查格式：`http` / `https` 要有 host，
+  其余 scheme 不查；纯锚点 `#x` 跳过。相对路径去掉 `?` 查询与 `#` 锚点后做 URL 解码，以 `/` 开头的按项目 root 解析，否则按文档所在目录解析；
+  目标落在 `.harness/` 或 `.agent-loop/` 里直接判错，否则不存在即判死链。
+- 其余检查：未跟踪的文档逐个报出；本 task 写下的行（相对 `base` 新增或改过，未跟踪文件取全部行）不含
+  `待验证|待确认|在跑|预计|TBD|TODO`，被命中的那一行写 `<!-- lint: allow -->` 即豁免。fenced code 与行内 code 不查。
+- 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
+  并返回它的退出码，没给命令时退出 0。git 调用失败经 `HarnessError` 退出 2。
 
 <a id="leftovers"></a>
 `.agent-loop/` 的退役由 `harness/records.py` 拥有，在 task CLOSE 的同一步运行（reviewer 决定落盘、`close_task` 之后，
