@@ -6,6 +6,15 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- CLOSE lint (#231): `init` prepends `agent-loop-harness lint --changed --` to the locked verifier by default. Before
+  the verifier runs, it checks the markdown changed since `init`: relative link targets exist and do not point into
+  `.harness/` or `.agent-loop/`, the documents are tracked by git, and lines the task wrote carry no leftover
+  `待验证|待确认|在跑|预计|TBD|TODO` unless the line has `<!-- lint: allow -->`. Violations exit 1 without running
+  the verifier. `config.json` records `lint` (`enabled`, `base`, `version`); the lint argv is not locked in
+  `verifier.files`. Migration: `init` now needs `agent-loop-harness` on PATH and a git repository with a commit;
+  otherwise pass `--lint off`. Tasks already initialized keep their verifier until the next `init`. See
+  `design.md#close-lint`.
+
 - Codex reviewer entry point: `.agent-loop/reviewer.json` can be `{"argv": ["python", "-m", "adapters.codex_review"]}`
   in every project, with no paths. It runs `codex exec` from the project root (through WSL on Windows) with the
   generated prompt on stdin and extra arguments from `AGENT_LOOP_CODEX_ARGS`; `--prompt` / `--out` run a free-form

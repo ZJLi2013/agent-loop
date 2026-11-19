@@ -24,7 +24,8 @@ cd ../agent-loop-demo
 If a published version is desired, check out its tag before installing. The preparation script refuses to
 overwrite an existing destination. Use another new directory when repeating the walkthrough.
 
-If the CLI is not on your PATH, use `python -m harness.run` in place of `agent-loop-harness` throughout.
+If the CLI is not on your PATH, use `python -m harness.run` in place of `agent-loop-harness` throughout, and add
+`--lint off` to `init`: the default lint runs through the `agent-loop-harness` command.
 Keep using the interpreter/environment into which you installed the package.
 
 ## 2. Lock the verifier and observe a real failure

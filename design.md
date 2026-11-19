@@ -62,7 +62,7 @@ agent-loop 只维护三类公开保证：
 | 维度 | 身份 | 取值 | 谁能改 | 存在哪 | 契约测试 |
 |---|---|---|---|---|---|
 | task 实例 | [task 行](#task-row)第二格的 task id，按原字符串匹配；review 只对它审过的 `plan_doc`（规范化的项目相对路径）有效 | 未审 / 已审 / 需重审（任一 `again[].at` 不早于最后一次 review 的 `at`；或 task 行的 `rN` 等于 plan 当前 revision 而最后一次 review 的 `plan_revision` 不同，含没有该字段的旧记录）/ must 未回应 / 待 human 批准（没有不早于该 review 的 `approvals[].at`）；审查失败计数（reviewer 失败时写入，同 plan 与 revision 累加、换了就从 1 起；审查期间输入变更不动它；审查成功删除；stop 门上报后把 `reported` 置真，同一记录不再上报）；`Plan Revision`、task `rN` 与锁定的 `plan_revision` | plan reviewer 写 findings；executor `--respond`；human `--approve` / `--again`；worker 或 human 改 revision | `.harness/plan-review/tasks/<id>.json`；`.harness/plan-review/failed.json`；plan document 头部；`task.md` 的 task 行（已归档时读 `archive/tasks.md`）；`state.json` | `tests/test_plan_review.py` |
-| 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `files`（`argv` 指向的工作区内文件的 SHA-256，含被 gitignore 的路径）/ `timeout_seconds` / `expect_regex` / `forbid_regex`、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py`、`tests/test_review.py` |
+| 执行尝试 | 一个 `.harness/` 一次一个 active task；每次运行一个 `run_id` | phase（下表）；`current_run_id` 与 `runner_pid` 表示占用；`verify_attempts` / `wall_seconds_used` 对预算；`verified_fingerprint`；`stop_report_requested` | runner 与 verifier 经 Harness 转移；`disable` | `state.json`；`config.json`（verifier `argv` / `files`（`argv` 指向的工作区内文件的 SHA-256，含被 gitignore 的路径）/ `timeout_seconds` / `expect_regex` / `forbid_regex`、`lint`（[CLOSE lint](#close-lint)）、budget、limits，摘要锁在 `config_sha256`）；`artifacts/<run_id>/start.json`；`.harness/lock` | `tests/test_protocol.py`、`tests/test_harness.py`、`tests/test_review.py`、`tests/test_lint.py` |
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；按 reviewer 开工只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_page.py` |
 | 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_review.py`、`tests/test_attention.py` |
 | 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定它所在的项目，项目是自带 `.git` 的目录，或 workspace 内没有上级目录含 `.agent-loop/task.md` 的目录（测试 fixture 与示例因此属于外层项目）；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
@@ -152,6 +152,25 @@ verifier 文件锁由 `harness/fingerprint.py` 拥有，与 workspace fingerprin
   `continue` / `ask_human` / `stop` 落盘的同一步关闭 task 并删除 `.harness/tasks/<id>/`；`revise` 保留 task 与 scratch，
   下一次 verify 开跑前比对。reviewer 写出无效决定不结束比对期，`completion_gate` 继续复核。
 - 每次 verify 在开跑前与判定通过前各比对一次：运行中改了 verifier 又在退出前改回原内容，不会被发现。
+
+<a id="close-lint"></a>
+CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，不是独立的状态或 guard：
+
+- `init --lint on`（CLI 默认）把 `agent-loop-harness lint --changed --` 拼在 verifier argv 之前；`verifier.files` 只按原 argv
+  计算，lint 用 console script 名，升级 agent-loop 不让已通过的证据 stale。`config.json` 的 `lint` 记
+  `enabled`、`base`（init 时的 `HEAD`）与 `version`（运行 `init` 的 agent-loop 包版本，从源码 checkout 运行、未安装时为 null），
+  与 config 其余字段同一次原子写入、同受 `config_sha256` 锁；`--lint off` 只记 `enabled: false`，argv 不变。console script 不在 PATH 上
+  或项目不是有提交的 git 仓库时 `init` 拒绝，不写 state / config。`initialize` 是唯一写者，`lint` 子命令只读。
+  Python 的 `initialize(..., lint=False)` 默认不开，默认开只在 CLI 上。
+- 范围：相对 `base` 改过的与未被忽略的未跟踪 `.md`，不含 `.harness/` 与 `.agent-loop/`；同一 init 周期内 `base` 不动。
+  没有 `.harness/config.json` 或其中没有 `lint.base` 时（在 Harness 外单独跑），`base` 取当前 `HEAD`。
+- 链接：查行内链接 `[text](target)`（含图片）与引用定义 `[id]: target`。带 scheme 的只查格式：`http` / `https` 要有 host，
+  其余 scheme 不查；纯锚点 `#x` 跳过。相对路径去掉 `?` 查询与 `#` 锚点后做 URL 解码，以 `/` 开头的按项目 root 解析，否则按文档所在目录解析；
+  目标落在 `.harness/` 或 `.agent-loop/` 里直接判错，否则不存在即判死链。
+- 其余检查：未跟踪的文档逐个报出；本 task 写下的行（相对 `base` 新增或改过，未跟踪文件取全部行）不含
+  `待验证|待确认|在跑|预计|TBD|TODO`，被命中的那一行写 `<!-- lint: allow -->` 即豁免。fenced code 与行内 code 不查。
+- 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
+  并返回它的退出码，没给命令时退出 0。git 调用失败经 `HarnessError` 退出 2。
 
 <a id="leftovers"></a>
 `.agent-loop/` 的退役由 `harness/records.py` 拥有，在 task CLOSE 的同一步运行（reviewer 决定落盘、`close_task` 之后，

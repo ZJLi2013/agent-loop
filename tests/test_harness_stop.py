@@ -185,7 +185,7 @@ class HarnessStopHookTest(unittest.TestCase):
                     io.StringIO()
                 ):
                     code = run.main(
-                        ["--root", directory, "init", "--task", "t1", "--",
+                        ["--root", directory, "init", "--task", "t1", "--lint", "off", "--",
                          sys.executable, "-S", "-c", "print('OK')"]
                     )
                 state = json.loads(
