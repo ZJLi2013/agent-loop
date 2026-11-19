@@ -33,7 +33,7 @@ def harness_dir(root: Path) -> Path:
 
 def exclude_runtime_from_git(root: Path) -> None:
     git_dir = root.resolve() / ".git"
-    if not git_dir.is_dir():
+    if not (git_dir / "HEAD").is_file():
         return
     exclude = git_dir / "info" / "exclude"
     exclude.parent.mkdir(parents=True, exist_ok=True)

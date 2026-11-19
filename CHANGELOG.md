@@ -4,6 +4,14 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- A `.git` directory without `HEAD` no longer counts as a repository (#234). The Codex reviewer's bubblewrap sandbox
+  leaves an empty `.git/` mount point in monorepo sub-projects. `init` used to write `info/exclude` into it, and the
+  memory hook resolved memory to `<sub>/.git/agent-loop/memory`, outside version control, and stopped reading
+  `<sub>/.agent-loop/memory`. Such sub-projects now keep memory in `<sub>/.agent-loop/memory`. Migration: move
+  `<sub>/.git/agent-loop/memory/*` back into `<sub>/.agent-loop/memory/` and delete the stray `<sub>/.git/`.
+
 ### Added
 
 - CLOSE lint (#231): `init` prepends `agent-loop-harness lint --changed --` to the locked verifier by default. Before
