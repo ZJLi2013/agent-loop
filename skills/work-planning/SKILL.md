@@ -173,8 +173,8 @@ verifier 通过后：
    `.harness/tasks/<task_id>/`，要留的在 locked verifier 前移出。配置 reviewer 时 Harness 在决定落盘后删除它，
    未配置时 CLOSE 末尾运行 `clean-task`；`status` 的 `strays` 列出 `.harness/` 里不归 Harness 的条目，逐条移走或删除。
    关闭 task 的 `verify` / `review` / `clean-task` 输出与 `status` 的 `leftovers` 列出 `.agent-loop/` 里名字带已关闭
-   task id、或在已关闭 Goal 的 plan 目录、又没被现行文档提到的文件：要留的证据移进项目被跟踪的文档或链接进
-   plan 归档，其余删除；被误报的长期工具在 `memory/facts.md` 提一句即不再报。逐 run 表的要求归 `experiment-design`。
+   task id、或在已关闭 Goal 的 plan 目录、又没被现行文档提到的文件：项目事实移进项目被跟踪的文档，只证明 task
+   通过的验收证据记进 plan 的 Experiment Log，其余删除；被误报的长期工具在 `memory/facts.md` 提一句即不再报。逐 run 表的要求归 `experiment-design`。
 
 ### 主线交接
 

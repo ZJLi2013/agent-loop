@@ -427,8 +427,8 @@ task 或已完成 Goal、又没被现行文档提到的文件，每项带 `path`
 ]
 ```
 
-Harness 不删它们，completion gate 也不检查。worker 在同一次 CLOSE 里处理：要留的证据移进项目被跟踪的文档或链接进
-plan 归档，其余删除；还在用的长期工具在 `memory/facts.md` 提一句，下次就不再报。判定规则见
+Harness 不删它们，completion gate 也不检查。worker 在同一次 CLOSE 里处理：项目事实移进项目被跟踪的文档，只证明 task
+通过的验收证据记进 plan 的 Experiment Log，其余删除；还在用的长期工具在 `memory/facts.md` 提一句，下次就不再报。判定规则见
 [记录寿命](../design.md#leftovers)。
 
 运行时证据在 `.harness/`，日志与产物有上限。必须比运行时保留期更久的
