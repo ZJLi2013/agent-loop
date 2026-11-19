@@ -253,6 +253,12 @@ agent-loop-harness init --task fractional-mean --plan-doc plan.md -- python -B -
 evidence stale 直接要求重新验证；默认不按动作数或时间暂停。确需固定 attention refresh 时，用
 `--goal-review-actions N` 或 `--goal-review-minutes N` 显式开启。
 
+`init` 默认带 `--lint on`：verify 先跑 `agent-loop-harness lint --changed`，检查本 task 自 init 以来改过的 markdown——相对链接的目标存在、
+不链接进 `.harness/` 或 `.agent-loop/`、文档已被 git 跟踪、本 task 写下的行没有残留的 `待验证|待确认|在跑|预计|TBD|TODO`；有违规时退出 1，
+原 verifier 不运行，这次 verify 计入尝试次数，所以 CLOSE 时先单独跑一次 `agent-loop-harness lint --changed`。合法的命中在那一行写
+`<!-- lint: allow -->`，没有文件级开关。lint 需要 `agent-loop-harness` 在 PATH 上、项目是有提交的 git 仓库，否则 `init` 报错；
+不满足或项目不要这道检查时用 `init --lint off`。规则见 [CLOSE lint](../design.md#close-lint)。
+
 verifier 参数中若有 task 会生成或重写的文件，在 `init` 的 `--` 前用 `--evidence-file PATH` 显式声明；
 有多个文件就重复该参数。例如 `check_result.py` 读取 task 产出的 `result.log`：
 

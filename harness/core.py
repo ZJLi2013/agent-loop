@@ -25,6 +25,7 @@ from harness.journal import (
     new_run_id,
     prune_artifacts,
 )
+from harness.lint import LINT_ARGV, lint_config
 from harness.plan import (
     PAUSE_FILE,
     pause_request,
@@ -95,6 +96,7 @@ def initialize(
     expect_regex: str | None = None,
     forbid_regex: str | None = None,
     owner: str | None = None,
+    lint: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if not task_id.strip():
         raise HarnessError("task_id is required")
@@ -122,6 +124,7 @@ def initialize(
         raise HarnessError("Goal Review action and time thresholds cannot be negative")
 
     root = root.resolve()
+    lint_settings = lint_config(root) if lint else {"enabled": False}
     locked_files = verifier_files(root, verifier_argv, evidence_files)
     base = harness_dir(root)
     scratch = task_dir(root, task_id)
@@ -233,12 +236,13 @@ def initialize(
         "task_id": task_id,
         "plan_doc": plan_doc,
         "verifier": {
-            "argv": verifier_argv,
+            "argv": [*LINT_ARGV, "--", *verifier_argv] if lint else verifier_argv,
             "files": locked_files,
             "timeout_seconds": float(timeout_seconds),
             "expect_regex": expect_regex,
             "forbid_regex": forbid_regex,
         },
+        "lint": lint_settings,
         "budget": {
             "max_attempts": int(max_attempts),
             "max_wall_seconds": float(max_wall_seconds),

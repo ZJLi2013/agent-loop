@@ -62,6 +62,7 @@ def main() -> None:
         binaries = target / ("Scripts" if os.name == "nt" else "bin")
         python = binaries / ("python.exe" if os.name == "nt" else "python")
         cli = binaries / ("agent-loop-harness.exe" if os.name == "nt" else "agent-loop-harness")
+        env["PATH"] = str(binaries) + os.pathsep + env.get("PATH", "")
         run([str(python), "-m", "pip", "install", "--no-index", "--no-deps",
              str(wheels[0])], root, env)
         location = run([str(python), "-c",
@@ -96,6 +97,8 @@ def main() -> None:
         passed = command("verify")
         if passed["state"]["phase"] != "verified":
             raise RuntimeError("The repaired example was not verified")
+        if passed["result"]["argv"][:3] != ["agent-loop-harness", "lint", "--changed"]:
+            raise RuntimeError(f"Verifier did not run through the installed lint: {passed['result']['argv']}")
         run_id = passed["state"]["last_run_id"]
         artifact = project / ".harness" / "artifacts" / run_id
         if not (artifact / "result.json").is_file():

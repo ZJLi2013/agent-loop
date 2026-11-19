@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from harness.core import (  # noqa: E402
     run_command,
     verify,
 )
+from harness.lint import lint_changed  # noqa: E402
 from harness.page import run_page  # noqa: E402
 from harness.plan_review import (  # noqa: E402
     again_task,
@@ -105,6 +107,12 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="task output read by the verifier; must match a verifier file argument (repeatable)",
     )
+    init.add_argument(
+        "--lint",
+        choices=("on", "off"),
+        default="on",
+        help="run `lint --changed` before the verifier (default: on)",
+    )
     init.add_argument("verifier", nargs=argparse.REMAINDER)
 
     execute = commands.add_parser("exec", help="run and journal one command")
@@ -160,6 +168,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--decision", choices=("continue", "replan", "stop"), required=True
     )
     goal_review.add_argument("--evidence", required=True)
+    lint = commands.add_parser(
+        "lint", help="check the markdown this task changed, then run COMMAND"
+    )
+    lint.add_argument(
+        "--changed",
+        action="store_true",
+        required=True,
+        help="scan the markdown changed since this task's init (the only scope)",
+    )
+    lint.add_argument("command", nargs=argparse.REMAINDER)
     commands.add_parser("status", help="print current config and state")
     commands.add_parser(
         "clean-task", help="remove the verified task's scratch directory"
@@ -190,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
                 expect_regex=args.expect_regex,
                 forbid_regex=args.forbid_regex,
                 owner=_session_id(),
+                lint=args.lint == "on",
             )
             print(
                 json.dumps(
@@ -285,6 +304,14 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(state, ensure_ascii=False, indent=2))
             return 0
+        if args.action == "lint":
+            problems = lint_changed(root)
+            for problem in problems:
+                print(f"lint: {problem}", file=sys.stderr)
+            if problems:
+                return 1
+            command = _command(args.command)
+            return subprocess.run(command, cwd=root).returncode if command else 0
         if args.action == "status":
             config, state = load_runtime(root)
             print(
