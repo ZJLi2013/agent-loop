@@ -14,6 +14,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Added
 
+- `experiment-design` Phase 1 asks for a cheap probe before an expensive batch whose go / scope / method depends on
+  an unverified premise. The design states the probe's size, its criterion, and the command for each outcome, or
+  why no probe is run.
+
 - CLOSE lint (#231): `init` prepends `agent-loop-harness lint --changed --` to the locked verifier by default. Before
   the verifier runs, it checks the markdown changed since `init`: relative link targets exist and do not point into
   `.harness/` or `.agent-loop/`, the documents are tracked by git, and lines the task wrote carry no leftover
