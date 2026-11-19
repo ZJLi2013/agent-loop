@@ -20,6 +20,7 @@ description: >-
 
 | 文档 | 位置 | 份数 | 写什么 | 不写什么 | 何时写 / 退役 |
 |---|---|---|---|---|---|
+| 项目入口 readme | 项目根 `readme.md` | 每项目一份 | 从宏观到微观：长线方向、当前 Goal、当前实验项目与进展，各一句并链到 plan 或实验记录 | task 清单与状态（只在 `task.md`）、设计 | Goal 或长线方向变化时 |
 | `task.md` | `.agent-loop/task.md` | 每项目一份 | 主线、task 行（状态、`rN`、检查点、预算、失败计数）、候选 | 设计、读数、结论 | 状态转移时；closed 行进 archive |
 | plan document | `.agent-loop/plans/<goal>/plan.md` | 每 Goal 一份 | Goal、设计、当前结论、脉络、每个 task 一个以 task id 开头的设计段、Experiment Log | 项目长期事实的唯一副本 | Goal 开始时建；完成时冻结 |
 | `<plan>-archive.md`、`sub-exp/<id>.md` | plan 同目录 | 按需 | 已关闭 task 的设计与证据；并行的独立实验 | 新 task 的设计 | CLOSE 写 archive；Goal 冻结时并进头部后删 |
