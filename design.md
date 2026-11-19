@@ -263,6 +263,8 @@ Goal
 Experiment Log
 ```
 
+一个 Goal 有哪几类文档、各放哪、写什么与不写什么，由 `work-planning` 的文档表拥有。
+
 单个实验直接追加到 `Experiment Log`。只有同一 Goal 下出现多个独立实验、详细日志开始遮蔽稳定头部、
 或需要并行维护时，才拆 linked `sub-exp/<id>.md`；plan document 始终保留结论与链接。
 Harness 参数叫 `plan_doc`，不关心文件名是 feature、exp 还是其它名字。

@@ -9,8 +9,9 @@ description: >-
 
 # Experiment-Driven Documentation
 
-把「假设 → 设计 → 执行 → 结果 → 分析 → 下一步」记进项目文档，让任何人（包括未来的自己）
-能复现思路与决策依据。
+把「假设 → 设计 → 执行 → 结果 → 分析 → 下一步」记进 plan document 的 task 设计段与 Experiment Log，
+task CLOSE 时把确立的结论写进项目实验记录（各文档的位置与禁写项见 `work-planning` 的文档表），让任何人
+（包括未来的自己）能复现思路与决策依据。
 
 **边界**：本 skill 是 `agent-loop` 里 DESIGN 那一格——**被选中的那个 task 要跑一轮验证时**
 用它。它只管**实验设计**（假设、方案、预期、判据）与 evidence，不代写 plan 的 Goal、
@@ -23,7 +24,7 @@ description: >-
 
 task 必须已获批准（不是 `📝 proposed`），且 plan document 已有 Goal；task 的 `rev` 必须等于
 plan 的 `Plan Revision`，`Plan Review` 必须是 `approved` 或 `unreviewed`。缺任一项就停止，
-回 `work-planning` 补齐。一次性 diagnostic 的 plan document 可以就是这份实验记录。
+回 `work-planning` 补齐。
 
 ---
 

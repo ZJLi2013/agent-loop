@@ -92,6 +92,13 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- `work-planning` owns one table of a Goal's documents (#233): `task.md`, the plan document, its archive and
+  sub-exp, and the project's tracked experiment record, each with location, count, contents, forbidden contents and
+  when it is written or retired. A sub-experiment is a task design section in the same plan, not a new plan or
+  project document; the experiment record holds one research question's conclusions, data and how to rerun it, never
+  task status, budgets, pending human choices or next steps. `experiment-design` no longer sends design and next
+  steps to project documents, and no longer lets the plan document double as the experiment record.
+
 - Before anything goes to the human, including a "suggest fixing / to confirm" item in a closing message, the agent
   checks five conditions in `when-to-stop`: root cause located, one fix (or evidence choosing it), reversible, no
   change to acceptance, within its authority. When all hold it fixes the item and reports it as fixed; otherwise it

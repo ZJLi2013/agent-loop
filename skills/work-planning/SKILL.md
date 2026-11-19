@@ -16,6 +16,18 @@ description: >-
 默认只建一份文档，不区分 feature / exp。Goal、plan 目录与 task id 用说明内容的短语义名（kebab-case，如
 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `P0` 优先级与 `rN` revision。
 
+一个 Goal 的文档只有下面几类，各写各的，不互相复制：
+
+| 文档 | 位置 | 份数 | 写什么 | 不写什么 | 何时写 / 退役 |
+|---|---|---|---|---|---|
+| `task.md` | `.agent-loop/task.md` | 每项目一份 | 主线、task 行（状态、`rN`、检查点、预算、失败计数）、候选 | 设计、读数、结论 | 状态转移时；closed 行进 archive |
+| plan document | `.agent-loop/plans/<goal>/plan.md` | 每 Goal 一份 | Goal、设计、当前结论、脉络、每个 task 一个以 task id 开头的设计段、Experiment Log | 项目长期事实的唯一副本 | Goal 开始时建；完成时冻结 |
+| `<plan>-archive.md`、`sub-exp/<id>.md` | plan 同目录 | 按需 | 已关闭 task 的设计与证据；并行的独立实验 | 新 task 的设计 | CLOSE 写 archive；Goal 冻结时并进头部后删 |
+| 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`） | 每个研究问题一份，按问题命名 | 确立的结论、支撑数据与它的位置、怎么重跑 | task 状态与进度、预算、以 task id 命名的文件或标题、待 human 选的选项、下一步与设计 | task CLOSE 时写入（`experiment-design` CLOSE 第 1 项） |
+
+子实验、子 feature 是同一 plan 里的一个 task 设计段，不另起 plan，也不另起项目文档；新 Goal 才有新 plan。
+待 human 选的做法走结构化提问（`when-to-stop`），不进任何文档。
+
 ```markdown
 # <Goal 名称>
 
