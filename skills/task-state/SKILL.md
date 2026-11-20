@@ -74,7 +74,12 @@ Mainline Review: approved
 交接、改表与支线的规则归 `work-planning`。没有这一节的项目只有一个 Goal。
 
 状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。
-`proposed` 表示还在 Human Review Gate，批准前不执行；`dropped` 要在行尾链接说明为什么放弃——
+`proposed` 表示还在 Human Review Gate，批准前不执行。**等批准或等资源（GPU、节点、上游产物）期间，先把这个 task
+可逆、短时的准备做完**：核对数据与权重就位、改好运行所需的脚本、短时 CPU 冒烟、把开跑命令写进 `progress.md`。
+准备只用已授权的资源，不占所等资源、不花待批预算、不做不可逆操作；冒烟只查能不能跑，不跑实验、不出验收结果。
+做完就继续等，不反复冒烟、不扩范围。批准与资源都到位后，先按当前 revision 完成 Harness 准入，再执行备好的命令；
+准备不推进 task 状态，review 改了设计就按新设计改准备。
+`dropped` 要在行尾链接说明为什么放弃——
 被否决的候选是长期决定，删掉它下次还会有人重提。
 
 `✅ done / ❌ dropped` 是 CLOSE 转换时的瞬时状态：结论与 evidence 写回后，把整行移到

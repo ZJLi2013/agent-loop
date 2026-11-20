@@ -4,6 +4,13 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+### Changed
+
+- A task waiting for approval or for a resource (GPU, node, upstream artifact) gets its reversible, short preparation
+  done while it waits: data and weights checked, run scripts changed, a short CPU smoke run, the launch command written
+  into `progress.md`. Preparation uses only authorized resources and no pending budget, produces no acceptance
+  evidence, and the launch still goes through Harness admission once both approval and resource are in place.
+
 ### Fixed
 
 - A `.git` directory without `HEAD` no longer counts as a repository (#234). The Codex reviewer's bubblewrap sandbox
