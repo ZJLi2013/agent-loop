@@ -6,6 +6,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Harness modules are named for what they own: `harness.review` → `harness.task_review` (it pairs with
+  `harness.plan_review` and `prompts/task_review.md`), `harness.page` → `harness.pager`, `harness.runner` →
+  `harness.process` (subprocess execution, distinct from the `run.py` CLI), and `harness.attention` →
+  `harness.goal_review` (the config key, state fields and CLI command were already `goal_review` / `goal-review`).
+  The CLI, `python -m harness.run`, state files and reviewer paths are unchanged. Migration: code that imports these
+  modules uses the new names.
 - Issue triage happens once the maintainer approves an issue (in a comment, in chat, or through a dispatch-window
   question), not on a weekly schedule. The maintainer or an agent acting on that approval applies
   `restores-contract`; auto-fix still takes only issues that carry it, and `run.ps1` checks labels the same way.
@@ -23,6 +29,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Fixed
 
+- Plan review and the `plan-review --approve / --again / --respond` records keep `runs.jsonl`, artifacts and reviewer
+  output within the limits set at `init`, as the runner, task review and pager already did. They used built-in
+  defaults (1000 journal entries, 20 artifacts), so a project with smaller limits grew past them and one with larger
+  limits lost artifacts it meant to keep. The defaults still apply before the first `init`.
 - `task-state` no longer tells the agent to ask the human when two tasks are blocked; like `agent-loop`, it sends the
   chain back to `work-planning` to be split again. Pointers in `task-state`, `when-to-stop` and `design.md` that named
   sections no longer present (failure triage table, 「岔出」, 「验收判据阶梯」, 「层 0 复现对方样例」) now name the

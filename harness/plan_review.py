@@ -8,13 +8,20 @@ from typing import Any
 from harness.errors import HarnessError
 from harness.findings import normalize_findings
 from harness.fingerprint import dirty_files, file_digests
-from harness.journal import append_journal, new_run_id, prune_artifacts
+from harness.journal import (
+    DEFAULT_MAX_ARTIFACTS,
+    DEFAULT_MAX_JOURNAL_ENTRIES,
+    DEFAULT_MAX_OUTPUT_BYTES,
+    append_journal,
+    new_run_id,
+    prune_artifacts,
+)
 from harness.plan import plan_location, plan_metadata
+from harness.process import execute_process
 from harness.project import render_prompt, review_checklist, task_file
 from harness.records import open_task_ids, task_links, task_row
-from harness.review import load_reviewer
-from harness.runner import execute_process
 from harness.storage import (
+    CONFIG_FILE,
     atomic_write_json,
     exclude_runtime_from_git,
     harness_dir,
@@ -23,6 +30,7 @@ from harness.storage import (
     state_lock,
     utc_now,
 )
+from harness.task_review import PROMPT_FILE, REVIEW_DIR, load_reviewer
 
 PLAN_REVIEW_DIR = "plan-review"
 RUNNING_FILE = "running.json"
@@ -32,9 +40,18 @@ MAX_REVIEW_FAILURES = 2
 STOP_GATE_PREFIX = "[agent-loop stop gate]"
 TASK_RECORDS = "tasks"
 RESPONSES = ("applied", "skipped", "reject")
-DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
-DEFAULT_MAX_ARTIFACTS = 20
-DEFAULT_MAX_JOURNAL_ENTRIES = 1000
+
+
+def _limits(root: Path) -> dict[str, int]:
+    """The limits of the project's last init; plan review also runs before the first one."""
+    config = harness_dir(root) / CONFIG_FILE
+    if config.exists():
+        return read_json(config)["limits"]
+    return {
+        "max_output_bytes": DEFAULT_MAX_OUTPUT_BYTES,
+        "max_artifacts": DEFAULT_MAX_ARTIFACTS,
+        "max_journal_entries": DEFAULT_MAX_JOURNAL_ENTRIES,
+    }
 
 
 def _plan_path(root: Path, plan_doc: str) -> tuple[Path, str]:
@@ -259,7 +276,7 @@ def run_plan_review(
                 f"(pid {holder.get('pid')}); wait for it to finish"
             )
         report_path = review_dir / "report.json"
-        prompt_path = harness_dir(root) / "review" / "prompt.md"
+        prompt_path = harness_dir(root) / REVIEW_DIR / PROMPT_FILE
         report_path.unlink(missing_ok=True)
         prompt_path.parent.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(
@@ -285,6 +302,7 @@ def run_plan_review(
         run_dir = harness_dir(root) / "artifacts" / run_id
         run_dir.mkdir(parents=True)
         atomic_write_json(running, {"run_id": run_id, "pid": os.getpid(), "at": utc_now()})
+        limits = _limits(root)
 
     try:
         execution = execute_process(
@@ -292,7 +310,7 @@ def run_plan_review(
             list(reviewer["argv"]),
             timeout_seconds=float(reviewer["timeout_seconds"]),
             run_dir=run_dir,
-            max_output_bytes=DEFAULT_MAX_OUTPUT_BYTES,
+            max_output_bytes=int(limits["max_output_bytes"]),
             is_paused=lambda: False,
         )
         report, error = (
@@ -332,8 +350,8 @@ def run_plan_review(
             "warning": warning,
         }
         atomic_write_json(run_dir / "result.json", result)
-        append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
-        prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
+        append_journal(root, result, int(limits["max_journal_entries"]))
+        prune_artifacts(root, int(limits["max_artifacts"]))
         running.unlink(missing_ok=True)
         # Edits to the plan or its bindings while the reviewer runs void its input, not its run: they are
         # checked before any failure is counted, since the input check also sees them.
@@ -424,8 +442,9 @@ def _journal_decision(root: Path, task_id: str, kind: str, entry: dict[str, Any]
         **entry,
     }
     atomic_write_json(run_dir / "result.json", result)
-    append_journal(root, result, DEFAULT_MAX_JOURNAL_ENTRIES)
-    prune_artifacts(root, DEFAULT_MAX_ARTIFACTS)
+    limits = _limits(root)
+    append_journal(root, result, int(limits["max_journal_entries"]))
+    prune_artifacts(root, int(limits["max_artifacts"]))
 
 
 def _reviewed_record(root: Path, task_id: str) -> dict[str, Any]:

@@ -6,12 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness.attention import (
-    DEFAULT_AFTER_ACTIONS,
-    DEFAULT_AFTER_SECONDS,
-    goal_review_reason,
-    schedule_goal_review,
-)
 from harness.errors import HarnessError
 from harness.fingerprint import (  # noqa: F401
     FOREIGN_RUNTIME_DIRS,
@@ -20,7 +14,16 @@ from harness.fingerprint import (  # noqa: F401
     verifier_files,
     workspace_fingerprint,
 )
+from harness.goal_review import (
+    DEFAULT_AFTER_ACTIONS,
+    DEFAULT_AFTER_SECONDS,
+    goal_review_reason,
+    schedule_goal_review,
+)
 from harness.journal import (
+    DEFAULT_MAX_ARTIFACTS,
+    DEFAULT_MAX_JOURNAL_ENTRIES,
+    DEFAULT_MAX_OUTPUT_BYTES,
     append_journal,
     new_run_id,
     prune_artifacts,
@@ -37,8 +40,9 @@ from harness.plan import (
     revision_source,
     task_plan_revision,
 )
-from harness.page import load_pager, page_followup
+from harness.pager import load_pager, page_followup
 from harness.plan_review import plan_review_ready, run_plan_review, stop_followup
+from harness.process import execute_process
 from harness.protocol import Event, Phase, TransitionError, apply_event
 from harness.records import (
     active_task_status,
@@ -46,8 +50,6 @@ from harness.records import (
     design_location_error,
     mainline_handoff,
 )
-from harness.review import load_reviewer, review_followup, run_review
-from harness.runner import execute_process
 from harness.scratch import clean_task, scratch_path, task_dir
 from harness.storage import (
     CONFIG_FILE,
@@ -62,13 +64,11 @@ from harness.storage import (
     state_lock,
     utc_now,
 )
+from harness.task_review import load_reviewer, review_followup, run_review
 
 DEFAULT_TIMEOUT_SECONDS = 300.0
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_MAX_WALL_SECONDS = 1800.0
-DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
-DEFAULT_MAX_ARTIFACTS = 20
-DEFAULT_MAX_JOURNAL_ENTRIES = 1000
 
 
 def _transition(state: dict[str, Any], event: Event) -> None:

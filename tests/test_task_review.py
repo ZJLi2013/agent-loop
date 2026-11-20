@@ -22,7 +22,7 @@ from harness.core import (
 )
 from harness.plan_review import record_task_review, task_record
 from harness.records import archive_closed_tasks, close_task
-from harness.review import run_review
+from harness.task_review import run_review
 
 DECISION = ".harness/review/decision.json"
 REWRITTEN_TASKS = """| P | id | rev | task | check | status | fail |

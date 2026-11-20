@@ -13,11 +13,10 @@ from harness.findings import describe
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_metadata, request_pause, resume
 from harness.plan_review import run_plan_review, task_record
+from harness.process import execute_process
 from harness.project import runtime_dir, task_file
 from harness.protocol import Phase
 from harness.records import open_task_ids
-from harness.review import MAX_REVIEWS
-from harness.runner import execute_process
 from harness.storage import (
     STATE_FILE,
     atomic_write_json,
@@ -27,6 +26,7 @@ from harness.storage import (
     state_lock,
     utc_now,
 )
+from harness.task_review import MAX_REVIEWS
 
 PAGER_FILE = "pager.json"
 PAGER_STATE = "pager-state.json"

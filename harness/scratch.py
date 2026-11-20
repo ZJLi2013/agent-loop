@@ -39,9 +39,9 @@ def clean_task(root: Path, task_id: str) -> str | None:
 
 
 def strays(root: Path, task_id: str) -> list[str]:
-    from harness.page import PAGER_STATE
+    from harness.pager import PAGER_STATE
     from harness.plan_review import PLAN_REVIEW_DIR
-    from harness.review import REVIEW_DIR
+    from harness.task_review import REVIEW_DIR
 
     owned = {
         CONFIG_FILE,

@@ -14,7 +14,7 @@ from harness.core import (
     resume,
     verify,
 )
-from harness.page import run_page
+from harness.pager import run_page
 from harness.plan import pause_request
 
 FAKE_PAGER = """

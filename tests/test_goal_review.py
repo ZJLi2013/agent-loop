@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from harness.attention import record_goal_review
 from harness.core import (
     HarnessError,
     completion_gate,
@@ -14,8 +13,9 @@ from harness.core import (
     load_runtime,
     run_command,
 )
+from harness.goal_review import record_goal_review
 from harness.plan import pause_request
-from harness.review import run_review
+from harness.task_review import run_review
 
 TASKS = """| P | id | rev | task | check | status | fail |
 |---|---|---|---|---|---|---|

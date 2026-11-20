@@ -8,7 +8,6 @@ import time
 import unittest
 from pathlib import Path
 
-from harness.attention import record_goal_review
 from harness.core import (
     HarnessError,
     completion_gate,
@@ -21,6 +20,7 @@ from harness.core import (
     resume,
     run_command,
 )
+from harness.goal_review import record_goal_review
 
 
 class HarnessPauseTest(unittest.TestCase):

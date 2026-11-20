@@ -11,6 +11,10 @@ from typing import Any
 
 from harness.storage import JOURNAL_FILE, harness_dir
 
+DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
+DEFAULT_MAX_ARTIFACTS = 20
+DEFAULT_MAX_JOURNAL_ENTRIES = 1000
+
 _SECRET_RE = re.compile(
     r"(?i)\b(api[_-]?key|token|password|secret|authorization)"
     r"(\s*[:=]\s*)([^\s,;]+)"

@@ -10,7 +10,6 @@ from pathlib import Path
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from harness.attention import record_goal_review  # noqa: E402
 from harness.compaction import handoff_mode  # noqa: E402
 from harness.core import (  # noqa: E402
     DEFAULT_MAX_ARTIFACTS,
@@ -30,8 +29,9 @@ from harness.core import (  # noqa: E402
     run_command,
     verify,
 )
+from harness.goal_review import record_goal_review  # noqa: E402
 from harness.lint import lint_changed  # noqa: E402
-from harness.page import run_page  # noqa: E402
+from harness.pager import run_page  # noqa: E402
 from harness.plan_review import (  # noqa: E402
     again_task,
     approve_task,
@@ -39,9 +39,9 @@ from harness.plan_review import (  # noqa: E402
     run_plan_review,
 )
 from harness.records import leftovers  # noqa: E402
-from harness.review import review_followup, run_review  # noqa: E402
 from harness.scratch import scratch_path, strays  # noqa: E402
 from harness.storage import STATE_FILE, harness_dir  # noqa: E402
+from harness.task_review import review_followup, run_review  # noqa: E402
 
 
 SESSION_ENV = ("AGENT_LOOP_SESSION_ID", "CURSOR_CONVERSATION_ID", "DSH_SESSION_ID")

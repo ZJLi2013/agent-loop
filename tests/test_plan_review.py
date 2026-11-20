@@ -108,6 +108,25 @@ class PlanReviewTest(unittest.TestCase):
         )
         return state
 
+    def test_review_keeps_journal_and_artifacts_within_the_init_limits(self) -> None:
+        self.configure(reviewer_writing({"t1": []}))
+        initialize(
+            self.root,
+            task_id="t1",
+            plan_doc="plan.md",
+            verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
+            max_artifacts=1,
+            max_journal_entries=1,
+        )
+        self.write_plan(2)
+        self.write_tasks(("t1", "📝 proposed"), revision=2)
+
+        self.review()
+
+        harness = self.root / ".harness"
+        self.assertEqual(len(list((harness / "artifacts").iterdir())), 1)
+        self.assertEqual(len((harness / "runs.jsonl").read_text(encoding="utf-8").splitlines()), 1)
+
     def test_review_runs_once_and_lists_the_task(self) -> None:
         self.configure(reviewer_writing({"t1": []}))
 
