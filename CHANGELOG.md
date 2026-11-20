@@ -6,6 +6,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Issue triage happens once the maintainer approves an issue (in a comment, in chat, or through a dispatch-window
+  question), not on a weekly schedule. The maintainer or an agent acting on that approval applies
+  `restores-contract`; auto-fix still takes only issues that carry it, and `run.ps1` checks labels the same way.
+
 - Assessing or writing a design, recommending a next step, or proposing what to borrow starts from a direction
   judgment: whether the core design can support the Goal and whether the direction is worth continuing
   (`when-to-stop`). Premise checks, cost breakdowns and borrowable items listed in the request say which judgment
