@@ -144,16 +144,12 @@ def _read_decision(path: Path) -> tuple[dict[str, str] | None, str | None]:
     findings, dropped, error = normalize_findings(value.get("findings", []))
     if error:
         return None, error
-    review = value.get("review")
-    if review is not None and not isinstance(review, str):
-        return None, "review must be a string"
     return {
         "decision": decision,
         "next_task": next_task if isinstance(next_task, str) else None,
         "why": why.strip(),
         "findings": findings,
         "dropped": dropped,
-        "review": review,
     }, None
 
 
@@ -275,12 +271,9 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         cleanup_error = None
         progress_archived = 0
         if decision and decision["decision"] == "revise":
-            decision.pop("review")
             revised_run = previous["verify_run_id"]
         elif decision:
-            close_task(
-                root, config.get("plan_doc"), str(state["task_id"]), decision.pop("review")
-            )
+            close_task(root, config.get("plan_doc"), str(state["task_id"]))
             progress_archived, progress_error = archive_progress(root)
             errors = [clean_task(root, str(state["task_id"])), progress_error]
             cleanup_error = "; ".join(error for error in errors if error) or None

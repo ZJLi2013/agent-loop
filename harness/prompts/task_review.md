@@ -19,13 +19,15 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 
 ## 要做的事
 
-1. 先复述入口，再做下面的核对。{task_id} 写入或改动了项目实验记录时，入口是 task 行链接的实验文档所在目录的
-   `readme.md`（没有就是该文档本身）。定位入口只看 task 行与 `git diff --stat`，然后只读入口，不看 plan、
+1. 先复述入口，再做下面的核对。{task_id} 写入或改动了项目实验记录时，入口是被改动的项目实验记录本身（有多份时逐份）；
+   readme 只是索引，不当入口。定位入口只看 task 行与 `git diff --stat`，然后只读入口，不看 plan、
    Experiment Log 与入口链接的文档，把五项复述写进 `.harness/review/entry-restatement.md`，写完才读其他文件：
    做了哪几步、步与步怎么衔接、每步的输入与产出；每类数据从哪来、到哪去；训练与评估各用哪些数据（来源、数量、作用），
    训练与评估两张清单上方是否各给出数据合计（带单位与适用条件；不要求按作用分组求和）；术语是否在首次使用前定义；同一说明是否写了不止一处，入口是否含待 human 选的做法或 task 状态。
    复述不出的项、缺的合计、先用后定义的术语、重复的说明、待选做法与 task 状态合成一条 `must` 并选 `revise`，
    `claim` 逐项写缺的是哪一项与入口行号。没有项目实验记录时在该文件写「不适用」，跳过这一段。
+   复述写完后，核对本 task 改过的项目入口 readme、实验线 readme 与 plan「当前结论」：只放一句与链接，
+   不含结论正文、进展、revision 或设计；结论正文出现在项目实验记录以外的地方时，并入同一条 `must`。
    核对 plan document 与 task 列表里关于 {task_id} 的结论是否与原始证据一致，不一致就改正。
    同时核对实际交给被测方的题目、数据、样本或请求（落盘的产物，不是摘要）与设计一致，且仍在测
    Goal 要测的东西；有上述检查表时逐条对照。
@@ -42,8 +44,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    {task_id} 仍在回答当前阶段的问题时，把它并入最后一行（task 范围与结论），不新开行；下一条命令换方向
    （新问题、假设被推翻而要换做法、要 replan、human 纠偏、stop）时才追加一行。脉络格子不写读数与链接；{task_id} 的读数与文档链接写进
    Experiment Log，不写 `.harness/runs.jsonl` 行号或 `artifacts/` 路径：它们会被截断与删除。
-   当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写进 `review` 字段。
-   标 done、把 {task_id} 的段落搬进 archive、改写锚点链接都由 Harness 做，你不要做。
+   当前结论只写现在为真的判断；证据缺口、未链接的记录等审查推理写成 findings，不写进 plan。
+   标 done、删掉 {task_id} 的设计段、把指向它的链接改成纯文字都由 Harness 做，你不要做；要留下的结论与证据位置写进当前结论与 Experiment Log。
    下一个 task 已在列表里、且设计已审过时，不改写它，也不给它加交接或核验步骤；要新 task 时（取自
    `task.md` 的 Candidates 就删掉那一行），写好一个 `📝 proposed` task：最多一个未验证假设、验收检查点、
    失败去向、预算，并链接本地设计文档；plan 表格里的一行不算设计。设计写成 plan document 里以 task id
@@ -66,7 +68,6 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    选 `ask_human` 时，`why` 写你推荐的选项与理由；若有不受这个问题影响的 task，写进 `next_task`；human 不在时 executor 会先做它。
    上面若列出了开工前的审查意见与回应，核对被驳回的 `must` 驳得是否成立。
 4. 只改 plan document 与 task 列表；不改代码，不跑实验。task 列表保持原有表格、一行一个 task、原有状态词。
-   本次 review 的推理与依据写进 `review` 字段，Harness 把它归档到 {task_id} 名下。
 
 ## 意见门槛
 
@@ -86,5 +87,5 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 把下面的 JSON 写到 `{decision_file}`：
 
 ```json
-{"decision": "continue | revise | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}], "review": "<本 task 的 review 依据>"}
+{"decision": "continue | revise | ask_human | stop", "next_task": "<task id，continue 时必填，ask_human 时可选>", "why": "<一句话：为什么这一步推进 Goal>", "findings": [{"level": "must | suggest", "claim": "<一句话>", "consequence": "<不改会怎样>", "evidence": "<文件:行或事实>", "change": "<建议改法>", "human": false}]}
 ```

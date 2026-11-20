@@ -202,7 +202,7 @@ class DesignLocationTest(unittest.TestCase):
     def test_init_refuses_the_topic_layout_and_close_retires_the_fixed_one(self) -> None:
         plan_doc = ".agent-loop/plans/x/plan.md"
         self.link("plans/x/plan.md#data-cleanup-a1")
-        with self.assertRaisesRegex(HarnessError, "CLOSE archives only those"):
+        with self.assertRaisesRegex(HarnessError, "experiment records hold results, not designs"):
             initialize(
                 self.root, task_id="a1", plan_doc=plan_doc,
                 verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
@@ -210,11 +210,28 @@ class DesignLocationTest(unittest.TestCase):
 
         self.link("plans/x/plan.md#a1-data-cleanup")
         self.assertIsNone(design_location_error(self.root, "a1", plan_doc))
-        close_task(self.root, plan_doc, "a1", None)
+        close_task(self.root, plan_doc, "a1")
         plan = (self.root / plan_doc).read_text(encoding="utf-8")
-        archive = (self.runtime / "plans" / "x" / "plan-archive.md").read_text(encoding="utf-8")
         self.assertNotIn("id design", plan)
-        self.assertIn("id design", archive)
+        self.assertFalse((self.runtime / "plans" / "x" / "plan-archive.md").exists())
+
+    def test_experiment_records_beside_the_plan_are_not_designs(self) -> None:
+        for directory in ("exps/topic", "exps/x/sub-exp", "exps/x"):
+            (self.root / directory).mkdir(parents=True, exist_ok=True)
+            (self.root / directory / "a1.md").write_text("design\n", encoding="utf-8")
+        (self.root / "plan.md").write_text(DESIGN_PLAN, encoding="utf-8")
+        (self.root / "exps" / "x" / "plan.md").write_text(DESIGN_PLAN, encoding="utf-8")
+        cases = (
+            ("root plan, experiment record", "plan.md", "../exps/topic/a1.md", False),
+            ("root plan, task heading", "plan.md", "../plan.md#a1-data-cleanup", True),
+            ("line plan, record beside it", "exps/x/plan.md", "../exps/x/a1.md", False),
+            ("line plan, sub-exp file", "exps/x/plan.md", "../exps/x/sub-exp/a1.md", True),
+        )
+        for name, plan_doc, target, located in cases:
+            with self.subTest(name):
+                self.link(target)
+                error = design_location_error(self.root, "a1", plan_doc)
+                self.assertEqual(error is None, located, error)
 
 
 LEFTOVER_TASKS = """# Tasks

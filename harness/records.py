@@ -12,6 +12,7 @@ from harness.project import RUNTIME_DIR, memory_dir, runtime_dir, task_file
 from harness.storage import STATE_FILE, harness_dir, load_runtime
 
 ARCHIVE_DIR = "archive"
+SUB_EXP = "sub-exp"
 TASK_ARCHIVE = "tasks.md"
 PROGRESS_FILE = "progress.md"
 # Records with their own retirement rules; leftovers never reports them.
@@ -76,6 +77,13 @@ def archived_task_ids(root: Path) -> set[str]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if (task_id := _task_id(line))
     }
+
+
+def task_ids(root: Path) -> set[str]:
+    """Every task id in task.md, open or closed, and in the task archive."""
+    path = task_file(root)
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    return {task_id for line in lines if (task_id := _task_id(line))} | archived_task_ids(root)
 
 
 def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
@@ -195,13 +203,21 @@ def _relink(text: str, source: Path, target: Path) -> str:
     return _rewrite(text, change)
 
 
-def _retarget(text: str, base: Path, plan: Path, archive: Path, moved: set[str]) -> str:
-    def change(name: str, anchor: str) -> str | None:
-        if anchor not in moved or (base / name).resolve() != plan.resolve():
-            return None
-        return f"{_relpath(archive, base)}#{anchor}"
+_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
 
-    return _rewrite(text, change)
+
+def _unlink(text: str, doc: Path, plan: Path, dropped: set[str]) -> str:
+    def replace(match: re.Match[str]) -> str:
+        parts = _local(match.group(2))
+        if not parts:
+            return match.group(0)
+        name, anchor = parts
+        target = (doc.parent / unquote(name)).resolve() if name else doc.resolve()
+        if unquote(anchor) in dropped and target == plan.resolve():
+            return match.group(1)
+        return match.group(0)
+
+    return _LINK.sub(replace, text)
 
 
 def _structural_lines(lines: list[str]) -> list[bool]:
@@ -300,15 +316,15 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
                 located = True
             else:
                 stray.append(match.group(2))
-        elif target.is_file() and target.is_relative_to(plan.parent):
+        elif target.is_file() and target.is_relative_to(plan.parent / SUB_EXP):
             located = True
     if located and not stray:
         return None
-    found = f" (not archivable: {', '.join(stray)})" if stray else ""
+    found = f" (not a task section: {', '.join(stray)})" if stray else ""
     return (
         f"task {task_id} must link its design to a {plan_doc} section whose heading starts "
         f"with {task_id} (add <a id> before it if the slug differs) or to a file under "
-        f"{plan.parent.name}/; CLOSE archives only those{found}"
+        f"{SUB_EXP}/ beside the plan; project experiment records hold results, not designs{found}"
     )
 
 
@@ -326,62 +342,41 @@ def _mark_done(root: Path, task_id: str) -> None:
             return
 
 
-def _move_sections(root: Path, plan: Path, task_id: str, review: str | None) -> None:
-    archive = plan.with_name(f"{plan.stem}-archive{plan.suffix}")
+def _drop_sections(root: Path, plan: Path, task_id: str) -> None:
     lines = plan.read_text(encoding="utf-8").splitlines()
     spans = _task_sections(lines, task_id)
-    if not spans and not review:
+    if not spans:
         return
-    moved_lines = [line for start, end in spans for line in lines[start:end]]
-    anchors = [m.group(1) for line in moved_lines if (m := _ANCHOR_LINE.match(line))]
-    moved = set(anchors)
-
+    structural = _structural_lines(lines)
+    dropped = set()
+    for start, end in spans:
+        for index in range(start, end):
+            if not structural[index]:
+                continue
+            if anchor := _ANCHOR_LINE.match(lines[index]):
+                dropped.add(anchor.group(1))
+            elif heading := _HEADING.match(lines[index]):
+                dropped.add(_slug(heading.group(2)))
     kept = [
         line
         for index, line in enumerate(lines)
         if not any(start <= index < end for start, end in spans)
     ]
-    if spans:
-        link = f"{archive.name}#{anchors[0]}" if anchors else archive.name
-        kept.insert(spans[0][0], f"{task_id} 的设计、结果与 review 依据见 [归档]({link})。")
+    _atomic_write(plan, _unlink("\n".join(kept), plan, plan, dropped).rstrip() + "\n")
 
-    def to_archive(name: str, anchor: str) -> str | None:
-        return f"{archive.name}#{anchor}" if not name and anchor in moved else None
-
-    def into_archive(name: str, anchor: str) -> str | None:
-        if not name:
-            return f"{plan.name}#{anchor}" if anchor not in moved else None
-        if anchor in moved and (plan.parent / name).resolve() == plan:
-            return f"#{anchor}"
-        return None
-
-    def within_archive(name: str, anchor: str) -> str | None:
-        return into_archive(name, anchor) if name else None
-
-    body = _retarget(_rewrite("\n".join(kept), to_archive), plan.parent, plan, archive, moved)
-    section = _rewrite("\n".join(moved_lines), into_archive).strip()
-    if review:
-        section = f"{section}\n\n### {task_id} boundary review\n\n{review.strip()}".strip()
-    existing = archive.read_text(encoding="utf-8").rstrip() if archive.exists() else ""
-    existing = _rewrite(existing, within_archive)
-    _atomic_write(archive, f"{existing}\n\n{section}\n".lstrip("\n"))
-    _atomic_write(plan, body.rstrip() + "\n")
-
-    if not moved:
-        return
     for doc in runtime_dir(root).rglob("*.md"):
-        if doc.resolve() in {plan, archive.resolve()}:
+        if doc.resolve() == plan:
             continue
         text = doc.read_text(encoding="utf-8")
-        updated = _retarget(text, doc.parent, plan, archive, moved)
+        updated = _unlink(text, doc, plan, dropped)
         if updated != text:
             _atomic_write(doc, updated)
 
 
-def close_task(root: Path, plan_doc: str | None, task_id: str, review: str | None) -> None:
+def close_task(root: Path, plan_doc: str | None, task_id: str) -> None:
     _mark_done(root, task_id)
     if plan_doc and (root / plan_doc).is_file():
-        _move_sections(root, (root / plan_doc).resolve(), task_id, review)
+        _drop_sections(root, (root / plan_doc).resolve(), task_id)
     archive_closed_tasks(root)
 
 

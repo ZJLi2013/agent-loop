@@ -9,8 +9,9 @@ description: >-
 
 # Experiment-Driven Documentation
 
-把「假设 → 设计 → 执行 → 结果 → 分析 → 下一步」记进项目文档，让任何人（包括未来的自己）
-能复现思路与决策依据。
+把「假设 → 设计 → 执行 → 结果 → 分析 → 下一步」记进 plan document 的 task 设计段与 Experiment Log，
+task CLOSE 时把确立的结论写进项目实验记录（各文档的位置与禁写项见 `work-planning` 的文档表），让任何人
+（包括未来的自己）能复现思路与决策依据。
 
 **边界**：本 skill 是 `agent-loop` 里 DESIGN 那一格——**被选中的那个 task 要跑一轮验证时**
 用它。它只管**实验设计**（假设、方案、预期、判据）与 evidence，不代写 plan 的 Goal、
@@ -23,7 +24,7 @@ description: >-
 
 task 必须已获批准（不是 `📝 proposed`），且 plan document 已有 Goal；task 的 `rev` 必须等于
 plan 的 `Plan Revision`，`Plan Review` 必须是 `approved` 或 `unreviewed`。缺任一项就停止，
-回 `work-planning` 补齐。一次性 diagnostic 的 plan document 可以就是这份实验记录。
+回 `work-planning` 补齐。
 
 ---
 
@@ -169,7 +170,7 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
    不为它改项目文档或开 PR；否定发现（排除过的方案及其依据、被推翻的假设）也跟着读数留在 Experiment Log，
    阻止重试的那条按 `agent-memory` 写进 `episodes.md`，不进项目文档；证据确立或修正了项目此后的行为、接口或约束时，按上句写进文档，
    带上表达它必需的数值、适用条件与证据链接；
-   写入或改动了项目实验记录时，入口（实验线 readme 或 plan 链接的结论页）要让 human 只读它就能复述：
+   写入或改动了项目实验记录时，这份记录就是入口（readme 只是链过来的索引，见 `work-planning` 的文档表），要让 human 只读它就能复述：
    一张表列出每一步的输入、产出与交给谁，表前一句话说步与步怎么衔接；训练与评估各一张数据清单，每个来源一行（数量、作用），
    两张清单上方各先给训练、评估的数据合计（带单位与适用条件，共享样本不重复相加，「对」与「条」不直接相加；
    不要求按作用分组求和），未定的写「未定」；术语在首次使用前定义；同一说明只写一处；
