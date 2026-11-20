@@ -19,6 +19,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Fixed
 
+- `task-state` no longer tells the agent to ask the human when two tasks are blocked; like `agent-loop`, it sends the
+  chain back to `work-planning` to be split again. Pointers in `task-state`, `when-to-stop` and `design.md` that named
+  sections no longer present (failure triage table, 「岔出」, 「验收判据阶梯」, 「层 0 复现对方样例」) now name the
+  current sections, and `design.md` lists Goal Review `replan` as a Plan Revision source.
 - A `.git` directory without `HEAD` no longer counts as a repository (#234). The Codex reviewer's bubblewrap sandbox
   leaves an empty `.git/` mount point in monorepo sub-projects. `init` used to write `info/exclude` into it, and the
   memory hook resolved memory to `<sub>/.git/agent-loop/memory`, outside version control, and stopped reading
