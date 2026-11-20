@@ -15,7 +15,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 |---|---|
 | `work-planning` | Goal → plan document → proposed task → review；Goal Review、RECONCILE 与 task / Goal CLOSE |
 | `task-state` | 活跃 `task.md`、closed-task archive、检查点、失败计数、当前交接快照 |
-| `experiment-design` | 实验假设、决策门、验收阶梯、单轮 exp 记录、verifier 前 CLOSE self-audit |
+| `experiment-design` | 实验假设、决策门、验收门、单轮 exp 记录、verifier 前 CLOSE self-audit |
 | `agent-memory` | facts / episodes / lessons 的准入、检索、写回与去重 |
 | `agent-heartbeat` | detach 长任务的连接与日志心跳 |
 | `self-report` | agent-loop 自身缺陷的归因、去重、发布前检查与 issue 上报 |

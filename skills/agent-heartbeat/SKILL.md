@@ -3,7 +3,9 @@ name: agent-heartbeat
 description: >-
   观察 detach 的长任务是否还活着：到机器的连接还在，远端日志仍有预期输出。
   训练、评测、编译或其他预计超过 30 分钟的后台任务用它。
-  心跳间隔由预计时长决定，约 1 小时每 10 分钟，10 小时及以上每 30 分钟。
+  心跳间隔由预计时长决定，约 1 小时每 10 分钟，3 小时及以上每 30 分钟。
+  Use when watching a detached training, evaluation, build or other background job expected to run
+  longer than 30 minutes.
 ---
 
 # Agent Heartbeat

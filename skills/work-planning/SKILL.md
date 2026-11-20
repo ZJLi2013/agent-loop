@@ -166,7 +166,7 @@ CLOSE 分两段：
 
 1. **locked verifier 前**：worker 按 `experiment-design` 的 CLOSE self-audit 回读本 task 完整 diff，
    精炼文档并处理临时脚本。
-2. **verifier 通过后**：收口结论、归档已闭合记录；配置 reviewer 时脉络行归 reviewer。
+2. **verifier 通过后**：收口结论、归档已闭合记录。
 
 verifier 通过后：
 
@@ -197,7 +197,7 @@ Goal 完成或 pivot 时冻结 plan document 为 as-built。主线行改 `✅ do
 
 active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。
 
-项目配置了 reviewer 时，写脉络行归 reviewer：锁定 verifier 通过后 Harness 自动运行
+项目配置了 reviewer 时（谁写脉络行见「脉络」一节），锁定 verifier 通过后 Harness 自动运行
 `harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。
 标 done、删除关闭 task 的标题段、把指向它们的链接改成纯文字由 Harness 在
 reviewer 决定落盘后完成，reviewer 与 worker 都不手工删。
