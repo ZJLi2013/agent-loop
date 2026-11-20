@@ -6,6 +6,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Assessing or writing a design, recommending a next step, or proposing what to borrow starts from a direction
+  judgment: whether the core design can support the Goal and whether the direction is worth continuing
+  (`when-to-stop`). Premise checks, cost breakdowns and borrowable items listed in the request say which judgment
+  they serve and become preconditions or reminders. A minimal check is the next action only when the direction
+  cannot be judged without it; two distinct exits alone do not qualify. Cheap probes and human-specified order are
+  unchanged.
 - A task waiting for approval or for a resource (GPU, node, upstream artifact) gets its reversible, short preparation
   done while it waits: data and weights checked, run scripts changed, a short CPU smoke run, the launch command written
   into `progress.md`. Preparation uses only authorized resources and no pending budget, produces no acceptance
