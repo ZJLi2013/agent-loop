@@ -10,10 +10,9 @@ from harness.findings import normalize_findings
 from harness.fingerprint import dirty_files, file_digests
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import plan_location, plan_metadata
+from harness.process import execute_process
 from harness.project import render_prompt, review_checklist, task_file
 from harness.records import open_task_ids, task_links, task_row
-from harness.review import load_reviewer
-from harness.runner import execute_process
 from harness.storage import (
     atomic_write_json,
     exclude_runtime_from_git,
@@ -23,6 +22,7 @@ from harness.storage import (
     state_lock,
     utc_now,
 )
+from harness.task_review import load_reviewer
 
 PLAN_REVIEW_DIR = "plan-review"
 RUNNING_FILE = "running.json"

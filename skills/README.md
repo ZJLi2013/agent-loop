@@ -39,7 +39,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 | 人类可读输出 | `write-for-humans` rule |
 | 对外披露 / 脱敏 / 去私料 | `external-output-boundary` rule |
 | Harness runtime / evidence | `harness/` |
-| task 边界 reviewer 的 prompt 与决策格式 | `harness/prompts/task_review.md`（校验在 `harness/review.py`） |
+| task 边界 reviewer 的 prompt 与决策格式 | `harness/prompts/task_review.md`（校验在 `harness/task_review.py`） |
 | plan reviewer 的 prompt、报告与按 task × Plan Revision 的审查记录 | `harness/prompts/plan_review.md`（校验与记录在 `harness/plan_review.py`） |
 | 平台事件接线 | `adapters/<platform>/` |
 

@@ -10,6 +10,7 @@ from harness.findings import describe, normalize_findings
 from harness.fingerprint import verifier_drift, workspace_fingerprint
 from harness.journal import append_journal, new_run_id, prune_artifacts
 from harness.plan import pause_request
+from harness.process import execute_process
 from harness.project import (
     memory_dir,
     render_prompt,
@@ -19,7 +20,6 @@ from harness.project import (
 )
 from harness.protocol import Phase
 from harness.records import CLOSED_MARKERS, active_task_status, archive_progress, close_task
-from harness.runner import execute_process
 from harness.scratch import clean_task
 from harness.storage import (
     HARNESS_DIR,

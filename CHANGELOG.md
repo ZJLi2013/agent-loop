@@ -6,6 +6,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Harness modules are named for what they own: `harness.review` → `harness.task_review` (it pairs with
+  `harness.plan_review` and `prompts/task_review.md`), `harness.page` → `harness.pager`, `harness.runner` →
+  `harness.process` (subprocess execution, distinct from the `run.py` CLI), and `harness.attention` →
+  `harness.goal_review` (the config key, state fields and CLI command were already `goal_review` / `goal-review`).
+  The CLI, `python -m harness.run`, state files and reviewer paths are unchanged. Migration: code that imports these
+  modules uses the new names.
 - Issue triage happens once the maintainer approves an issue (in a comment, in chat, or through a dispatch-window
   question), not on a weekly schedule. The maintainer or an agent acting on that approval applies
   `restores-contract`; auto-fix still takes only issues that carry it, and `run.ps1` checks labels the same way.
