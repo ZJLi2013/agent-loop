@@ -8,6 +8,7 @@ from pathlib import Path
 from adapters.core import handle
 from adapters.protocol import HookAction, HookEvent, HookRequest
 from harness.project import memory_dir
+from harness.storage import exclude_runtime_from_git
 
 
 class AdapterCoreTest(unittest.TestCase):
@@ -79,6 +80,16 @@ class AdapterCoreTest(unittest.TestCase):
             broken.mkdir()
             (broken / ".git").write_text("gitdir: missing/worktree\n", encoding="utf-8")
             self.assertIn("找不到本项目的 memory", read_task(broken))
+
+            sub = main / "sub"
+            (sub / ".git" / "info").mkdir(parents=True)
+            local = (sub / ".agent-loop" / "memory").resolve()
+            local.mkdir(parents=True)
+            (local / "INDEX.md").write_text("- sub fact\n", encoding="utf-8")
+            exclude_runtime_from_git(sub)
+            self.assertEqual(memory_dir(sub), local)
+            self.assertIn("sub fact", read_task(sub))
+            self.assertEqual(list((sub / ".git" / "info").iterdir()), [])
 
     def test_active_workspace_without_harness_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

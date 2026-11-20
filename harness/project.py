@@ -47,7 +47,8 @@ def _git_common_dir(root: Path) -> Path | None:
     # Read the files instead of running git: the worktree may have been created on another host.
     dot_git = root / ".git"
     if dot_git.is_dir():
-        return dot_git
+        # A sandbox mount point (Codex under bubblewrap) leaves an empty .git in a sub-project of a monorepo.
+        return dot_git if (dot_git / "HEAD").is_file() else None
     if not dot_git.is_file():
         return None
     try:

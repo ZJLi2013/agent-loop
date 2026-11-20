@@ -55,9 +55,9 @@ if (-not $Issue) {
     }
 }
 
-# Triage labels are written by the maintainer; a relabel during the run does not stop it.
+# restores-contract is applied once the maintainer approves the fix; a relabel during the run does not stop it.
 $triage = Invoke-Checked gh issue view $Issue --repo $repo --json labels -q '.labels[].name'
-if ($triage -notcontains 'restores-contract') { Stop-Run "#$Issue is not triaged as restores-contract" }
+if ($triage -notcontains 'restores-contract') { Stop-Run "#$Issue is not triaged as restores-contract; apply it once the maintainer approves the fix" }
 $conflict = $triage | Where-Object { $_ -in 'changes-contract', 'out-of-scope' }
 if ($conflict) { Stop-Run "#$Issue is triaged both restores-contract and $($conflict -join ', ')" }
 

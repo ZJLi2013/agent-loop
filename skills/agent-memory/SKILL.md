@@ -22,7 +22,9 @@ procedural memory 就是 `skills/` 本身，不在这里重复索引。
 ## 四个文件
 
 **记忆属于被开发的那个项目，不属于本库。** 一个 git clone 只有一份，放在工作树之外的 git 目录里，
-这个 clone 的所有工作树（`git worktree add` 出来的也算）共用；不是 git 仓库的项目放在 `.agent-loop/memory/`：
+这个 clone 的所有工作树（`git worktree add` 出来的也算）共用；不是 git 仓库的项目放在 `.agent-loop/memory/`。
+项目根没有含 `HEAD` 的 `.git` 就不算 git 仓库：monorepo 里的子项目各用自己的 `.agent-loop/memory/`，由外层 clone 跟踪，
+不要往子项目根里的空 `.git/`（reviewer 沙箱的挂载点）里写：
 
 ```text
 <项目>/.git/agent-loop/memory/   # linked worktree 也解析到这里；不是 git 仓库时为 <项目>/.agent-loop/memory/

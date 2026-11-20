@@ -4,7 +4,45 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+### Changed
+
+- Issue triage happens once the maintainer approves an issue (in a comment, in chat, or through a dispatch-window
+  question), not on a weekly schedule. The maintainer or an agent acting on that approval applies
+  `restores-contract`; auto-fix still takes only issues that carry it, and `run.ps1` checks labels the same way.
+
+- Assessing or writing a design, recommending a next step, or proposing what to borrow starts from a direction
+  judgment: whether the core design can support the Goal and whether the direction is worth continuing
+  (`when-to-stop`). Premise checks, cost breakdowns and borrowable items listed in the request say which judgment
+  they serve and become preconditions or reminders. A minimal check is the next action only when the direction
+  cannot be judged without it; two distinct exits alone do not qualify. Cheap probes and human-specified order are
+  unchanged.
+- A task waiting for approval or for a resource (GPU, node, upstream artifact) gets its reversible, short preparation
+  done while it waits: data and weights checked, run scripts changed, a short CPU smoke run, the launch command written
+  into `progress.md`. Preparation uses only authorized resources and no pending budget, produces no acceptance
+  evidence, and the launch still goes through Harness admission once both approval and resource are in place.
+
+### Fixed
+
+- `task-state` no longer tells the agent to ask the human when two tasks are blocked; like `agent-loop`, it sends the
+  chain back to `work-planning` to be split again. Pointers in `task-state`, `when-to-stop` and `design.md` that named
+  sections no longer present (failure triage table, 「岔出」, 「验收判据阶梯」, 「层 0 复现对方样例」) now name the
+  current sections, and `design.md` lists Goal Review `replan` as a Plan Revision source.
+- A `.git` directory without `HEAD` no longer counts as a repository (#234). The Codex reviewer's bubblewrap sandbox
+  leaves an empty `.git/` mount point in monorepo sub-projects. `init` used to write `info/exclude` into it, and the
+  memory hook resolved memory to `<sub>/.git/agent-loop/memory`, outside version control, and stopped reading
+  `<sub>/.agent-loop/memory`. Such sub-projects now keep memory in `<sub>/.agent-loop/memory`. Migration: move
+  `<sub>/.git/agent-loop/memory/*` back into `<sub>/.agent-loop/memory/` and delete the stray `<sub>/.git/`.
+
 ### Added
+
+- Task review restates the experiment entry first (#237). When a task writes or changes a project experiment record,
+  the reviewer reads only the entry readme, writes `.harness/review/entry-restatement.md` (steps, data flow, training
+  and evaluation lists with their totals, terms, duplicates, pending choices and task status), and only then reads the
+  rest; gaps become one `must` with entry line numbers. The CLOSE self-audit asks the same of the entry and keeps its
+  step and data-flow skeleton when trimming.
+- `experiment-design` Phase 1 asks for a cheap probe before an expensive batch whose go / scope / method depends on
+  an unverified premise. The design states the probe's size, its criterion, and the command for each outcome, or
+  why no probe is run.
 
 - CLOSE lint (#231): `init` prepends `agent-loop-harness lint --changed --` to the locked verifier by default. Before
   the verifier runs, it checks the markdown changed since `init`: relative link targets exist and do not point into

@@ -324,7 +324,7 @@ task reviewer 写的 successor 与其他 task 一样，在 init 前经独立 pla
 代价是每个新 successor 多一次 plan reviewer 调用。task reviewer 指名的 successor 若与别的 task 共用记录文件（大小写撞名），
 决策在落盘前作废，免得无人值守时绑到一个 `init` 会拒绝的 task。记录只由 plan review 写入（`source="plan_review"` 与它的
 `run_id`）；最后一条记录不是 plan review 写的 task 视为未审。
-Plan Revision 只承担 human 纠偏。
+Plan Revision 只承担 human 纠偏与 Goal Review `replan`。
 
 reviewer 的输入有边界。判据只来自 Goal、`.agent-loop/review-checklist.md` 与设计文档显式链接的检查表；
 `archive/` 与 `*-archive.md` 只是历史，可作事实引用，不作判据。证据只来自 prompt 列出的输入、

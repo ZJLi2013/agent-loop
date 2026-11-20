@@ -74,7 +74,12 @@ Mainline Review: approved
 交接、改表与支线的规则归 `work-planning`。没有这一节的项目只有一个 Goal。
 
 状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。
-`proposed` 表示还在 Human Review Gate，批准前不执行；`dropped` 要在行尾链接说明为什么放弃——
+`proposed` 表示还在 Human Review Gate，批准前不执行。**等批准或等资源（GPU、节点、上游产物）期间，先把这个 task
+可逆、短时的准备做完**：核对数据与权重就位、改好运行所需的脚本、短时 CPU 冒烟、把开跑命令写进 `progress.md`。
+准备只用已授权的资源，不占所等资源、不花待批预算、不做不可逆操作；冒烟只查能不能跑，不跑实验、不出验收结果。
+做完就继续等，不反复冒烟、不扩范围。批准与资源都到位后，先按当前 revision 完成 Harness 准入，再执行备好的命令；
+准备不推进 task 状态，review 改了设计就按新设计改准备。
+`dropped` 要在行尾链接说明为什么放弃——
 被否决的候选是长期决定，删掉它下次还会有人重提。
 
 `✅ done / ❌ dropped` 是 CLOSE 转换时的瞬时状态：结论与 evidence 写回后，把整行移到
@@ -88,7 +93,7 @@ Mainline Review: approved
 
 等待 review 时允许「若干 `📝 proposed` + 零行 doing」；除此之外，**`🔬 doing` 有且只有一行。**
 批准时最高优先级 proposed 转 doing，其余转 todo。跑到一半要改别的东西时，先挪 `🔬`
-（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下问人。**
+（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下回 `work-planning` 重拆。**
 
 **具体的值不写进 `task.md`。** 远端节点、容器名、checkpoint 路径这类跨会话还要用的常量，
 归 `agent-memory` 的 `memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
@@ -101,8 +106,8 @@ Mainline Review: approved
 一个合格的检查点满足三条：
 
 1. **可执行或可观测**——一条命令、一个产物、一个数值阈值。「功能正常」「效果变好」不算。
-2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-design` 的「验收判据阶梯」。
-3. **失败时的去向是已知的**——不必写在表里，但要能按 `agent-loop` 的失败分流表归类。
+2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-design` 的「验收门」。
+3. **失败时的去向是已知的**——不必写在表里，但要能按 `when-to-stop`「先自修，再中止」的分类表归类。
    归不进任何一类的失败，说明这个 task 拆得不对，回 `work-planning` 重拆。
 
 再做一步长检查：**一个 task 最多跨越一个未验证假设。** 如果通过要同时赌两件事，或失败后
@@ -112,7 +117,7 @@ Mainline Review: approved
 写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。**
 
 写成「重构干净」「跑通」的检查点有双重代价：**既判不出完成，也挡不住漂移**——
-任何改动都能说自己在往那个方向走（`agent-loop` 的漂移判据要拿这个检查点当尺子）。
+任何改动都能说自己在往那个方向走（`agent-loop`「改动必须让当前检查点从不通过变成通过」要拿这个检查点当尺子）。
 
 ## 失败计数
 
@@ -189,4 +194,4 @@ Human 纠偏的 pause → revision → RECONCILE → resume 事务归 `work-plan
 新 agent 只读这些文件就能接手，不需要翻聊天记录。
 
 **满足这四条就是 DONE：报告结果然后停。** 评审、提上游、写博客都是 user 要了才做的岔出项，
-不是循环的出口（见 `agent-loop` 的「岔出」）。
+不是循环的出口（见 `agent-loop` 硬不变量的 DONE 一条）。
