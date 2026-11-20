@@ -87,13 +87,10 @@ Mainline Review: approved
 说明 consolidation 漏执行，先归档再 SELECT。
 
 `rev` 把 task 绑定到 plan document 的 `Plan Revision: N`，写作 `rN`；不属于 plan
-的维护项写 `—`。revision 只因 human 纠偏或 Goal Review replan 递增（见 `work-planning` 的 Human correction）；
-往下拆的新 task 绑当前 `rN`，不升版。human 修改 Goal 后 revision 必须递增，旧 revision 的 task 逐项改绑新 `rN`（在新 revision 下
-重审一次）或 blocked / dropped，不能按旧 `rN` 继续执行。
+的维护项写 `—`。revision 何时递增、旧 task 怎么改绑归 `work-planning` 的 Human correction。
 
-等待 review 时允许「若干 `📝 proposed` + 零行 doing」；除此之外，**`🔬 doing` 有且只有一行。**
-批准时最高优先级 proposed 转 doing，其余转 todo。跑到一半要改别的东西时，先挪 `🔬`
-（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下回 `work-planning` 重拆。**
+doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing 在 `work-planning` Gate 第 6 步。
+跑到一半要改别的东西时，先挪 `🔬`（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下回 `work-planning` 重拆。**
 
 **具体的值不写进 `task.md`。** 远端节点、容器名、checkpoint 路径这类跨会话还要用的常量，
 归 `agent-memory` 的 `memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
@@ -110,9 +107,8 @@ Mainline Review: approved
 3. **失败时的去向是已知的**——不必写在表里，但要能按 `when-to-stop`「先自修，再中止」的分类表归类。
    归不进任何一类的失败，说明这个 task 拆得不对，回 `work-planning` 重拆。
 
-再做一步长检查：**一个 task 最多跨越一个未验证假设。** 如果通过要同时赌两件事，或失败后
-无法判断哪条假设错了，就把 inspection / probe 拆成前一项。只把最近 1–2 个增量项写进活跃表，
-其余写成候选；每项变绿后再生成下一项。
+步长（一个 task 最多跨一个未验证假设、活跃表只写最近 1–2 项）归 `work-planning` Gate 第 2、3 步；
+每项变绿后再生成下一项。
 
 写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。**
 
@@ -189,9 +185,6 @@ Human 纠偏的 pause → revision → RECONCILE → resume 事务归 `work-plan
 
 ## 完成
 
-全部 task `✅` 或剩余失败被显式接受，且主线没有 `▶ next` 的 Goal；每个 `✅` 都有检查点的实际输出作为证据；
-结论已收口到 plan document（见 `work-planning`）；
-新 agent 只读这些文件就能接手，不需要翻聊天记录。
-
-**满足这四条就是 DONE：报告结果然后停。** 评审、提上游、写博客都是 user 要了才做的岔出项，
-不是循环的出口（见 `agent-loop` 硬不变量的 DONE 一条）。
+DONE 的判定与收尾动作在 `agent-loop` 硬不变量（没有 active task、主线没有 `▶ next`；closed 行归档、`leftovers`
+处理完）。报告前另核对：剩余失败已被显式接受；每个 `✅` 都有检查点的实际输出作为证据；结论已收口到 plan
+document（见 `work-planning`）；新 agent 只读这些文件就能接手，不需要翻聊天记录。核对完报告结果然后停。

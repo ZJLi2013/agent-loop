@@ -56,7 +56,8 @@ domain 名这份权重根本没训过、`num_frames=16` 被静默截成 13。样
 
 ## 三、归档与冻结的做法
 
-功能落地且不再迭代时归档，不删除。在文档顶部加：
+项目被跟踪的 feature 文档在功能落地且不再迭代时归档，不删除；`.agent-loop/plans/` 下的 plan 目录不归本节，
+Goal 冻结时按 `work-planning` 只留 plan document。在文档顶部加：
 
 ```markdown
 > Status: as-built (frozen YYYY-MM)。最新设计以 <活文档> 为准。
