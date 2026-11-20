@@ -35,6 +35,8 @@ from harness.storage import (
 
 REVIEWER_FILE = "reviewer.json"
 REVIEW_DIR = "review"
+# Plan and task review share this path: configured reviewer commands read it by name (docs/usage.md).
+PROMPT_FILE = "prompt.md"
 DECISIONS = ("continue", "revise", "ask_human", "stop")
 MAX_REVIEWS = 2
 DEFAULT_REVIEW_TIMEOUT_SECONDS = 1800.0
@@ -203,7 +205,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         review_dir.mkdir(parents=True, exist_ok=True)
         decision_path = review_dir / "decision.json"
         decision_path.unlink(missing_ok=True)
-        (review_dir / "prompt.md").write_text(
+        (review_dir / PROMPT_FILE).write_text(
             _prompt(root, config, state, previous, objection, revised_run), encoding="utf-8"
         )
 

@@ -21,6 +21,9 @@ from harness.goal_review import (
     schedule_goal_review,
 )
 from harness.journal import (
+    DEFAULT_MAX_ARTIFACTS,
+    DEFAULT_MAX_JOURNAL_ENTRIES,
+    DEFAULT_MAX_OUTPUT_BYTES,
     append_journal,
     new_run_id,
     prune_artifacts,
@@ -66,9 +69,6 @@ from harness.task_review import load_reviewer, review_followup, run_review
 DEFAULT_TIMEOUT_SECONDS = 300.0
 DEFAULT_MAX_ATTEMPTS = 3
 DEFAULT_MAX_WALL_SECONDS = 1800.0
-DEFAULT_MAX_OUTPUT_BYTES = 1_048_576
-DEFAULT_MAX_ARTIFACTS = 20
-DEFAULT_MAX_JOURNAL_ENTRIES = 1000
 
 
 def _transition(state: dict[str, Any], event: Event) -> None:

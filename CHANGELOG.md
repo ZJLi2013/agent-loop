@@ -29,6 +29,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Fixed
 
+- Plan review and the `plan-review --approve / --again / --respond` records keep `runs.jsonl`, artifacts and reviewer
+  output within the limits set at `init`, as the runner, task review and pager already did. They used built-in
+  defaults (1000 journal entries, 20 artifacts), so a project with smaller limits grew past them and one with larger
+  limits lost artifacts it meant to keep. The defaults still apply before the first `init`.
 - `task-state` no longer tells the agent to ask the human when two tasks are blocked; like `agent-loop`, it sends the
   chain back to `work-planning` to be split again. Pointers in `task-state`, `when-to-stop` and `design.md` that named
   sections no longer present (failure triage table, 「岔出」, 「验收判据阶梯」, 「层 0 复现对方样例」) now name the
