@@ -10,7 +10,9 @@ Decide first whether agent-loop takes a change, then which layer it goes to. [Th
 `design.md`](design.md#范围) lists the three public guarantees agent-loop maintains and how each kind of request is
 handled. The issue forms and the pull request template ask which guarantee a change maintains.
 
-The maintainer triages new issues every Monday and gives each open issue exactly one label:
+Each open issue gets exactly one triage label once the maintainer has decided on it, in an issue comment, in chat, or
+by approving a dispatch-window question. The maintainer or an agent acting on that approval applies the label; an
+issue nobody has approved stays untriaged:
 
 - `restores-contract`: an existing guarantee is broken, with one reproducible piece of evidence. It is a defect and
   needs no second project to confirm it.
@@ -130,8 +132,10 @@ Open an issue yourself when:
 - a project's `.agent-loop/reports/` holds a draft;
 - the problem shows only in a private project. Describe it with a synthetic reproduction.
 
-Only Kernel and Adapter bugs triaged `restores-contract` carry the `auto-fix` label. The maintainer writes triage
-labels and `.github/auto-fix/run.ps1` only reads them. Without `-Issue` it picks the lowest-numbered open issue
+The agent filing a Kernel or Adapter bug adds the `auto-fix` label, which only says the bug is a candidate.
+`restores-contract`, applied after the maintainer approves the fix as described under Admission, is what lets
+auto-fix take it. The label records that approval, not who applied it: agents and the maintainer may share a
+GitHub account. `.github/auto-fix/run.ps1` only reads triage labels. Without `-Issue` it picks the lowest-numbered open issue
 labelled both `auto-fix` and `restores-contract` that has no open pull request, and exits 0 when there is none.
 Once either path has chosen the issue, the script reads that issue's labels once, before it fetches or creates a
 worktree. It stops with exit 1 when `restores-contract` is missing or another triage label is also present, and
