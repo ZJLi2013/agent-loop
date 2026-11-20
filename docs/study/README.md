@@ -11,7 +11,7 @@ agent-loop 是服务于其他研究与工程项目的 harness。这里的调研�
 |---|---|---|---|
 | [`harness/`](harness/) 执行、预算与完成门 | 已落地 | [最小 Harness](harness/harness.md)；[心跳](harness/heartbeat.md)：进程存活与有效进展的区分 | `harness/`、`skills/agent-heartbeat` |
 | [`planning-review/`](planning-review/) 规划、纠偏与评审 | 已落地 | [渐进计划](planning-review/planning-contract.md)；[worker / reviewer](planning-review/multi_agent.md)：角色分工与外部参照 | `skills/work-planning`、`harness/plan*.py`、`harness/review.py` |
-| [`memory/`](memory/) 记忆与记录收敛 | 已落地 | [Memory](memory/memory.md)：检索与写回；[记录生命周期](memory/experiment-record-lifecycle.md)：归档与证据指针；[skill 精炼](memory/agent-memory-trim.md)：去重不改决定的做法与核对清单 | `skills/agent-memory`、`skills/task-state`、`harness/records.py` |
+| [`memory/`](memory/) 记忆与记录收敛 | 已落地 | [Memory](memory/memory.md)：检索与写回；[记录生命周期](memory/experiment-record-lifecycle.md)：归档与证据指针 | `skills/agent-memory`、`skills/task-state`、`harness/records.py` |
 | [`exploration-mode/`](exploration-mode/) 开放研究问题（v0.2） | 提案 | [探索模式](exploration-mode/exploration-mode.md)；[决定表](exploration-mode/research-automation.md)：外部系统对照；[研究地图模板](exploration-mode/research-map-template.md)：初稿；[autoresearch](exploration-mode/autoresearch.md)：单指标循环的控制结构 | 尚无；见 [ROADMAP](../../ROADMAP.md) |
 
 ## 跨 feature 文档
