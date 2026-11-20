@@ -13,20 +13,15 @@ description: >-
 task CLOSE 时把确立的结论写进项目实验记录（各文档的位置与禁写项见 `work-planning` 的文档表），让任何人
 （包括未来的自己）能复现思路与决策依据。
 
-**边界**：本 skill 是 `agent-loop` 里 DESIGN 那一格——**被选中的那个 task 要跑一轮验证时**
-用它。它只管**实验设计**（假设、方案、预期、判据）与 evidence，不代写 plan 的 Goal、
-当前结论或渐进 task；那些归 `work-planning`。
-
-`task.md` 的 schema、验收检查点、失败计数归 `task-state`；语态归 `write-for-humans`；
-「什么情况才停下来问人」归 `when-to-stop`。**本 skill 不定义任何任务清单格式。**
+**边界**：被选中的 task 要跑一轮验证时用。只管实验设计（假设、方案、预期、判据）与 evidence；Goal、当前结论、
+渐进 task 归 `work-planning`，`task.md` 的 schema、检查点、失败计数归 `task-state`，语态归 `write-for-humans`，
+何时停下问人归 `when-to-stop`。**本 skill 不定义任何任务清单格式。**
 
 ## 准入：plan 先于实验
 
 task 必须已获批准（不是 `📝 proposed`），且 plan document 已有 Goal；task 的 `rev` 必须等于
 plan 的 `Plan Revision`，`Plan Review` 必须是 `approved` 或 `unreviewed`。缺任一项就停止，
 回 `work-planning` 补齐。
-
----
 
 ## 两道门
 
@@ -71,32 +66,16 @@ GPU 占用、大量 token）。**便宜的是写，贵的是跑和读。**
 
 **性能类用层 1、数值类用层 3、准入用层 4，三者不混。**
 
----
-
 ## 文档结构：一篇一个结论
 
-主线、解释性膨胀与组织轴的通则在 `write-for-humans`。默认把本轮写进 plan document 的
-Experiment Log；只有 `work-planning` 判定需要拆分时才写 linked sub-exp。
+主线、解释性膨胀、组织轴与语态（含保留「关于世界的否定发现」与「排除 / 不做」表）归 `write-for-humans`。
+默认把本轮写进 plan 的 Experiment Log；只有 `work-planning` 判定需要拆分时才写 linked sub-exp。实验报告另守四条：
 
-**没有重点的报告等于没有结论的实验。** 模型默认按执行顺序平铺（L0/L1/L2 各一节各十几行），读者被迫认为它们同等重要，读完记不住任何一条。
-
-1. **开篇就是结论**：第一节叫「结论」，一句话 + 最多一张表，这句话要能独立成立。
-2. **写出三个并列的「核心结论」＝还没想清哪个是主的。**
-3. **支撑读数 ≤ 3 条**，按重要性排，不按实验编号排。
-4. **方法与前提降到后面**：环境、换算、参数核实回答「怎么得到的」，必须在但不占开头。
-5. **删掉空占位表**：`| 待填 |` 是把没做的事伪装成内容，总览表里一行 `⬜ 待跑` 就够。
-6. **L0/L1/L2 留在总览表**，正文按「结论 / 证据 / 单独要指出的事 / 可信度边界 / 方法」组织。
-7. **结论收口在 plan document 的稳定头部，Experiment Log / sub-exp 留证据。**
-   一个数只有一个定义处，别处用链接。
-
----
-
-## 文档语态
-
-归 `write-for-humans` 的「直接陈述当前为真的内容」，包括保留「关于世界的否定发现」与「排除 / 不做」表。
-实验里的否定事实（「假设不成立，RMS 0.05」）往往是最贵的那部分产出。
-
----
+1. 第一节叫「结论」：一句话 + 最多一张表，能独立成立；写出三个并列的「核心结论」＝还没想清哪个是主的。
+2. 支撑读数 ≤ 3 条，按重要性排，不按实验编号排；方法与前提（环境、换算、参数核实）放后面。
+3. L0/L1/L2 留在总览表，正文按「结论 / 证据 / 单独要指出的事 / 可信度边界 / 方法」组织；删掉 `| 待填 |`
+   这类空占位表，总览表里一行 `⬜ 待跑` 就够。
+4. 结论收口在 plan document 的稳定头部，Experiment Log / sub-exp 留证据；一个数只有一个定义处，别处用链接。
 
 ## Workflow
 
@@ -127,19 +106,8 @@ Experiment Log；只有 `work-planning` 判定需要拆分时才写 linked sub-e
 或 scratch 入口实现，不开 PR；检查点判假设成立与否，不判代码合入或 CI。无论结果都有用的埋点可以走 PR；
 上面「直接上线看生产信号」的那类改动，上线本身就是实验，不受此限。
 
-```markdown
-## Exp-<ID>: <标题>
-### 假设 / 决策价值
-<一句话>；否定结果会改变: <什么>
-### 领域先例（研究型假设必填）
-- <已知结论 / 常用做法 / 坑 + 链接>；没找到写「未找到」及查了哪里
-### 方案
-- 脚本 / 关键参数 / 对照组 / 变量
-### 预期与判据
-- 成立: <metrics>　不成立: <metrics>　判据: 层 <n>
-### 结果 / 分析 / 结论与 Next Step
-（待实验）
-```
+设计段按 [reference.md](reference.md) 的「实验设计模板」写：假设与否定结果会改变什么、领域先例（研究型必填）、
+方案、成立 / 不成立的判据与所在层。
 
 ### Phase 1.5 — Smoke Test
 
@@ -177,15 +145,11 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
    被测变体同理：结果为正时作为下一个 task 进产品代码（单独 PR，human 合入）；结果为否时删除，否定事实按第 1 项留在 Experiment Log；
 4. 实验 run 输出（日志、事件流、逐步状态与观测）不放在实验文档目录：结论、verifier 与 reviewer
    要读的数据写成文档里每个 run 一行的表，本地 run 目录放 task scratch（`.harness/tasks/<task_id>/`），远端的按第 5 项定去留，
-   文档只写留下的路径与复现参数（保留脚本的路径加参数）。Harness 指纹只含已跟踪改动和未被 gitignore 的
-   未跟踪文件：文档目录在指纹内时，留在那里的 run 输出在 verifier 之后删除会让证据 stale；在 gitignore 里
-   （如 `.agent-loop/`）时，verifier 之后改文档不会让证据 stale。结论标明不计入的 run 直接删除。
-   逐 run 表写读数、退出码与必要的输出摘录，不引用 `.harness/runs.jsonl` 行号或 `artifacts/`：两者按条数截断与删除；
-5. 本 task 在远端节点上建的资产（容器、checkout、venv 与 build 目录、run 输出、只为它拉的镜像与权重）逐项按三档定去留：
-   Hot（节点清单 `hot_models` 里的基础模型）不清理；Warm（repo 专有 ckpt）`-atime +7`，清理时 `! -name` 排除 Hot；
-   Cold（`.venv` / `build` / `__pycache__` / pip cache）`-mtime +3`。一次性的删除，要留的把路径与用途写进 `facts.md`。
-   只认交接笔记里记下的容器名与工作目录，不碰共享缓存与别人的容器；公共节点上不用 `docker image prune -a`、
-   `docker system prune -a`、`docker image rm <tag>`；
+   文档只写留下的路径与复现参数（保留脚本的路径加参数）。结论标明不计入的 run 直接删除。逐 run 表写读数、退出码与
+   必要的输出摘录，不引用 `.harness/runs.jsonl` 行号或 `artifacts/`：两者按条数截断与删除。文档目录在不在 Harness
+   指纹内决定 verifier 之后删 run 输出会不会让证据 stale，见 [reference.md](reference.md) 的「run 输出与 Harness 指纹」；
+5. 本 task 在远端节点上建了资产（容器、checkout、venv 与 build 目录、run 输出、只为它拉的镜像与权重）时，逐项按
+   [reference.md](reference.md) 的「远端资产去留」定去留；只认交接笔记里记下的容器名与工作目录，不碰共享缓存与别人的容器；
 6. 再读最终 diff：删掉一段内容不会改变未来判断或下一条命令，就不恢复；入口里解释步骤与数据流的骨架（第 1 项）不按这条删。
 
 不知道归属的文件不删；先留下一行边界并按 `when-to-stop` 处理。最常残留的是平均着墨的分级标题、

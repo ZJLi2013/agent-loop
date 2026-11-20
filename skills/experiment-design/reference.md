@@ -1,6 +1,6 @@
 # Reference
 
-主流程见 [SKILL.md](SKILL.md)。这里放两次真实事故的逐项清单，以及低频操作的做法。
+主流程见 [SKILL.md](SKILL.md)。这里放两次真实事故的逐项清单、低频操作的做法，以及正文按情形指过来的模板与细则。
 
 前两节是**某个领域的实例，不是通用判据**——它们是 Phase 0 那道门与「先复现对方样例」
 那条规则的由来。做同类工作时照着核，不同领域就只取教训、自己列清单。
@@ -65,3 +65,32 @@ Goal 冻结时按 `work-planning` 只留 plan document。在文档顶部加：
 
 之后该文档只读。耐久的 rationale 上提到活文档，feature 文档退化为「链接活文档 + 保留实验证据」；
 可选移入 `docs/archive/`。**partN / featureN 这类内部序号不外泄**——它们只在本仓库有意义。
+
+---
+
+## 四、实验设计模板
+
+```markdown
+## Exp-<ID>: <标题>
+### 假设 / 决策价值
+<一句话>；否定结果会改变: <什么>
+### 领域先例（研究型假设必填）
+- <已知结论 / 常用做法 / 坑 + 链接>；没找到写「未找到」及查了哪里
+### 方案
+- 脚本 / 关键参数 / 对照组 / 变量
+### 预期与判据
+- 成立: <metrics>　不成立: <metrics>　判据: 层 <n>
+### 结果 / 分析 / 结论与 Next Step
+（待实验）
+```
+
+## 五、run 输出与 Harness 指纹
+
+Harness 指纹只含已跟踪改动和未被 gitignore 的未跟踪文件：文档目录在指纹内时，留在那里的 run 输出在 verifier
+之后删除会让证据 stale；在 gitignore 里（如 `.agent-loop/`）时，verifier 之后改文档不会让证据 stale。
+
+## 六、远端资产去留
+
+本 task 在远端节点上建的资产逐项按三档定去留：Hot（节点清单 `hot_models` 里的基础模型）不清理；Warm（repo 专有 ckpt）
+`-atime +7`，清理时 `! -name` 排除 Hot；Cold（`.venv` / `build` / `__pycache__` / pip cache）`-mtime +3`。一次性的删除，
+要留的把路径与用途写进 `facts.md`。公共节点上不用 `docker image prune -a`、`docker system prune -a`、`docker image rm <tag>`。
