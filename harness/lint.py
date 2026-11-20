@@ -10,12 +10,18 @@ from urllib.parse import unquote, urlsplit
 
 from harness.errors import HarnessError
 from harness.project import RUNTIME_DIR
+from harness.records import SUB_EXP, task_ids
 from harness.storage import CONFIG_FILE, HARNESS_DIR, harness_dir, read_json
 
 LINT_ARGV = ["agent-loop-harness", "lint", "--changed"]
 ALLOW = "<!-- lint: allow -->"
 LEFTOVER = re.compile(r"待验证|待确认|在跑|预计|TBD|TODO")
+PENDING = re.compile(r"待\s*human")
+DESIGN_STATE = "design-state content belongs in the plan's task section"
 PRUNED_DIRS = (HARNESS_DIR, RUNTIME_DIR)
+
+_HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.*)$")
+_CELL_LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
 
 _FENCE = re.compile(r"^\s*(```|~~~)")
 _CODE_SPAN = re.compile(r"(`+).*?\1")
@@ -56,11 +62,25 @@ def lint_config(root: Path) -> dict[str, Any]:
     return {"enabled": True, "base": base, "version": version}
 
 
-def _base(root: Path) -> str:
-    config = harness_dir(root) / CONFIG_FILE
-    if config.exists():
-        return (read_json(config).get("lint") or {}).get("base") or "HEAD"
-    return "HEAD"
+def _config(root: Path) -> dict[str, Any]:
+    path = harness_dir(root) / CONFIG_FILE
+    return read_json(path) if path.exists() else {}
+
+
+def _design_state(prose: str, ids: set[str]) -> str | None:
+    if heading := _HEADING.match(prose):
+        first = re.split(r"[\s:：（(]", heading[1].strip(), maxsplit=1)[0]
+        if first in ids:
+            return f"heading starts with task id {first!r}"
+    stripped = prose.strip()
+    if stripped.startswith("|") and stripped.endswith("|"):
+        first = stripped.strip("|").split("|")[0].strip()
+        first = link[1] if (link := _CELL_LINK.fullmatch(first)) else first
+        if first in ids:
+            return f"table row for task id {first!r}"
+    if PENDING.search(prose):
+        return "'待 human'"
+    return None
 
 
 def _markdown(listing: str) -> list[str]:
@@ -99,7 +119,7 @@ def _link_problem(root: Path, source: Path, target: str) -> str | None:
     return None if path.exists() else "dead link"
 
 
-def _check(root: Path, relative: str, added: set[int] | None) -> list[str]:
+def _check(root: Path, relative: str, added: set[int] | None, ids: set[str] | None) -> list[str]:
     source = root / relative
     problems = []
     fenced = False
@@ -121,18 +141,31 @@ def _check(root: Path, relative: str, added: set[int] | None) -> list[str]:
                 problems.append(
                     f"{relative}:{number}: leftover {word[0]!r}; finish the line or mark it {ALLOW}"
                 )
+            if ids is not None and (reason := _design_state(prose, ids)):
+                problems.append(f"{relative}:{number}: {reason}; {DESIGN_STATE} or mark it {ALLOW}")
     return problems
 
 
 def lint_changed(root: Path) -> list[str]:
     """Problems in the markdown changed since this task's init (HEAD without a task)."""
     root = root.resolve()
-    base = _base(root)
+    config = _config(root)
+    base = (config.get("lint") or {}).get("base") or "HEAD"
+    plan_doc = config.get("plan_doc")
+    ids = task_ids(root) if plan_doc else set()
+    plan = (root / plan_doc).resolve() if plan_doc else None
+
+    def design_ids(relative: str) -> set[str] | None:
+        path = (root / relative).resolve()
+        if plan and (path == plan or path.is_relative_to(plan.parent / SUB_EXP)):
+            return None
+        return ids
+
     tracked = _markdown(_git(root, "diff", "--name-only", "-z", "--relative", "--diff-filter=d", base, "--"))
     untracked = _markdown(_git(root, "ls-files", "--others", "--exclude-standard", "-z"))
     problems = [f"{relative}: not tracked by git" for relative in untracked]
     for relative in tracked:
-        problems += _check(root, relative, _added_lines(root, base, relative))
+        problems += _check(root, relative, _added_lines(root, base, relative), design_ids(relative))
     for relative in untracked:
-        problems += _check(root, relative, None)
+        problems += _check(root, relative, None, design_ids(relative))
     return problems

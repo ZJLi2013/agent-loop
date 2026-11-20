@@ -91,6 +91,55 @@ class LintTest(unittest.TestCase):
 
         self.assertEqual(lint_changed(self.root), [])
 
+    def design_project(self) -> None:
+        header = "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
+        self.write(".agent-loop/task.md", header + "| P0 | w5 | r1 | x | y | 🔬 doing | 0 |\n")
+        self.write(".agent-loop/archive/tasks.md", header + "| P1 | w3 | r1 | x | y | ✅ done | 0 |\n")
+        self.write("plan.md", "# Plan\n\n## w5 设计\n")
+        self.write("exps/topic/notes.md", "# 主题\n\n| w3 | 旧行 |\n")
+        self.commit()
+
+    def configure(self) -> None:
+        self.write(".harness/config.json", json.dumps(
+            {"plan_doc": "plan.md", "lint": {"base": self.git("rev-parse", "HEAD").strip()}}))
+
+    def design_hits(self) -> list[str]:
+        return [p for p in lint_changed(self.root) if "design-state" in p]
+
+    def test_design_state_on_lines_this_task_wrote(self) -> None:
+        self.design_project()
+        self.configure()
+        self.write("exps/topic/notes.md", "\n".join([
+            "# 主题", "", "| w3 | 旧行 |", "",
+            "## w5 同预算对照", "| [w3](../../plan.md) | done |", "做法待 human 选",
+            "## w5 已知例外 <!-- lint: allow -->", "## w50 不是 task",
+        ]))
+
+        hits = self.design_hits()
+
+        self.assertEqual([h.split(": ")[0] for h in hits],
+                         ["exps/topic/notes.md:5", "exps/topic/notes.md:6", "exps/topic/notes.md:7"], hits)
+
+    def test_plan_and_sub_exp_skip_only_design_state(self) -> None:
+        self.design_project()
+        self.configure()
+        self.write("plan.md", "# Plan\n\n## w5 设计\n\n## w6 设计\n待 human 批\n[gone](missing.md)\n")
+        self.write("sub-exp/w6.md", "## w6 并行实验\n")
+        self.git("add", "-A")
+
+        problems = lint_changed(self.root)
+
+        self.assertEqual(problems, ["plan.md:7: dead link: missing.md"])
+
+    def test_without_config_only_pending_is_checked(self) -> None:
+        self.design_project()
+        self.write("exps/topic/notes.md", "# 主题\n\n| w3 | 旧行 |\n\n## w5 设计\n待 human 批\n")
+
+        hits = self.design_hits()
+
+        self.assertEqual(len(hits), 1, hits)
+        self.assertTrue(hits[0].startswith("exps/topic/notes.md:6: '待 human'"), hits)
+
     def test_wrapper_runs_the_verifier_only_when_lint_passes(self) -> None:
         argv = ["--root", str(self.root), "lint", "--changed", "--", sys.executable, "-c", "raise SystemExit(3)"]
         self.assertEqual(run.main(argv), 3)

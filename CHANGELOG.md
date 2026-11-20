@@ -130,13 +130,21 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
-- `work-planning` owns one table of a Goal's documents (#233): the project entry readme (long-term direction, then
-  the current Goal, then the current experiment; no task list), `task.md`, the plan document, its sub-exp, and the
-  project's tracked experiment record, each with location, count, contents, forbidden contents and when it is
-  written or retired. A sub-experiment is a task design section in the same plan, not a new plan or
-  project document; the experiment record holds one research question's conclusions, data and how to rerun it, never
-  task status, budgets, pending human choices or next steps. `experiment-design` no longer sends design and next
+- `work-planning` owns one table of a Goal's documents (#233): the project entry readme and the experiment-line
+  readme (links only: direction, current Goal, an index, one status word per loop), `task.md`, the plan document,
+  the task design (a plan section or `sub-exp/`), and the project's tracked experiment record, each with location,
+  contents, forbidden contents and the check that enforces them. A sub-experiment is a task design section in the
+  same plan, not a new plan or project document; the experiment record is the one place a conclusion is defined,
+  with its data and how to rerun it, never task status, budgets, pending human choices or designs. Readmes and the
+  plan's current conclusions give one sentence and a link. `experiment-design` no longer sends design and next
   steps to project documents, and no longer lets the plan document double as the experiment record.
+- Each forbidden entry in that table now has a check (#233). `init` accepts a task design only in a plan section
+  whose heading starts with the task id or in `sub-exp/` beside the plan; any other file in the plan directory,
+  including an experiment record beside a root-level or experiment-line plan, is refused. CLOSE lint refuses lines
+  the task added outside the plan and `sub-exp/` that are headings starting with a task id, table rows whose first
+  cell is a task id, or `待 human`. The task reviewer restates the changed experiment record, not the readme, and
+  checks that readmes and current conclusions hold only a sentence and links. Migration: a task whose design lives
+  in a plan-directory file other than `sub-exp/` must move it before its next `init`; running tasks are unaffected.
 
 - Task CLOSE deletes the task's design sections from the plan instead of moving them to `<plan>-archive.md` (#233).
   Links in `.agent-loop/` that pointed at the deleted anchors become plain text. The task reviewer's decision no

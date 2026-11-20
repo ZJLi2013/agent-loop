@@ -12,6 +12,7 @@ from harness.project import RUNTIME_DIR, memory_dir, runtime_dir, task_file
 from harness.storage import STATE_FILE, harness_dir, load_runtime
 
 ARCHIVE_DIR = "archive"
+SUB_EXP = "sub-exp"
 TASK_ARCHIVE = "tasks.md"
 PROGRESS_FILE = "progress.md"
 # Records with their own retirement rules; leftovers never reports them.
@@ -76,6 +77,13 @@ def archived_task_ids(root: Path) -> set[str]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if (task_id := _task_id(line))
     }
+
+
+def task_ids(root: Path) -> set[str]:
+    """Every task id in task.md, open or closed, and in the task archive."""
+    path = task_file(root)
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    return {task_id for line in lines if (task_id := _task_id(line))} | archived_task_ids(root)
 
 
 def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
@@ -308,7 +316,7 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
                 located = True
             else:
                 stray.append(match.group(2))
-        elif target.is_file() and target.is_relative_to(plan.parent):
+        elif target.is_file() and target.is_relative_to(plan.parent / SUB_EXP):
             located = True
     if located and not stray:
         return None
@@ -316,7 +324,7 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
     return (
         f"task {task_id} must link its design to a {plan_doc} section whose heading starts "
         f"with {task_id} (add <a id> before it if the slug differs) or to a file under "
-        f"{plan.parent.name}/; CLOSE removes only those{found}"
+        f"{SUB_EXP}/ beside the plan; project experiment records hold results, not designs{found}"
     )
 
 

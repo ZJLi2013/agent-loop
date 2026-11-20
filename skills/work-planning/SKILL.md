@@ -16,19 +16,23 @@ description: >-
 默认只建一份文档，不区分 feature / exp。Goal、plan 目录与 task id 用说明内容的短语义名（kebab-case，如
 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `P0` 优先级与 `rN` revision。
 
-一个 Goal 的文档只有下面几类，各写各的，不互相复制：
+一个 Goal 的文档只有下面几类，各写各的，不互相复制。每行的「不写什么」都有一个执行点：能按位置或字面判定的由 Harness
+拒绝，只能按含义判定的由 task reviewer 在 CLOSE 核对：
 
-| 文档 | 位置 | 份数 | 写什么 | 不写什么 | 何时写 / 退役 |
-|---|---|---|---|---|---|
-| 项目入口 readme | 项目根 `readme.md` | 每项目一份 | 从宏观到微观：长线方向、当前 Goal、当前实验项目与进展，各一句并链到 plan 或实验记录 | task 清单与状态（只在 `task.md`）、设计 | Goal 或长线方向变化时 |
-| `task.md` | `.agent-loop/task.md` | 每项目一份 | 主线、task 行（状态、`rN`、检查点、预算、失败计数）、候选 | 设计、读数、结论 | 状态转移时；closed 行进 archive |
-| plan document | `.agent-loop/plans/<goal>/plan.md` | 每 Goal 一份 | Goal、设计、当前结论、脉络、每个 task 一个以 task id 开头的设计段、Experiment Log | 项目长期事实的唯一副本 | Goal 开始时建；完成时冻结 |
-| `sub-exp/<id>.md` | plan 同目录 | 按需 | 并行的独立实验 | 新 task 的设计 | Goal 冻结时并进头部后删 |
-| 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`） | 每个研究问题一份，按问题命名 | 确立的结论、支撑数据与它的位置、怎么重跑 | task 状态与进度、预算、以 task id 命名的文件或标题、待 human 选的选项、下一步与设计 | task CLOSE 时写入（`experiment-design` CLOSE 第 1 项） |
+| 文档 | 位置 | 写什么 | 不写什么 | 执行点 |
+|---|---|---|---|---|
+| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句、文档索引，都只放链接 | 进展、结论、revision、task 清单与状态、设计 | task reviewer 在 CLOSE 核对 |
+| 实验线 readme | `exps/<线>/readme.md` | 每环一行：状态词加链接 | 结论正文、设计、待选项 | task reviewer 在 CLOSE 核对 |
+| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线、task 行（状态、`rN`、检查点、预算、失败计数）、候选 | 设计、读数、结论 | Harness 解析 task 行 |
+| plan document | `.agent-loop/plans/<goal>/plan.md`，每 Goal 一份 | Goal、设计、当前结论（每条一句加链接）、脉络、task 设计段、Experiment Log | 项目结论的正文定义 | task reviewer 在 CLOSE 核对 |
+| task 设计 | plan 内以 task id 开头的标题段，或 plan 目录下的 `sub-exp/<id>.md`（并行的独立实验） | 一个 task 的设计 | — | `init` 拒绝指向别处的设计链接 |
+| 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`），每个研究问题一份，按问题命名 | 结论（唯一定义处）、支撑数据与它的位置、怎么重跑 | 以 task id 开头的标题、以 task id 为行的表、待 human 选的项、设计 | CLOSE lint 拒绝本 task 新增的这些行 |
 
 子实验、子 feature 是同一 plan 里的一个 task 设计段，不另起 plan，也不另起项目文档；新 Goal 才有新 plan。
+结论只在项目实验记录定义一次，readme 与 plan「当前结论」只放一句并链过去，进展与状态只在 `task.md`。
 待 human 选的做法走结构化提问（`when-to-stop`），不进任何文档。
-task 关闭时 Harness 删掉它的设计段，不留 archive；要留下的结论写进当前结论、Experiment Log 或项目实验记录。
+task 关闭时 Harness 删掉它的设计段，不留 archive；要留下的结论写进项目实验记录，当前结论与 Experiment Log 链过去。
+`sub-exp/` 在 Goal 冻结时并进头部后删除。
 
 ```markdown
 # <Goal 名称>
@@ -44,7 +48,7 @@ Plan Review: proposed
 验收怎么判、不靠 human 的领域判断。机制有多步时附一张示意图>
 
 ## 当前结论
-<现在为真的判断，每条对应它证实或推翻的设计要素；设计中就明确写未验证>
+<现在为真的判断，每条一句、对应它证实或推翻的设计要素，并链到定义它的项目实验记录；设计中就明确写未验证>
 
 ## 脉络
 
@@ -102,7 +106,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    那次 plan review 就是独立架构评审：目标是否每个概念一个 owner、第一版该不做什么，修正记进 plan。
    这个 task 关闭前不拆后续 task。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。task 行链接它的设计：plan 里以
-   task id 开头的标题段，或 plan 目录下的独立文件；CLOSE 只删除前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
+   task id 开头的标题段，或 plan 目录下 `sub-exp/` 里的文件；CLOSE 只删除前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
 4. 配置 reviewer 时，提交后在同一轮运行 `plan-review`，不留到下一轮：task 在它绑定的每个 revision 下审一次，
    同一 revision 内改设计不重审。Harness 启用、未配 pager 时，plan 停在 `proposed` 而审查没做完，stop hook 不放行。
    reviewer 只给准入意见，分 `must`（不改就方向错、结论错或白跑昂贵实验）与 `suggest`（严谨性），各最多 3 条。

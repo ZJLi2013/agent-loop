@@ -169,6 +169,9 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
   目标落在 `.harness/` 或 `.agent-loop/` 里直接判错，否则不存在即判死链。
 - 其余检查：未跟踪的文档逐个报出；本 task 写下的行（相对 `base` 新增或改过，未跟踪文件取全部行）不含
   `待验证|待确认|在跑|预计|TBD|TODO`，被命中的那一行写 `<!-- lint: allow -->` 即豁免。fenced code 与行内 code 不查。
+- 设计态内容：本 task 写下的行不是以 task id 开头的标题、首格是 task id 的表行，也不含 `待 human`；同样以 allow 标记豁免。
+  task id 取 `task.md` 与 task archive 的全部 task 行（`records.task_ids`），在一次调用开始时连同 config 的 `plan_doc` 读一次；
+  没有 config 或 `plan_doc` 时只查 `待 human`。`plan_doc` 与它目录下 `sub-exp/` 的文件只豁免这一类，链接与残留词照查。
 - 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
   并返回它的退出码，没给命令时退出 0。git 调用失败经 `HarnessError` 退出 2。
 
@@ -276,9 +279,9 @@ run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit�
 
 CLOSE 只删除以 task id 开头的标题段（连同标题前的 `<a id>`），`.agent-loop/` 里指向它们的链接改成纯文字，所以 `init --plan-doc` 在准入时
 检查 task 设计的位置：task 行里的本地链接相对 `task.md` 解析；指向 plan 的链接必须全部落在这类标题段内（按标题的
-GitHub slug 或段首 `<a id>` 匹配），且至少一个链接合格；plan 目录内已存在的独立文件（如 `sub-exp/<id>.md`）也合格，
-CLOSE 不删它。主题标题、共用标题、不带 anchor 的 plan 链接与 plan 目录外的文件（含 `.harness/tasks/<id>/`）
-都不合格。slug 与 GitHub 不一致（如重复标题的 `-1` 后缀）时表现为误拒，修法是在 task 标题前加 `<a id>`，guard 不猜。
+GitHub slug 或段首 `<a id>` 匹配），且至少一个链接合格；plan 目录下 `sub-exp/` 里已存在的文件也合格，
+CLOSE 不删它。主题标题、共用标题、不带 anchor 的 plan 链接与 `sub-exp/` 外的文件（含 plan 同目录的项目实验记录与
+`.harness/tasks/<id>/`）都不合格：plan 在项目根或实验线目录时，「plan 目录下任何文件」会把项目实验记录算成设计。slug 与 GitHub 不一致（如重复标题的 `-1` 后缀）时表现为误拒，修法是在 task 标题前加 `<a id>`，guard 不猜。
 旧 plan 里已写在主题标题下的设计不会被追溯迁移；它们的 task 再次 `init` 前须按上述位置改写。
 
 CLOSE self-audit 是 `experiment-design` 的 Policy 步骤，不增加状态：worker 在 locked verifier 前回读
