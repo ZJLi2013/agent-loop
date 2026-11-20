@@ -124,7 +124,7 @@ doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing �
 自修一次就 +1，并在该 task 的实验文档里记一行「试了什么、结果如何」。
 计数触及 `when-to-stop` 的中止条件时才停。
 
-## 跨 session 交接
+## 何时换会话
 
 **task 执行中不换会话；task 关闭后可以换，会话变重才换。** 关闭指验证通过、reviewer 的关闭决定（`continue` /
 `ask_human` / `stop`）落盘、CLOSE 与交接写完；没配 reviewer 时是验证通过后 CLOSE 跑完 `clean-task` 与 `disable`。
@@ -139,6 +139,8 @@ doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing �
 宿主设了 `AGENT_LOOP_SESSION_HOST`（如调度工具）时，每次关闭都写交接并结束这一轮，由宿主判续用还是新开。
 `verify` 通过时输出里有 `handoff`（有宿主，或本会话压缩过）就照它做，不在同一轮开下一个 task。
 agent 看不到自己的上下文读数，不凭感觉换。
+
+## 交接笔记
 
 四份东西分工不同，**活跃状态覆盖，历史证据归档**：
 

@@ -89,22 +89,25 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    当前结论并链接证据。回答一个问题的 Goal（判定、对比、复现、修 bug）退出条件仍是那个结论。human 提出的实现方案默认采用，
    但和 agent 自己的方案一样要对照 Goal；与 Goal 冲突时（包括 Goal 变了之后）先指出冲突，由 human 决定改还是留，
    不自行替换，也不默默照做。
-2. 写设计前按机制名搜一次 memory 的 `rejected`。多段管线先让每段的最简版本端到端跑通，再加深其中一段。
-   供读者反复取用的产出，最简版本还要被读者用上一次才加深；测量与判据、健壮性、演练、第二层抽象都算加深。
-   还没被用上时，下一个 task 只做让它被用上的事：接进一个真实项目、改读法、删掉挡路的步骤。
-   一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
-   交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
-   渲染样例；改它们等于改设计。删除或放宽一道门时，写明它防的风险由哪道检查接替。
-   改代码的 task，设计写明落在哪个现有 owner 及为什么不放别处、按机制名搜到并复用的现有机制、要改的文件，
-   以及每条行为由哪个测试钉住；局部可逆的选择留给实现。
-   此外改动新增跨 run 持久的状态、读写或权限边界、并发写者，或有多个调用方的接口时，实现前展开成约一页
-   模块契约：唯一 owner 与职责、数据布局与生命周期、谁以什么模式读写、不变量（各配一个测试）、并发与失败行为、
-   不做的事。Gate 上 human 只审其中的不变量与取舍，不审代码布局。
-   改代码的工作引入新抽象、给仓库已有的概念（一个检查、一个状态读取、一个 registry）再写一份实现，或改跨模块
-   使用的接口时，拆 task 前先写类级设计：现状与目标类图、关键场景的一张时序图（画法见 `code-to-uml-diagram`）；
-   每个概念一个 owner，写明替换或复用哪份现有实现；最小迁移顺序，每步可独立合并。它写进第一个 task 的设计，
-   那次 plan review 就是独立架构评审：目标是否每个概念一个 owner、第一版该不做什么，修正记进 plan。
-   这个 task 关闭前不拆后续 task。
+2. 写设计：
+   - 先按机制名搜一次 memory 的 `rejected`。
+   - 多段管线先让每段的最简版本端到端跑通，再加深其中一段。供读者反复取用的产出，最简版本还要被读者用上一次才加深；
+     测量与判据、健壮性、演练、第二层抽象都算加深。还没被用上时，下一个 task 只做让它被用上的事：接进一个真实项目、
+     改读法、删掉挡路的步骤。
+   - 一个 task 最多跨一个未验证假设；失败后无法定位哪条假设错了，就先拆 probe / inspection。
+   - 交给被测方的题目、数据、样本或请求，连同决定它们的 schema / 模板 / 候选定义，在实现前写进设计并附
+     渲染样例；改它们等于改设计。
+   - 删除或放宽一道门时，写明它防的风险由哪道检查接替。
+   - 改代码的 task，设计写明落在哪个现有 owner 及为什么不放别处、按机制名搜到并复用的现有机制、要改的文件，
+     以及每条行为由哪个测试钉住；局部可逆的选择留给实现。
+   - 模块契约：改动新增跨 run 持久的状态、读写或权限边界、并发写者，或有多个调用方的接口时，实现前展开成约一页：
+     唯一 owner 与职责、数据布局与生命周期、谁以什么模式读写、不变量（各配一个测试）、并发与失败行为、
+     不做的事。Gate 上 human 只审其中的不变量与取舍，不审代码布局。
+   - 类级设计：改代码的工作引入新抽象、给仓库已有的概念（一个检查、一个状态读取、一个 registry）再写一份实现，或改跨模块
+     使用的接口时，拆 task 前先写现状与目标类图、关键场景的一张时序图（画法见 `code-to-uml-diagram`）；
+     每个概念一个 owner，写明替换或复用哪份现有实现；最小迁移顺序，每步可独立合并。它写进第一个 task 的设计，
+     那次 plan review 就是独立架构评审：目标是否每个概念一个 owner、第一版该不做什么，修正记进 plan。
+     这个 task 关闭前不拆后续 task。
 3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。task 行链接它的设计：plan 里以
    task id 开头的标题段，或 plan 目录下 `sub-exp/` 里的文件；CLOSE 只删除前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
 4. 配置 reviewer 时，提交后在同一轮运行 `plan-review`，不留到下一轮：task 在它绑定的每个 revision 下审一次，
@@ -168,10 +171,13 @@ CLOSE 分两段：
    精炼文档并处理临时脚本。
 2. **verifier 通过后**：收口结论、归档已闭合记录。
 
-verifier 通过后：
+verifier 通过后，项目配置了 reviewer 时（谁写脉络行见「脉络」一节）Harness 自动运行 `harness review`，
+worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。标 done、删除关闭 task 的标题段、
+把指向它们的链接改成纯文字由 Harness 在 reviewer 决定落盘后完成，reviewer 与 worker 都不手工删。此外：
 
 1. 把该 task 的多轮实验合并成一个 task 结论，更新「当前结论」，把它并入脉络的当前阶段行，换方向时开新行；
-2. Experiment Log 的已收口行改为 `promoted / superseded`，留到 Goal 冻结；
+2. Experiment Log 的已收口行改为 `promoted / superseded`，留到 Goal 冻结；active Experiment Log 超过 10 行是
+   漏执行告警，不是按行截断规则；
 3. 通知 `task-state` 归档 closed task（`progress.md` 的旧交接段由 Harness 在 CLOSE 时移进 archive），通知
    `agent-memory` 只保留未来仍会改变选择的结论、`disproved / rejected` 与证据指针；
 4. 本 task 的临时文件（kit、workspace、本地 run 目录、job 清单、PR 草稿、task 专用 verifier）都放
@@ -194,10 +200,3 @@ Goal 完成或 pivot 时冻结 plan document 为 as-built。主线行改 `✅ do
 关键点并进头部，其余连同目录里的其它文件删除，冻结后 plan 目录只剩 plan document。这些文件此时进入 `leftovers`，
 按 CLOSE 第 4 步处理；暂停中的 Goal 不进。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。
-
-active Experiment Log 超过 10 行是漏执行告警，不是按行截断规则。
-
-项目配置了 reviewer 时（谁写脉络行见「脉络」一节），锁定 verifier 通过后 Harness 自动运行
-`harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。
-标 done、删除关闭 task 的标题段、把指向它们的链接改成纯文字由 Harness 在
-reviewer 决定落盘后完成，reviewer 与 worker 都不手工删。
