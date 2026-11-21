@@ -398,6 +398,8 @@ task 记录的高、却没有这样的暂停请求时，`init` 与 `resume` 都�
 未消费的 `--require-revision` 暂停请求加上同一计划的 revision 提升，允许新 task 替代上次 task reviewer 的 `next_task`
 或 `stop` 决定；task 状态、版本绑定和 plan review 准入仍须通过。`init` 成功写入新配置和状态后删除暂停请求，拒绝时保留。
 新 task 不用 `resume`；`resume` 只恢复原 task，不会切换 task，也不替换它的 verifier 和预算。
+任务因执行预算耗尽进入 `stopped` 后，`exec`、`verify` 和 `resume` 都会提示 `execution budget exhausted`，
+并要求运行 `disable` 结束当前任务；即使存在待处理的暂停请求也如此，拒绝时保留任务状态和暂停请求。
 
 有待处理的 Goal Review 时，记录证据与决定：
 

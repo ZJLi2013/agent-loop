@@ -29,6 +29,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Fixed
 
+- On a task stopped by an exhausted execution budget, `exec`, `verify` and `resume` report the exhausted budget
+  and direct the caller to `disable`, including when a pause request is pending (#248). Refused commands leave
+  the task state and pending pause unchanged.
 - Plan review and the `plan-review --approve / --again / --respond` records keep `runs.jsonl`, artifacts and reviewer
   output within the limits set at `init`, as the runner, task review and pager already did. They used built-in
   defaults (1000 journal entries, 20 artifacts), so a project with smaller limits grew past them and one with larger

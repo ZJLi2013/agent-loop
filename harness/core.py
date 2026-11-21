@@ -359,6 +359,8 @@ def run_command(
         config, state = load_runtime(root)
         if not state.get("active"):
             raise HarnessError("harness is disabled")
+        if state.get("phase") == Phase.STOPPED.value:
+            raise HarnessError("execution budget exhausted; run disable to end this task")
         aborted = recover_aborted(root, config, state)
         if aborted:
             atomic_write_json(harness_dir(root) / STATE_FILE, state)
@@ -418,7 +420,7 @@ def run_command(
                 _transition(state, Event.BUDGET_EXHAUSTED)
                 state["updated_at"] = utc_now()
                 atomic_write_json(harness_dir(root) / STATE_FILE, state)
-            raise HarnessError("execution budget exhausted")
+            raise HarnessError("execution budget exhausted; run disable to end this task")
         attention_reason = goal_review_reason(config, state)
         if attention_reason:
             schedule_goal_review(root, attention_reason)
