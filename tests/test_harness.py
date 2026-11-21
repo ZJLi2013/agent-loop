@@ -19,6 +19,8 @@ from harness.core import (
     initialize,
     load_runtime,
     pause_request,
+    request_pause,
+    resume,
     run_command,
     verify,
     workspace_fingerprint,
@@ -134,6 +136,53 @@ class HarnessTest(unittest.TestCase):
         self.assertTrue(result["timed_out"])
         self.assertEqual(result["outcome"], "timeout")
         self.assertEqual(state["phase"], "stopped")
+
+    def test_stopped_commands_report_budget_and_disable_before_pause(self) -> None:
+        for budget in ("wall", "attempts"):
+            with self.subTest(budget=budget):
+                if budget == "wall":
+                    self.init(timeout_seconds=0.5, max_wall_seconds=0.1)
+                    run_command(
+                        self.root,
+                        [sys.executable, "-S", "-c", "import time; time.sleep(5)"],
+                        kind="exec",
+                    )
+                else:
+                    self.init("raise SystemExit(1)", max_attempts=1)
+                    verify(self.root)
+                self.assertEqual(load_runtime(self.root)[1]["phase"], "stopped")
+
+                for pause in ("none", "ordinary", "require_revision"):
+                    if pause != "none":
+                        request_pause(
+                            self.root,
+                            reason="wait for a merge",
+                            require_revision=pause == "require_revision",
+                        )
+                    state_path = harness_dir(self.root) / "state.json"
+                    state_before = state_path.read_bytes()
+                    request_before = pause_request(self.root)
+                    journal_path = harness_dir(self.root) / "runs.jsonl"
+                    journal_before = journal_path.read_bytes()
+                    commands = (
+                        ("exec", lambda: run_command(
+                            self.root, [sys.executable, "-S", "-c", "pass"], kind="exec"
+                        )),
+                        ("verify", lambda: verify(self.root)),
+                        ("resume", lambda: resume(self.root)),
+                    )
+                    for name, command in commands:
+                        with self.subTest(pause=pause, command=name):
+                            with self.assertRaisesRegex(
+                                HarnessError, "execution budget exhausted.*disable"
+                            ):
+                                command()
+                            self.assertEqual(state_path.read_bytes(), state_before)
+                            self.assertEqual(pause_request(self.root), request_before)
+                            self.assertEqual(journal_path.read_bytes(), journal_before)
+
+                self.assertFalse(disable(self.root)["active"])
+                self.assertIsNone(pause_request(self.root))
 
     def test_output_is_redacted_and_bounded(self) -> None:
         self.init(max_output_bytes=100)
