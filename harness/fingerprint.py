@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from harness.errors import HarnessError
@@ -57,6 +60,48 @@ def workspace_fingerprint(root: Path) -> str:
         return digest.hexdigest()
     except (OSError, subprocess.CalledProcessError):
         return _fallback_fingerprint(root)
+
+
+def workspace_tree(root: Path) -> str | None:
+    """Write the workspace (tracked and untracked, not ignored) as a git tree; the real index is left untouched."""
+    root = root.resolve()
+    # Removed after `git add`: an exclude pathspec naming an ignored path makes `git add` fail.
+    runtime = [HARNESS_DIR] + [f":(glob)**/{name}/**" for name in FOREIGN_RUNTIME_DIRS]
+    with tempfile.TemporaryDirectory() as temp:
+        index = Path(temp) / "index"
+        env = {**os.environ, "GIT_INDEX_FILE": str(index)}
+        try:
+            real = subprocess.run(
+                ["git", "rev-parse", "--path-format=absolute", "--git-path", "index"],
+                cwd=root, check=True, capture_output=True, text=True,
+            ).stdout.strip()
+            if Path(real).is_file():
+                # Starts from the real index so unchanged files keep their stat cache and are not rehashed.
+                shutil.copyfile(real, index)
+            for argv in (
+                ["git", "add", "-A", "--", "."],
+                ["git", "rm", "-r", "-q", "--cached", "--ignore-unmatch", "--", *runtime],
+            ):
+                subprocess.run(argv, cwd=root, env=env, check=True, capture_output=True)
+            return subprocess.run(
+                ["git", "write-tree"], cwd=root, env=env, check=True, capture_output=True, text=True
+            ).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            return None
+
+
+def workspace_diff(root: Path, tree: str) -> str | None:
+    """Diff from an earlier workspace_tree to the current workspace; None when either side cannot be read."""
+    current = workspace_tree(root)
+    if current is None:
+        return None
+    try:
+        return subprocess.run(
+            ["git", "diff", tree, current, "--", "."],
+            cwd=root.resolve(), check=True, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
 
 
 def _file_digest(path: Path) -> str | None:
