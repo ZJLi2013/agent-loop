@@ -201,6 +201,8 @@ def resume(root: Path) -> dict[str, Any]:
 
     root = root.resolve()
     config, state = load_runtime(root)
+    if state.get("active") and state.get("phase") == "stopped":
+        raise HarnessError("execution budget exhausted; run disable to end this task")
     request = pause_request(root)
     if not (request and request.get("require_revision")):
         if reason := _task_eligibility_error(root, state):
@@ -242,6 +244,8 @@ def resume(root: Path) -> dict[str, Any]:
 
     with state_lock(root):
         config, state = load_runtime(root)
+        if state.get("active") and state.get("phase") == "stopped":
+            raise HarnessError("execution budget exhausted; run disable to end this task")
         request = pause_request(root)
         if not request and state.get("phase") != "paused":
             raise HarnessError("runner is not paused")
