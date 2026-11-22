@@ -128,6 +128,19 @@ def task_row(root: Path, task_id: str) -> list[str] | None:
     return None
 
 
+def task_priority_error(root: Path, task_id: str) -> str | None:
+    """Explain why an otherwise task-shaped row was skipped by the parser."""
+    path = task_file(root)
+    if not path.exists():
+        return None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        cells = _cells(line)
+        if cells and len(cells) >= 7 and cells[1] == task_id and cells[1].lower() != "id":
+            if not re.fullmatch(r"P\d+", cells[0]):
+                return f"row for {task_id} has priority `{cells[0]}`; task rows need P<number>"
+    return None
+
+
 def active_task_status(root: Path, task_id: str) -> str | None:
     cells = task_row(root, task_id)
     return cells[5] if cells else None
