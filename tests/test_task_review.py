@@ -119,6 +119,29 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
 
+    def test_review_reports_invalid_next_task_priority(self) -> None:
+        for priority in ("P8a", "P15.1", "P17a"):
+            with self.subTest(priority=priority):
+                self.tearDown()
+                self.setUp()
+                tasks = REWRITTEN_TASKS.replace("✅ done", "🔬 doing").replace(
+                    "| P0 | t2 |", f"| {priority} | t2 |"
+                )
+                self.init(reviewer_writing(
+                    {"decision": "continue", "next_task": "t2", "why": "next"},
+                    tasks=tasks,
+                ))
+
+                review = run_review(self.root)["review"]
+
+                self.assertIsNone(review["decision"])
+                self.assertEqual(
+                    review["error"],
+                    f"row for t2 has priority `{priority}`; task rows need P<number>",
+                )
+                self.assertEqual(records.active_task_status(self.root, "t1"), "🔬 doing")
+                self.assertFalse((self.root / ".agent-loop/archive/tasks.md").exists())
+
     def test_closing_review_archives_old_handoffs_and_reports_failures(self) -> None:
         real_write = records._atomic_write
         for blocked in (False, True):
