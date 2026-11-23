@@ -131,7 +131,8 @@ def task_ids(root: Path) -> set[str]:
 
 
 def feature_doc(root: Path, plan: Path) -> bool:
-    return plan.parent == (root / FEATURES_DIR).resolve()
+    """Any document under features/ except a group readme, which is an entry and holds no task designs."""
+    return (root / FEATURES_DIR).resolve() in plan.parents and plan.name.lower() != "readme.md"
 
 
 def _belongs(root: Path, plan: Path, target: Path) -> bool:
@@ -363,7 +364,7 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
     feature = feature_doc(root, plan)
     if not feature and not _in_flight(root, text):
         return (
-            f"plan document {plan_doc} must be {FEATURES_DIR}/<feature>.md, directly under {FEATURES_DIR}/; "
+            f"plan document {plan_doc} must be {FEATURES_DIR}/<feature>.md (subdirectories allowed, not readme.md); "
             f"a plan elsewhere is accepted only after one of its tasks is archived"
         )
     lines = text.splitlines()
@@ -435,7 +436,7 @@ def _drop_sections(root: Path, plan: Path, task_id: str) -> None:
     ]
     _atomic_write(plan, _unlink("\n".join(kept), plan, plan, dropped).rstrip() + "\n")
 
-    docs = [*runtime_dir(root).rglob("*.md"), *(root / FEATURES_DIR).glob("*.md"), *(root / EXPS_DIR).glob("*.md")]
+    docs = [*runtime_dir(root).rglob("*.md"), *(root / FEATURES_DIR).rglob("*.md"), *(root / EXPS_DIR).rglob("*.md")]
     for doc in docs:
         if doc.resolve() == plan:
             continue
@@ -585,7 +586,7 @@ def leftovers(root: Path) -> list[dict[str, str]]:
         if base in directory.parents:
             return True
         return (tracked is not None and untracked is not None and root in directory.parents
-                and directory not in (base, root / FEATURES_DIR))
+                and directory != base and root / FEATURES_DIR not in (directory, *directory.parents))
 
     plan_dirs = {plan.parent: plan for plan in live_plans if scopes(plan.parent)}
     plan_dirs.update({plan.parent: plan for plan in done_plans if scopes(plan.parent) and plan.parent not in plan_dirs})
