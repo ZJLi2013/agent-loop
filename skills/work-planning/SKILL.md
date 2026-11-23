@@ -13,8 +13,8 @@ description: >-
 
 ## feature 与 exp 两份文档
 
-每个具体 feature 只有两份工作文档：`features/<feature>.md` 写设计，`exps/<feature>.md` 写实验，同名一一对应，直接放在这两个目录下并被
-git 跟踪。一个 feature 是一处能单独设计、单独验收的改动，或一个研究问题；一个 Goal 有一到多个 feature。Goal 只写在 `task.md`：
+每个具体 feature 只有两份工作文档：`features/<feature>.md` 写设计，`exps/<feature>.md` 写实验，同路径一一对应并被 git 跟踪；
+`<feature>` 可以带子目录（`features/<组>/<名>.md` 对应 `exps/<组>/<名>.md`），两侧逐级镜像。一个 feature 是一处能单独设计、单独验收的改动，或一个研究问题；一个 Goal 有一到多个 feature。Goal 只写在 `task.md`：
 主线行的问题与退出条件，加 `## Goal（…）` 一段；主线行的 plan 格链接这个 Goal 的全部 feature。Harness 的 plan document（`plan_doc`）
 就是 feature 文档，下文的 plan 都指它。Goal、feature 与 task id 用说明内容的短语义名
 （kebab-case，如 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `rN` revision。
@@ -24,10 +24,11 @@ git 跟踪。一个 feature 是一处能单独设计、单独验收的改动，�
 
 | 文档 | 位置 | 写什么 | 不写什么 | 执行点 |
 |---|---|---|---|---|
-| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；每个 feature 一行：一句当前事实（可带关键数）加 feature 与 exp 的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行 |
+| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；每个 feature 或分组一行：一句当前事实（可带关键数）加 feature 与 exp 的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行 |
 | `task.md` | `.agent-loop/task.md`，每项目一份 | 主线（Goal 的问题、退出条件与它的 feature 链接）、task 行（id、问题、两个去向、状态，行序即优先级，链到 feature 里的设计节）、候选 | 设计、`rN`、失败计数、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
 | feature 文档 | `features/<feature>.md`，每个具体 feature 一份 | 设计与关键结论：首屏字段 `目标`、`现状`、`下一步`（研究型另加 `原因`、`已排除`），写法见 `write-for-humans`「给 human 读的项目文档」；所属 Goal 与本 feature 要让什么成真、设计、当前结论（项目结论的唯一定义处，每条一句判断带关键数，链到 exp 里支撑它的一节）、脉络；每个 task 的设计是其中以 task id 开头的一节，含绑定 revision 的 `- rev：rN` 一行，CLOSE 时删除 | Goal 的定义（归 `task.md`）、逐 run 表、原始读数、复现命令、日志与输出摘录、Experiment Log、要 human 选的项 | `init` 拒绝不在 `features/` 下的新 `plan_doc`，以及指向别处（exp、另一个 feature、`.harness/`）的 task 设计链接；CLOSE lint 拒绝缺首屏字段与 `## Experiment Log`；task reviewer 在 CLOSE 只读首屏答三问 |
-| exp 文档 | `exps/<feature>.md`，与 feature 同名 | 实验细节与数据：每个实验一节，写配置与输入（数据、seed、环境、参数）、读数表、复现命令与产物位置；Experiment Log | 设计（干预、判据、预算）、结论、首屏字段、`- rev：rN`、以 task id 开头的标题、Experiment Log 外以 task id 为行的表、要 human 选的项 | CLOSE lint 拒绝 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、首屏字段行、`- rev：` 行，没有同名 feature、子目录与未跟踪文件，以及本 task 新增的设计态行 |
+| exp 文档 | `exps/<feature>.md`，与 feature 同路径 | 实验细节与数据：每个实验一节，写配置与输入（数据、seed、环境、参数）、读数表、复现命令与产物位置；Experiment Log | 设计（干预、判据、预算）、结论、首屏字段、`- rev：rN`、以 task id 开头的标题、Experiment Log 外以 task id 为行的表、要 human 选的项 | CLOSE lint 拒绝 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、首屏字段行、`- rev：` 行，没有同路径 feature 与未跟踪文件，以及本 task 新增的设计态行 |
+| 分组 readme（可选） | `features/<组>/readme.md` 与 `exps/<组>/readme.md`，成对 | features 侧是系列入口：首屏字段同 feature 文档；组内每个 feature 一行：一句当前事实加链接；脉络。exps 侧只留实验 id 对照与数据入口 | 设计、task 设计段、结论的展开（归各 feature）；exps 侧另不写首屏字段与结论 | features 侧按 feature 文档查首屏字段与 Experiment Log、按 readme 查纯链接索引行；exps 侧按 exp 文档查，并要有同路径的 features 侧 readme；`init` 不接受它作 `plan_doc` |
 
 task 设计不另起文档，task 行只链到它所在的那一节。feature 下的子步骤与子实验是它的 task 设计段与 exp 里的一节；能单独设计、单独验收的另一处改动或另一个研究问题，才开新的 feature 与同名 exp。
 按内容类型分工，同一种内容只归一份文档：设计与结论在 feature，结论只在「当前结论」定义一次，项目 readme 只放一句并链过去；配置、读数、复现与逐 run 记录在 exp，feature 只链过去；进展与状态只在 `task.md`。
@@ -49,8 +50,9 @@ Plan Review: proposed
 <所属 Goal（链到 `task.md` 主线行），一句话写本 feature 要让什么成真；产出给人读或给下游用时写明读者>
 
 ## 设计
-<一句话策略；手写的最终产出样例（不是结果）；2–4 个关键选择，各写替换了什么；不做什么；
-验收怎么判、不靠 human 的领域判断。机制有多步时附一张示意图>
+<当前选定的实验或 probe 方案：一句话策略；手写的最终产出样例（不是结果）；2–4 个关键选择，各写替换了什么；不做什么；
+验收怎么判、不靠 human 的领域判断。结合当前 task 的设计段，执行者不用再决定被测假设、干预、输入、判据与预算，
+就能定下第一个执行动作和结果对应的下一步。机制有多步时附一张示意图>
 
 ## 当前结论
 <现在为真的判断，每条一句带关键数、对应它证实或推翻的设计要素，并链到 exp 里支撑它的一节；设计中就明确写未验证>
@@ -105,6 +107,8 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
    不自行替换，也不默默照做。
 2. 写设计：
    - 先按机制名搜一次 memory 的 `rejected`。
+   - 设计节写选定的方案，不用待回答的问题清单或完成检查点代替。最终方法还定不下来时，选定一个能消除这份不确定性的 probe
+     写成设计；纯查询、调研整理与写方案直接做，不建交付物是设计本身的 task。
    - 多段管线先让每段的最简版本端到端跑通，再加深其中一段。供读者反复取用的产出，最简版本还要被读者用上一次才加深；
      测量与判据、健壮性、演练、第二层抽象都算加深。还没被用上时，下一个 task 只做让它被用上的事：接进一个真实项目、
      改读法、删掉挡路的步骤。

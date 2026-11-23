@@ -189,8 +189,8 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
   task id 取 `task.md` 与 task archive 的全部 task 行（`records.task_ids`），在一次调用开始时连同 config 的 `plan_doc` 读一次；
   没有 config 或 `plan_doc` 时只查 `待 human`。`plan_doc` 是 feature 文档时，只有它里面当前 task id 开头的标题段，与同名
   `exps/<feature>.md` 的 `## Experiment Log` 节豁免这一类；在途 Goal 的旧位置 plan 及其子实验目录整份豁免。链接与残留词照查。
-- 布局：`features/`、`exps/` 下改过的文档必须直接放在目录里；feature 第一个 `## ` 之前要有 `目标`、`现状`、`下一步` 三个字段行，
-  不含 `## Experiment Log`；exp 要有同名 feature，不含 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、字段行与 `- rev：` 行；
+- 布局：`features/`、`exps/` 可以有子目录，两侧逐级镜像；feature（含分组 `readme.md`）第一个 `## ` 之前要有 `目标`、`现状`、`下一步` 三个字段行，
+  不含 `## Experiment Log`；exp（含分组 `readme.md`）要有同路径的 feature，不含 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、字段行与 `- rev：` 行；
   围栏代码块里的行不查；这两个目录里被 gitignore 的文档逐个报出。
 - 等待截止：`.agent-loop/task.md` 里表头有 `状态` 列的表，未关闭行的状态格含 `YYYY-MM-DD 前没等到就关` 且日期早于今天时报出；
   本 task 写下的状态格含「等」（不含等价、等于、等同、等级、等号）却没有这句时报出。
@@ -273,7 +273,7 @@ Policy 回答「这个状态下怎么做」，不重新定义转移：
 
 ### Feature 与 exp 文档
 
-每个具体 feature 两份文档，同名一一对应，直接放在项目根的两个目录下并被 git 跟踪；Goal 的问题与退出条件只在 `task.md` 的主线行，
+每个具体 feature 两份文档，同路径一一对应，放在项目根的两个目录下并被 git 跟踪，子目录两侧镜像；Goal 的问题与退出条件只在 `task.md` 的主线行，
 主线行的 plan 格链接这个 Goal 的全部 feature：
 
 ```text
@@ -299,12 +299,12 @@ run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit�
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 
 Goal 与 task 按文件认，不按目录：主线交接（`records.mainline_handoff`）认上一行 plan 格里任一 feature 交到 `▶ next` 行任一 feature；`records.open_task_ids(plan_doc=…)` 只收链接落在这份 feature 里的 task，plan review、`leftovers`
-与 CLOSE 都读它；`features/` 本身不是任何 Goal 的目录，`leftovers` 不在里面认领文件。
+与 CLOSE 都读它；`features/` 及其子目录不是任何 Goal 的目录，`leftovers` 不在里面认领文件。
 
 CLOSE 只删除以 task id 开头的标题段（连同标题前的 `<a id>`），`.agent-loop/`、`features/`、`exps/` 里指向它们的链接改成纯文字，
 所以 `init --plan-doc` 在准入时由 `records.design_location_error` 检查两件事：
 
-- plan 位置：`plan_doc` 必须是 `features/` 的直接子文件。别处的 plan 只在已进入执行时接受：`archive/tasks.md` 里至少一个
+- plan 位置：`plan_doc` 必须是 `features/` 下（可在子目录里）、不叫 `readme.md` 的文件；分组 readme 是入口，不放 task 设计。别处的 plan 只在已进入执行时接受：`archive/tasks.md` 里至少一个
   已关闭 task 的 id 出现在 plan 正文里；plan review 记录与 task 绑定不算凭证。
 - task 设计位置：task 行里的本地链接相对 `task.md` 解析；指向 plan 的链接必须全部落在这类标题段内（按标题的
   GitHub slug 或段首 `<a id>` 匹配），且至少一个链接合格。主题标题、共用标题、不带 anchor 的 plan 链接、exp、另一个
