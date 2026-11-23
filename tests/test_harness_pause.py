@@ -27,7 +27,8 @@ class HarnessPauseTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.plan = self.root / "plan.md"
+        (self.root / "features").mkdir()
+        self.plan = self.root / "features/plan.md"
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -50,7 +51,7 @@ class HarnessPauseTest(unittest.TestCase):
         (task_dir / "task.md").write_text(
             "| id | task | check | status |\n"
             "|---|---|---|---|\n"
-            "| t1 | test | [design](../plan.md#t1-design) | 🔬 doing |\n",
+            "| t1 | test | [design](../features/plan.md#t1-design) | 🔬 doing |\n",
             encoding="utf-8",
         )
         self.binding = revision
@@ -60,7 +61,7 @@ class HarnessPauseTest(unittest.TestCase):
         initialize(
             self.root,
             task_id="t1",
-            plan_doc="plan.md",
+            plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
 
@@ -150,7 +151,7 @@ class HarnessPauseTest(unittest.TestCase):
         self.write_plan(1, "approved")
         self.write_task(1)
         initialize(
-            self.root, task_id="t1", plan_doc="plan.md",
+            self.root, task_id="t1", plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"], goal_review_after_actions=1,
         )
         run_command(self.root, [sys.executable, "-S", "-c", "print('x')"], kind="exec")

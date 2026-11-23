@@ -25,9 +25,9 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 
 | id | task | 验收检查点 | 状态 |
 |---|---|---|---|
-| y-schema-drift | Y 的 schema 漂移能修好吗？（[设计](plans/y/plan.md#y-schema-drift)） | `validate.py` 退出 0 → migrate-x-to-y；不过 → 回 plan | 🔬 doing |
-| migrate-x-to-y | X 迁到 Y 后测试还全绿吗？（[设计](plans/y/plan.md#migrate-x-to-y)） | 全绿 → y-e2e-latency；不绿 → 回 plan | 🚧 blocked y-schema-drift |
-| y-e2e-latency | Y 的端到端延迟在基线 1.1 倍内吗？（[设计](plans/y/plan.md#y-e2e-latency)） | 在 → x-legacy-cleanup；不在 → 回 plan | ⬜ todo |
+| y-schema-drift | Y 的 schema 漂移能修好吗？（[设计](../features/y.md#y-schema-drift)） | `validate.py` 退出 0 → migrate-x-to-y；不过 → 回 plan | 🔬 doing |
+| migrate-x-to-y | X 迁到 Y 后测试还全绿吗？（[设计](../features/y.md#migrate-x-to-y)） | 全绿 → y-e2e-latency；不绿 → 回 plan | 🚧 blocked y-schema-drift |
+| y-e2e-latency | Y 的端到端延迟在基线 1.1 倍内吗？（[设计](../features/y.md#y-e2e-latency)） | 在 → x-legacy-cleanup；不在 → 回 plan | ⬜ todo |
 | x-legacy-cleanup | X 的旧路径能全删掉吗？ | grep 不到 `legacy_x` → 完成；还有 → 列出调用方 | ⬜ todo |
 
 ## Candidates
@@ -68,8 +68,8 @@ Mainline Review: approved
 
 | Goal | 问题 | 退出条件 | 状态 | plan |
 |---|---|---|---|---|
-| score-sources | 成绩来源 | 逐任务 / global memory 的贡献各有结论 | ✅ done | [plan](plans/score-sources/plan.md) |
-| success-signal-ablation | 成功信号消融 | 去掉成功信号后成绩变化有结论 | ▶ next | [plan](plans/success-signal-ablation/plan.md) |
+| score-sources | 成绩来源 | 逐任务 / global memory 的贡献各有结论 | ✅ done | [plan](../features/score-sources.md) |
+| success-signal-ablation | 成功信号消融 | 去掉成功信号后成绩变化有结论 | ▶ next | [plan](../features/success-signal-ablation.md) |
 | new-task-generalization | 新任务泛化 | 未见任务上的成绩有结论 | ⬜ todo | |
 ```
 

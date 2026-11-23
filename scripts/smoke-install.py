@@ -87,7 +87,7 @@ def main() -> None:
         def command(*args: str, expected: int = 0) -> dict:
             return json.loads(run([str(cli), *args], project, env, expected))
 
-        command("init", "--task", "fractional-mean", "--plan-doc", "plan.md", "--",
+        command("init", "--task", "fractional-mean", "--plan-doc", "features/fractional-mean.md", "--",
                 str(python), "-B", "-m", "unittest", "-v")
         failed = command("verify", expected=1)
         if failed["result"]["outcome"] != "fail":

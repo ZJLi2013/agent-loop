@@ -59,6 +59,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        (self.root / "features").mkdir()
         (self.root / ".agent-loop").mkdir()
         (self.root / ".agent-loop" / "task.md").write_text(
             REWRITTEN_TASKS.replace("✅ done", "🔬 doing"),
@@ -363,6 +364,7 @@ class VerifierLockReviewTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        (self.root / "features").mkdir()
         (self.root / ".agent-loop").mkdir()
         (self.root / ".agent-loop" / "task.md").write_text(
             REWRITTEN_TASKS.replace("✅ done", "🔬 doing"), encoding="utf-8"
@@ -520,8 +522,8 @@ PLAN_WITH_T1 = (
 )
 PLAN_MOVED = PLAN_HEAD + "\n### t2 本地设计\n- rev：r1\nnext\n"
 PLAN_TASKS = (
-    REWRITTEN_TASKS.replace("| first | check |", "| first | [设计](../plan.md#t1-design) |")
-    .replace("| next | check |", "| next | [设计](../plan.md#t2-本地设计) |")
+    REWRITTEN_TASKS.replace("| first | check |", "| first | [设计](../features/plan.md#t1-design) |")
+    .replace("| next | check |", "| next | [设计](../features/plan.md#t2-本地设计) |")
 )
 
 
@@ -541,7 +543,7 @@ def plan_reviewer(*calls: tuple[dict[str, object] | None, str, bool]) -> list[st
             "counter.write_text(str(n + 1))",
             f"decision, plan, fail = json.loads({json.dumps(calls)!r})[n]",
             f"Path('.agent-loop/task.md').write_text({PLAN_TASKS!r}, encoding='utf-8')",
-            "Path('plan.md').write_text(plan, encoding='utf-8')",
+            "Path('features/plan.md').write_text(plan, encoding='utf-8')",
             "if decision is not None:",
             f"    Path({DECISION!r}).write_text(json.dumps(decision))",
             "sys.exit(3 if fail else 0)",
@@ -554,11 +556,12 @@ class ClosedPlanSectionTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        (self.root / "features").mkdir()
         (self.root / ".agent-loop").mkdir()
         (self.root / ".agent-loop" / "task.md").write_text(
             PLAN_TASKS.replace("✅ done", "🔬 doing"), encoding="utf-8"
         )
-        (self.root / "plan.md").write_text(PLAN_WITH_T1, encoding="utf-8")
+        (self.root / "features" / "plan.md").write_text(PLAN_WITH_T1, encoding="utf-8")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -570,7 +573,7 @@ class ClosedPlanSectionTest(unittest.TestCase):
         initialize(
             self.root,
             task_id="t1",
-            plan_doc="plan.md",
+            plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         run_command(
@@ -597,7 +600,7 @@ class ClosedPlanSectionTest(unittest.TestCase):
         archive = (self.root / ".agent-loop" / "archive" / "tasks.md").read_text(encoding="utf-8")
         self.assertIn("| P | id | rev | task | 验收检查点 | 状态 | 失败 |", archive)
         self.assertIn("| — | t1 | r1 | first | 设计 | ✅ done | 0 |", archive)
-        self.assertNotIn("t1 本地设计", (self.root / "plan.md").read_text(encoding="utf-8"))
+        self.assertNotIn("t1 本地设计", (self.root / "features" / "plan.md").read_text(encoding="utf-8"))
         self.assertNotIn("| t1 |", (self.root / ".agent-loop" / "task.md").read_text(encoding="utf-8"))
         self.assertNotIn("t1", json.loads((self.root / ".harness" / "failures.json").read_text())["tasks"])
 
@@ -612,7 +615,7 @@ class ClosedPlanSectionTest(unittest.TestCase):
 SUCCESSOR_TASKS = (
     "| id | task | check | status |\n"
     "|---|---|---|---|\n"
-    "| t2 | next | [设计](../plan.md#t2-本地设计) | 🔬 doing |\n"
+    "| t2 | next | [设计](../features/plan.md#t2-本地设计) | 🔬 doing |\n"
 )
 
 
@@ -630,7 +633,7 @@ class HumanSuccessorTest(unittest.TestCase):
 
     def human_decides(self, revision: int, review: str) -> None:
         plan = PLAN_MOVED.replace("Plan Revision: 1", f"Plan Revision: {revision}").replace("rev：r1", f"rev：r{revision}")
-        (self.root / "plan.md").write_text(
+        (self.root / "features" / "plan.md").write_text(
             plan.replace("Plan Review: unreviewed", f"Plan Review: {review}"), encoding="utf-8"
         )
         (self.root / ".agent-loop" / "task.md").write_text(
@@ -641,7 +644,7 @@ class HumanSuccessorTest(unittest.TestCase):
         _, state = initialize(
             self.root,
             task_id="t2",
-            plan_doc="plan.md",
+            plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         return state
@@ -685,7 +688,7 @@ class HumanSuccessorTest(unittest.TestCase):
                 if legacy:
                     record_task_review(
                         self.root, "t2", findings=[], dropped=0, summary="", source="task_review",
-                        run_id=None, plan_doc="plan.md", plan_revision=1,
+                        run_id=None, plan_doc="features/plan.md", plan_revision=1,
                     )
                 self.human_decides(1, review)
                 if starts:
@@ -700,13 +703,13 @@ MAINLINE = (
     "## 主线\n\nOne line.\nMainline Review: {review}\n\n"
     "| Goal | 问题 | 退出条件 | 状态 | plan |\n|---|---|---|---|---|\n{rows}\n\n"
 )
-DONE_A = "| A | a | a | ✅ done | [plan](../plan.md) |"
-DONE_SIDE = "| A | a | a | ✅ done | [plan](../side/plan.md) |"
-NEXT_B = "| B | b | b | ▶ next | [plan](../next/plan.md) |"
+DONE_A = "| A | a | a | ✅ done | [plan](../features/plan.md) |"
+DONE_SIDE = "| A | a | a | ✅ done | [plan](../features/side.md) |"
+NEXT_B = "| B | b | b | ▶ next | [plan](../features/next.md) |"
 TODO_C = "| C | c | c | ⬜ todo | |"
 HANDOFF_TASKS = (
     "## Goal\n\n| id | task | check | status |\n|---|---|---|---|\n"
-    "| {task} | next | [设计](../next/plan.md#t2-design) | 🔬 doing |\n"
+    "| {task} | next | [设计](../features/next.md#t2-design) | 🔬 doing |\n"
 )
 NEXT_PLAN = "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## t2 design\n\n- rev：r1\n"
 
@@ -723,11 +726,10 @@ class MainlineHandoffTest(unittest.TestCase):
         *,
         review: str = "approved",
         task: str = "t2",
-        plan: str = "next/plan.md",
+        plan: str = "features/next.md",
     ) -> dict[str, object]:
         for name in ("next", "side"):
-            (self.root / name).mkdir(exist_ok=True)
-            (self.root / name / "plan.md").write_text(NEXT_PLAN, encoding="utf-8")
+            (self.root / "features" / f"{name}.md").write_text(NEXT_PLAN, encoding="utf-8")
         mainline = MAINLINE.format(review=review, rows="\n".join(rows)) if rows else ""
         (self.root / ".agent-loop" / "task.md").write_text(
             mainline + HANDOFF_TASKS.format(task=task), encoding="utf-8"
@@ -745,9 +747,9 @@ class MainlineHandoffTest(unittest.TestCase):
             ("next aligned goal", "stop", [DONE_A, NEXT_B, TODO_C], {}, True),
             ("unapproved mainline", "stop", [DONE_A, NEXT_B], {"review": "proposed"}, False),
             ("skipped goal", "stop", [DONE_A, TODO_C, NEXT_B], {}, False),
-            ("plan outside next goal", "stop", [DONE_A, NEXT_B], {"plan": "side/plan.md"}, False),
+            ("plan outside next goal", "stop", [DONE_A, NEXT_B], {"plan": "features/side.md"}, False),
             ("no mainline", "stop", None, {}, False),
-            ("continue within goal", "continue", [DONE_A, NEXT_B], {"task": "t3", "plan": "plan.md"}, False),
+            ("continue within goal", "continue", [DONE_A, NEXT_B], {"task": "t3", "plan": "features/plan.md"}, False),
             ("side goal closed", "stop", [DONE_SIDE, NEXT_B], {}, False),
         )
         for name, decision, rows, options, starts in cases:
@@ -767,11 +769,10 @@ class MainlineHandoffTest(unittest.TestCase):
             "level": "must", "claim": "wrong input", "consequence": "wasted run",
             "evidence": "plan:1", "change": "fix input", "human": False,
         }
-        (self.root / "next").mkdir()
-        (self.root / "next" / "plan.md").write_text(NEXT_PLAN, encoding="utf-8")
+        (self.root / "features" / "next.md").write_text(NEXT_PLAN, encoding="utf-8")
         record_task_review(
             self.root, "t2", findings=[must], dropped=0, summary="", source="plan_review", run_id=None,
-            plan_doc="next/plan.md", plan_revision=1,
+            plan_doc="features/next.md", plan_revision=1,
         )
         with self.assertRaisesRegex(HarnessError, "must items"):
             self.start([DONE_A, NEXT_B])

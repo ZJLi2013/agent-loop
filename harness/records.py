@@ -14,6 +14,8 @@ from harness.storage import STATE_FILE, harness_dir, load_runtime
 
 ARCHIVE_DIR = "archive"
 SUB_EXP = "sub-exp"
+FEATURES_DIR = "features"
+EXPS_DIR = "exps"
 TASK_ARCHIVE = "tasks.md"
 PROGRESS_FILE = "progress.md"
 # Records with their own retirement rules; leftovers never reports them.
@@ -128,6 +130,15 @@ def task_ids(root: Path) -> set[str]:
     return {cells[0] for _, cells in _task_rows(_active_lines(root))} | archived_task_ids(root)
 
 
+def feature_doc(root: Path, plan: Path) -> bool:
+    return plan.parent == (root / FEATURES_DIR).resolve()
+
+
+def _belongs(root: Path, plan: Path, target: Path) -> bool:
+    """A feature document owns only links to itself; a legacy plan owns its whole directory."""
+    return target == plan if feature_doc(root, plan) else target.is_relative_to(plan.parent)
+
+
 def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
     path = task_file(root)
     lines = _active_lines(root)
@@ -136,10 +147,7 @@ def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
         cells[0]
         for index, cells in _task_rows(lines)
         if not _closed(cells)
-        and (
-            plan is None
-            or any(target.is_relative_to(plan.parent) for target in _linked_files(lines[index], path.parent))
-        )
+        and (plan is None or any(_belongs(root, plan, target) for target in _linked_files(lines[index], path.parent)))
     ]
 
 
@@ -349,9 +357,21 @@ def _slug(heading: str) -> str:
     return re.sub(r"[^\w\- ]", "", heading.strip().lower()).replace(" ", "-")
 
 
+def _in_flight(root: Path, text: str) -> bool:
+    """A plan that names an archived task has closed one, so its Goal started before the features/ layout."""
+    return any(re.search(rf"(?<![\w-]){re.escape(task_id)}(?![\w-])", text) for task_id in archived_task_ids(root))
+
+
 def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None:
     plan = (root / plan_doc).resolve()
-    lines = plan.read_text(encoding="utf-8").splitlines() if plan.is_file() else []
+    text = plan.read_text(encoding="utf-8") if plan.is_file() else ""
+    feature = feature_doc(root, plan)
+    if not feature and not _in_flight(root, text):
+        return (
+            f"plan document {plan_doc} must be {FEATURES_DIR}/<goal>.md, directly under {FEATURES_DIR}/; "
+            f"a plan elsewhere is accepted only after one of its tasks is archived"
+        )
+    lines = text.splitlines()
     structural = _structural_lines(lines)
     archived = set()
     for start, end in _task_sections(lines, task_id):
@@ -375,15 +395,15 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
                 located = True
             else:
                 stray.append(match.group(2))
-        elif target.is_file() and target.is_relative_to(plan.parent / SUB_EXP):
+        elif not feature and target.is_file() and target.is_relative_to(plan.parent / SUB_EXP):
             located = True
     if located and not stray:
         return None
     found = f" (not a task section: {', '.join(stray)})" if stray else ""
     return (
         f"task {task_id} must link its design to a {plan_doc} section whose heading starts "
-        f"with {task_id} (add <a id> before it if the slug differs) or to a file under "
-        f"{SUB_EXP}/ beside the plan; project experiment records hold results, not designs{found}"
+        f"with {task_id} (add <a id> before it if the slug differs); {EXPS_DIR}/ and other "
+        f"documents hold results, not designs{found}"
     )
 
 
@@ -420,7 +440,8 @@ def _drop_sections(root: Path, plan: Path, task_id: str) -> None:
     ]
     _atomic_write(plan, _unlink("\n".join(kept), plan, plan, dropped).rstrip() + "\n")
 
-    for doc in runtime_dir(root).rglob("*.md"):
+    docs = [*runtime_dir(root).rglob("*.md"), *(root / FEATURES_DIR).glob("*.md"), *(root / EXPS_DIR).glob("*.md")]
+    for doc in docs:
         if doc.resolve() == plan:
             continue
         text = doc.read_text(encoding="utf-8")
@@ -568,7 +589,8 @@ def leftovers(root: Path) -> list[dict[str, str]]:
     def scopes(directory: Path) -> bool:
         if base in directory.parents:
             return True
-        return tracked is not None and untracked is not None and root in directory.parents and directory != base
+        return (tracked is not None and untracked is not None and root in directory.parents
+                and directory not in (base, root / FEATURES_DIR))
 
     plan_dirs = {plan.parent: plan for plan in live_plans if scopes(plan.parent)}
     plan_dirs.update({plan.parent: plan for plan in done_plans if scopes(plan.parent) and plan.parent not in plan_dirs})

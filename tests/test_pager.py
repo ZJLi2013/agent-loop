@@ -54,11 +54,12 @@ class PagerCheckpointTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        (self.root / "features").mkdir()
         runtime = self.root / ".agent-loop"
         runtime.mkdir()
         (runtime / "task.md").write_text(
             "| id | task | check | status |\n"
-            "| t1 | demo | [design](../plan.md#t1-design) | 🔬 doing |\n",
+            "| t1 | demo | [design](../features/plan.md#t1-design) | 🔬 doing |\n",
             encoding="utf-8",
         )
         (self.root / "fake_pager.py").write_text(FAKE_PAGER, encoding="utf-8")
@@ -76,7 +77,7 @@ class PagerCheckpointTest(unittest.TestCase):
         self.temp.cleanup()
 
     def write_plan(self, revision: int, review: str) -> None:
-        (self.root / "plan.md").write_text(
+        (self.root / "features" / "plan.md").write_text(
             f"# Demo\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n"
             "## Goal\nDemo goal\n\n## t1 design\n\n- rev：r1\n",
             encoding="utf-8",
@@ -87,7 +88,7 @@ class PagerCheckpointTest(unittest.TestCase):
         initialize(
             self.root,
             task_id="t1",
-            plan_doc="plan.md",
+            plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", verifier],
             **kw,
         )
@@ -128,7 +129,7 @@ class PagerCheckpointTest(unittest.TestCase):
             (self.root / ".harness" / "pager-state.json").resolve(),
         )
         self.assertEqual(serve[0], "serve")
-        self.assertIn("Plan Review: approved", (self.root / "plan.md").read_text(encoding="utf-8"))
+        self.assertIn("Plan Review: approved", (self.root / "features" / "plan.md").read_text(encoding="utf-8"))
         _, state = load_runtime(self.root)
         self.assertEqual(state["phase"], "ready")
         self.assertEqual(outcome["reply"]["verb"], "OK")

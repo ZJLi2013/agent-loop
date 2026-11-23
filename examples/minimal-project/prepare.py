@@ -9,14 +9,16 @@ from pathlib import Path
 def prepare(destination: Path) -> None:
     source = Path(__file__).resolve().parent
     destination.mkdir(parents=True, exist_ok=False)
-    for name in ("average.py", "test_average.py", "plan.md"):
+    for name in ("average.py", "test_average.py"):
         shutil.copy2(source / name, destination / name)
+    for name in ("features", "exps"):
+        shutil.copytree(source / name, destination / name)
     runtime = destination / ".agent-loop"
     runtime.mkdir()
     task = (source / "task.md").read_text(encoding="utf-8")
-    # The copied task lives one level below the plan.
+    # The copied task lives one level below the project root.
     (runtime / "task.md").write_text(
-        task.replace("](plan.md", "](../plan.md"), encoding="utf-8"
+        task.replace("](features/", "](../features/"), encoding="utf-8"
     )
     (destination / ".gitignore").write_text(
         ".harness/\n.agent-loop/\n__pycache__/\n", encoding="utf-8"

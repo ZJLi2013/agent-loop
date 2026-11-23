@@ -212,7 +212,7 @@ reviewer 换另一个模型时，见下文「可选的独立 reviewer」里的 o
 
 ## 创建并评审计划
 
-在工作项目里写一份 plan document，说明 Goal、范围、当前结论、下一个决策与验收判据，文件名不限。包含：
+在工作项目的 `features/<goal>.md` 写 plan document（feature 文档），说明 Goal、范围、当前结论、下一个决策与验收判据；实验结论与逐 run 记录写同名的 `exps/<goal>.md`，第一个 `## ` 之前写 `目标`、`现状`、`下一步` 三行。两份都直接放在目录下并被 git 跟踪，`init` 拒绝 `features/` 之外的新 plan。feature 文档包含：
 
 ```text
 Plan Revision: 1
@@ -248,7 +248,7 @@ plan review 建议。
 在工作项目根目录，初始化一个适合该项目 Goal 的 verifier：
 
 ```sh
-agent-loop-harness init --task fractional-mean --plan-doc plan.md -- python -B -m unittest -v
+agent-loop-harness init --task fractional-mean --plan-doc features/fractional-mean.md -- python -B -m unittest -v
 ```
 
 把命令换成项目真实的测试或实验检查。初始化会锁定 verifier 命令、命令里未声明为 evidence 的工作区内文件内容（含被 gitignore 的路径）与预算；之后改了 verifier 文件，
@@ -336,10 +336,10 @@ harness 不捆绑这些工具。凭据与模型选择由该工具负责。review
 已经这样做了）。
 
 ```sh
-agent-loop-harness plan-review --plan-doc plan.md
+agent-loop-harness plan-review --plan-doc features/fractional-mean.md
 ```
 
-`plan-review` 只读取 task 表中链接到该计划或其目录内文件的未关闭 task，不为主线 Goal 行或表头写评审记录。
+`plan-review` 只读取 task 表中链接到该计划的未关闭 task，不为主线 Goal 行或表头写评审记录。
 其他计划的 task 若没有这样的链接，其记录冲突不阻塞本次评审。task reviewer 指定后继 task 时，Harness 会先检查
 该 id 的评审记录是否属于它；大小写冲突会使本次决策无效，并提示 reviewer 改名后重试，不会先保存无法开工的
 `continue`。已有评审记录保留。
@@ -348,7 +348,7 @@ agent-loop-harness plan-review --plan-doc plan.md
 报告里每个 task 最多 3 条 `must`、3 条 `suggest`。worker 逐条回应 `must`，`suggest` 可以跳过：
 
 ```sh
-agent-loop-harness plan-review --plan-doc plan.md --respond <task> --item 1=applied --item 2=reject --reason "<事实>"
+agent-loop-harness plan-review --plan-doc features/fractional-mean.md --respond <task> --item 1=applied --item 2=reject --reason "<事实>"
 ```
 
 plan reviewer 只给建议，不能批准计划。报告里没有 `human: true` 项时 worker 不问你，回应 `must` 后写
@@ -384,7 +384,7 @@ agent-loop-harness pause --require-revision --reason "Goal changed"
 将新 task 绑定当前 revision 并标为唯一的 `🔬 doing`，用 `init` 配置它自己的 verifier 和预算：
 
 ```sh
-agent-loop-harness init --task c --plan-doc plan.md -- python verify_c.py
+agent-loop-harness init --task c --plan-doc features/fractional-mean.md -- python verify_c.py
 ```
 
 revision 只因 human 纠偏（`pause --require-revision`）或 Goal Review `replan` 递增。同一计划的 revision 比上次 task 或当前
@@ -434,7 +434,7 @@ task 或已完成 Goal、又没被现行文档提到的文件，每项带 `path`
 ```
 
 Harness 不删它们，completion gate 也不检查。worker 在同一次 CLOSE 里处理：项目事实移进项目被跟踪的文档，只证明 task
-通过的验收证据记进 plan 的 Experiment Log，其余删除；还在用的长期工具在 `memory/facts.md` 提一句，下次就不再报。判定规则见
+通过的验收证据记进 exp 的 Experiment Log，其余删除；还在用的长期工具在 `memory/facts.md` 提一句，下次就不再报。判定规则见
 [记录寿命](../design.md#leftovers)。
 
 运行时证据在 `.harness/`，日志与产物有上限。必须比运行时保留期更久的

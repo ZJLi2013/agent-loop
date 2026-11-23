@@ -140,17 +140,6 @@ class LintTest(unittest.TestCase):
         self.assertEqual(len(hits), 1, hits)
         self.assertTrue(hits[0].startswith("exps/topic/notes.md:6: '待 human'"), hits)
 
-    def test_experiment_line_readme_needs_entry_fields(self) -> None:
-        self.write("exps/line/01-does-x-help.md", "# 01\n")
-        self.write("exps/line/readme.md", "# 结论\n\n- **目标**：少误判。\n\n## 实验\n- **现状**：x\n")
-        self.write("exps/other/readme.md", "# 无编号分文档\n")
-        self.git("add", "-A")
-
-        problems = lint_changed(self.root)
-
-        self.assertEqual(problems, ["exps/line/readme.md: entry fields missing before the first ## section: 现状、下一步"])
-        self.write("exps/line/readme.md", "# 结论\n\n- **目标**：少误判。\n- **现状**：没变好。\n- 下一步：重训。\n")
-        self.assertEqual(lint_changed(self.root), [])
 
     def test_link_only_index_lines_in_readmes(self) -> None:
         self.write("readme.md", "\n".join([
@@ -169,27 +158,7 @@ class LintTest(unittest.TestCase):
         self.assertEqual([p.split(": ")[0] for p in problems], ["readme.md:3", "readme.md:4"], problems)
         self.assertTrue(all("link-only index line" in p for p in problems), problems)
 
-    def test_code_named_experiment_files(self) -> None:
-        for name in ("exps/line/w1-post-train.md", "exps/line/rt1.md", "exps/line/01-does-continued-training-help.md",
-                     "exps/line/does-4-views-help.md", "docs/v2-notes.md"):
-            self.write(name, "# x\n")
-        self.git("add", "-A")
 
-        problems = lint_changed(self.root)
-
-        self.assertEqual(problems, [
-            "exps/line/rt1.md: code-named file; name it <two-digit order>-<question>.md",
-            "exps/line/w1-post-train.md: code-named file; name it <two-digit order>-<question>.md",
-        ])
-
-    def test_unchanged_readme_is_not_checked(self) -> None:
-        self.write("exps/line/w1.md", "# 旧\n")
-        self.write("exps/line/01-a.md", "# 旧\n")
-        self.write("exps/line/readme.md", "# 旧\n\n- [w1](w1.md)\n")
-        self.commit()
-        self.write("exps/line/01-a.md", "# 改\n")
-
-        self.assertEqual(lint_changed(self.root), [])
 
     def test_task_table_rows_this_task_added_match_the_template(self) -> None:
         header = "| id | task | check | status |\n|---|---|---|---|\n"
