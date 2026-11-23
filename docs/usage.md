@@ -212,7 +212,7 @@ reviewer 换另一个模型时，见下文「可选的独立 reviewer」里的 o
 
 ## 创建并评审计划
 
-为每个具体 feature 在工作项目的 `features/<feature>.md` 写 plan document（feature 文档；一个 Goal 可以有多个 feature），说明 Goal、范围、当前结论、下一个决策与验收判据；实验结论与逐 run 记录写同名的 `exps/<feature>.md`，第一个 `## ` 之前写 `目标`、`现状`、`下一步` 三行。两份都直接放在目录下并被 git 跟踪，`init` 拒绝 `features/` 之外的新 plan。feature 文档包含：
+为每个具体 feature 在工作项目的 `features/<feature>.md` 写 plan document（feature 文档；一个 Goal 可以有多个 feature），第一个 `## ` 之前写 `目标`、`现状`、`下一步` 三行，再写 Goal、范围、当前结论（结论只在这里定义）、下一个决策与验收判据；配置、读数、复现命令与逐 run 记录写同名的 `exps/<feature>.md`，那里不写结论与设计。两份都直接放在目录下并被 git 跟踪，`init` 拒绝 `features/` 之外的新 plan。feature 文档包含：
 
 ```text
 Plan Revision: 1

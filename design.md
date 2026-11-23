@@ -189,8 +189,9 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
   task id 取 `task.md` 与 task archive 的全部 task 行（`records.task_ids`），在一次调用开始时连同 config 的 `plan_doc` 读一次；
   没有 config 或 `plan_doc` 时只查 `待 human`。`plan_doc` 是 feature 文档时，只有它里面当前 task id 开头的标题段，与同名
   `exps/<feature>.md` 的 `## Experiment Log` 节豁免这一类；在途 Goal 的旧位置 plan 及其子实验目录整份豁免。链接与残留词照查。
-- 布局：`features/`、`exps/` 下改过的文档必须直接放在目录里；exp 要有同名 feature，第一个 `## ` 之前要有 `目标`、`现状`、
-  `下一步` 三个字段行；这两个目录里被 gitignore 的文档逐个报出。
+- 布局：`features/`、`exps/` 下改过的文档必须直接放在目录里；feature 第一个 `## ` 之前要有 `目标`、`现状`、`下一步` 三个字段行，
+  不含 `## Experiment Log`；exp 要有同名 feature，不含 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、字段行与 `- rev：` 行；
+  围栏代码块里的行不查；这两个目录里被 gitignore 的文档逐个报出。
 - 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
   并返回它的退出码，没给命令时退出 0。git 调用失败经 `HarnessError` 退出 2。
 
@@ -275,15 +276,15 @@ Policy 回答「这个状态下怎么做」，不重新定义转移：
 
 ```text
 features/<feature>.md  Plan Revision / Plan Review
+                       首屏：目标 / 现状 / 下一步
                        Goal（所属 Goal 与本 feature 要让什么成真）
                        设计（策略、手写的产出样例、关键选择、不做什么、验收怎么判）
-                       当前结论（每条一句，链到 exp）
+                       当前结论（结论的唯一定义处，每条一句带关键数，链到 exp）
                        脉络（一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision；不放读数与链接）
                        ---  以下是执行细节：human 在 Gate 只读上面几节
                        系统 / Pipeline（确实存在才写）
                        <task id> 标题段（task 设计）
-exps/<feature>.md      首屏：目标 / 现状 / 下一步
-                       结论（唯一定义处）、支撑数据、怎么重跑
+exps/<feature>.md      每个实验一节：配置与输入、读数表、复现命令与产物位置
                        Experiment Log
 ```
 

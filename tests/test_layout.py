@@ -12,8 +12,9 @@ from harness.errors import HarnessError
 from harness.lint import lint_changed
 from harness.records import close_task, design_location_error, leftovers, mainline_handoff, open_task_ids
 
-PLAN_HEAD = "# {name}\n\nPlan Revision: 1\nPlan Review: approved\n\n## Goal\n\n{name}\n\n"
-EXP_HEAD = "# a\n\n- 目标：a\n- 现状：a\n- 下一步：a\n\n"
+PLAN_HEAD = ("# {name}\n\nPlan Revision: 1\nPlan Review: approved\n\n- 目标：a\n- 现状：a\n- 下一步：a\n\n"
+             "## Goal\n\n{name}\n\n")
+EXP_HEAD = "# a 的实验细节\n\n"
 
 
 class LayoutTest(unittest.TestCase):
@@ -116,7 +117,7 @@ class LayoutTest(unittest.TestCase):
                 self.assertEqual(error is None, located, error)
 
     def test_close_unlinks_the_section_in_features_and_exps(self) -> None:
-        self.write("exps/a.md", EXP_HEAD + "## 结论\n\n做法见 [a1 设计](../features/a.md#a1-设计)。\n")
+        self.write("exps/a.md", EXP_HEAD + "## 读数\n\n做法见 [a1 设计](../features/a.md#a1-设计)。\n")
         self.write("features/b.md", self.read("features/b.md") + "\n沿用 [a1 设计](a.md#a1-设计)。\n")
 
         close_task(self.root, "features/a.md", "a1")
@@ -137,18 +138,35 @@ class LayoutTest(unittest.TestCase):
 
         hits = [p.split(": ")[0] for p in lint_changed(self.root) if "design-state" in p]
 
-        self.assertEqual(sorted(hits), ["exps/a.md:9", "features/b.md:16"])
+        self.assertEqual(sorted(hits), ["exps/a.md:5", "features/b.md:20"])
 
-    def test_exp_without_a_feature_or_first_screen_is_refused(self) -> None:
-        self.write("exps/z.md", "# z\n\n## 结论\n")
+    def test_feature_needs_first_screen_and_no_experiment_log(self) -> None:
+        self.write("features/c.md", "# c\n\nPlan Revision: 1\n\n## Goal\n")
+        self.write("features/d.md", PLAN_HEAD.format(name="d") + "## Experiment Log\n")
+        self.write("features/e.md", PLAN_HEAD.format(name="e") + "exp 的样子：\n```markdown\n## Experiment Log\n```\n")
+        self.git("add", "-A")
+
+        problems = lint_changed(self.root)
+
+        self.assertIn("features/c.md: entry fields missing before the first ## section: 目标、现状、下一步", problems)
+        self.assertIn("features/d.md:14: Experiment Log belongs in exps/d.md", problems)
+        self.assertEqual([p for p in problems if p.startswith("features/e.md")], [])
+
+    def test_exp_holds_only_details_and_data(self) -> None:
+        self.write("exps/z.md", "# z\n\n## 读数\n")
         self.write("exps/line/01-q.md", "# q\n")
+        self.write("exps/a.md", EXP_HEAD + "## 当前结论\n- **现状**：x\n- rev：r1\n")
+        self.write("exps/b.md", EXP_HEAD + "## 三档读数\n配置：seed 0\n```markdown\n## 当前结论\n```\n"
+                   "| 档 | p95 |\n|---|---|\n| 0 | 2.4 |\n\n## Experiment Log\n\n| b1 | run | pass |\n")
         self.git("add", "-A")
 
         problems = lint_changed(self.root)
 
         self.assertIn("exps/z.md: no features/z.md; each exp document has a feature of the same name", problems)
-        self.assertTrue(any(p.startswith("exps/z.md: entry fields missing") for p in problems), problems)
         self.assertTrue(any(p.startswith("exps/line/01-q.md: put it directly in exps/") for p in problems), problems)
+        self.assertEqual(sorted(p.split(": ")[0] for p in problems if p.startswith("exps/a.md")),
+                         ["exps/a.md:3", "exps/a.md:4", "exps/a.md:5"])
+        self.assertEqual([p for p in problems if p.startswith("exps/b.md")], [])
 
     def test_untracked_feature_is_refused(self) -> None:
         self.write(".gitignore", "features/c.md\n")

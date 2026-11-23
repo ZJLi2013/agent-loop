@@ -35,6 +35,8 @@ _SECTION = re.compile(r"^\s{0,3}##\s")
 _INDEX_LINE = re.compile(r"^\s*(?:[-*+]\s|\d+\.\s|\|)")
 _WORD = re.compile(r"[^\W\d_]")
 EXPERIMENT_LOG = re.compile(r"^\s{0,3}##\s+Experiment Log\s*$")
+_FEATURE_HEADING = re.compile(r"(Goal|设计|当前结论|结论|脉络)\s*$")
+_REVISION = re.compile(r"^\s*[-*]\s+rev\s*[：:]\s*r\d+")
 
 
 def _git(root: Path, *args: str) -> str:
@@ -131,24 +133,34 @@ def _is_readme(relative: str) -> bool:
 
 
 def _layout_problems(root: Path, relative: str) -> list[str]:
-    """features/<feature>.md and exps/<feature>.md sit directly in their directory; an exp opens with the entry fields."""
+    """features/<feature>.md holds the first screen and conclusions; exps/<feature>.md only experiment details and data."""
     parts = PurePosixPath(relative).parts
     if parts[0] not in (FEATURES_DIR, EXPS_DIR):
         return []
     if len(parts) != 2:
         return [f"{relative}: put it directly in {parts[0]}/ as <feature>.md, without subdirectories"]
-    if parts[0] == FEATURES_DIR:
-        return []
     problems = []
-    if not (root / FEATURES_DIR / parts[1]).is_file():
+    if parts[0] == EXPS_DIR and not (root / FEATURES_DIR / parts[1]).is_file():
         problems.append(f"{relative}: no {FEATURES_DIR}/{parts[1]}; each exp document has a feature of the same name")
-    found = set()
-    for line in (root / relative).read_text(encoding="utf-8", errors="replace").splitlines():
-        if _SECTION.match(line):
-            break
-        if field := _FIELD.match(line):
-            found.add(field[1])
-    if missing := [field for field in ENTRY_FIELDS if field not in found]:
+    found, sectioned, fenced = set(), False, False
+    for number, line in enumerate((root / relative).read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if _FENCE.match(line):
+            fenced = not fenced
+        if fenced or _FENCE.match(line):
+            continue
+        sectioned = sectioned or bool(_SECTION.match(line))
+        field = _FIELD.match(line)
+        if parts[0] == FEATURES_DIR:
+            if not sectioned and field:
+                found.add(field[1])
+            if EXPERIMENT_LOG.match(line):
+                problems.append(f"{relative}:{number}: Experiment Log belongs in {EXPS_DIR}/{parts[1]}")
+            continue
+        heading = _HEADING.match(line)
+        if heading and _FEATURE_HEADING.match(heading[1]) or field or _REVISION.match(line):
+            problems.append(f"{relative}:{number}: design, conclusions and the first screen belong in "
+                            f"{FEATURES_DIR}/{parts[1]}; an exp holds only experiment details and data")
+    if parts[0] == FEATURES_DIR and (missing := [field for field in ENTRY_FIELDS if field not in found]):
         problems.append(f"{relative}: entry fields missing before the first ## section: {'、'.join(missing)}")
     return problems
 

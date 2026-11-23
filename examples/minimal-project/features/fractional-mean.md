@@ -3,6 +3,10 @@
 Plan Revision: 1
 Plan Review: approved
 
+- **目标**: `average([1, 2])` returns `1.5` and empty input still raises.
+- **现状**: integer division; the fractional-mean test fails.
+- **下一步**: switch to true division and rerun the locked verifier.
+
 ## Goal
 
 Fix the arithmetic mean without changing the empty-input contract.

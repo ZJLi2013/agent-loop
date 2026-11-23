@@ -1,8 +1,7 @@
-# The mean still truncates fractions
+# fractional-mean experiment details
 
-- **目标**: `average([1, 2])` returns `1.5` and empty input still raises.
-- **现状**: integer division; the fractional-mean test fails.
-- **下一步**: switch to true division and rerun the locked verifier.
+## Test run
+Setup: Python 3.11+, no extra inputs. Rerun: `python -B -m unittest -v`.
 
 ## Experiment Log
 
