@@ -19,15 +19,15 @@ git 跟踪。一个 feature 是一处能单独设计、单独验收的改动，�
 就是 feature 文档，下文的 plan 都指它。Goal、feature 与 task id 用说明内容的短语义名
 （kebab-case，如 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `rN` revision。
 
-一个项目的文档只有下面几类，各写各的，不互相复制。每行的「不写什么」都有一个执行点：能按位置或字面判定的由 Harness
-拒绝，只能按含义判定的由 task reviewer 在 CLOSE 核对：
+一个项目的文档只有下面几类，各写各的，不互相复制。「不写什么」里能按位置或字面判定的由 Harness 拒绝；
+其余按本表由写的人守，task reviewer 只审内容，不审格式与分工：
 
 | 文档 | 位置 | 写什么 | 不写什么 | 执行点 |
 |---|---|---|---|---|
-| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；每个 feature 一行：一句当前事实（可带关键数）加 feature 与 exp 的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行；task reviewer 在 CLOSE 从它只跟一个链接到 feature 首屏 |
+| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；每个 feature 一行：一句当前事实（可带关键数）加 feature 与 exp 的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行 |
 | `task.md` | `.agent-loop/task.md`，每项目一份 | 主线（Goal 的问题、退出条件与它的 feature 链接）、task 行（id、问题、两个去向、状态，行序即优先级，链到 feature 里的设计节）、候选 | 设计、`rN`、失败计数、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
 | feature 文档 | `features/<feature>.md`，每个具体 feature 一份 | 设计与关键结论：首屏字段 `目标`、`现状`、`下一步`（研究型另加 `原因`、`已排除`），每行一句白话带关键数；所属 Goal 与本 feature 要让什么成真、设计、当前结论（项目结论的唯一定义处，每条一句判断带关键数，链到 exp 里支撑它的一节）、脉络；每个 task 的设计是其中以 task id 开头的一节，含绑定 revision 的 `- rev：rN` 一行，CLOSE 时删除 | Goal 的定义（归 `task.md`）、逐 run 表、原始读数、复现命令、日志与输出摘录、Experiment Log、要 human 选的项 | `init` 拒绝不在 `features/` 下的新 `plan_doc`，以及指向别处（exp、另一个 feature、`.harness/`）的 task 设计链接；CLOSE lint 拒绝缺首屏字段与 `## Experiment Log`；task reviewer 在 CLOSE 只读首屏答三问 |
-| exp 文档 | `exps/<feature>.md`，与 feature 同名 | 实验细节与数据：每个实验一节，写配置与输入（数据、seed、环境、参数）、读数表、复现命令与产物位置；Experiment Log | 设计（干预、判据、预算）、结论、首屏字段、`- rev：rN`、以 task id 开头的标题、Experiment Log 外以 task id 为行的表、要 human 选的项 | CLOSE lint 拒绝 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、首屏字段行、`- rev：` 行，没有同名 feature、子目录与未跟踪文件，以及本 task 新增的设计态行；task reviewer 在 CLOSE 核对它只有细节与数据 |
+| exp 文档 | `exps/<feature>.md`，与 feature 同名 | 实验细节与数据：每个实验一节，写配置与输入（数据、seed、环境、参数）、读数表、复现命令与产物位置；Experiment Log | 设计（干预、判据、预算）、结论、首屏字段、`- rev：rN`、以 task id 开头的标题、Experiment Log 外以 task id 为行的表、要 human 选的项 | CLOSE lint 拒绝 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、首屏字段行、`- rev：` 行，没有同名 feature、子目录与未跟踪文件，以及本 task 新增的设计态行 |
 
 task 设计不另起文档，task 行只链到它所在的那一节。feature 下的子步骤与子实验是它的 task 设计段与 exp 里的一节；能单独设计、单独验收的另一处改动或另一个研究问题，才开新的 feature 与同名 exp。
 按内容类型分工，同一种内容只归一份文档：设计与结论在 feature，结论只在「当前结论」定义一次，项目 readme 只放一句并链过去，首屏每个字段一句；配置、读数、复现与逐 run 记录在 exp，feature 只链过去；进展与状态只在 `task.md`。
