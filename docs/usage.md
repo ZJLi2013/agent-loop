@@ -224,6 +224,9 @@ Plan Review: proposed
 
 Harness 只把同时满足两条的表格行读作 task：至少 7 列，第一列是 `P` 加数字（`P0`、`P1`…）。主线表、候选表、表头和分隔行
 都不满足，所以不会被当成 task；不满足的 task 行同样读不到：plan review 不审它，`init --task` 找不到它。
+CLOSE lint 拒绝本 task 新增、列数与模板不一致的 task 行（例如多加一列「预算上限」）；预算与细节写进设计节。
+它只查 `.agent-loop/task.md` 里自 lint base 起新增的行，且只查表头前两格是 `P`、`id` 的表；列数取
+`harness/records.py` 的 `TASK_COLUMNS`，运行时不读模板文件。`.agent-loop/` 下的其他文件仍不进 lint。
 没有 `rev` 列的 6 列旧表要迁移，在 id 后补上绑定 plan 的那一列：
 
 ```markdown

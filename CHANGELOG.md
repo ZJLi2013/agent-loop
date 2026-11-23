@@ -6,6 +6,18 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- An experiment line's readme is its entry document and reads like a report: a one-sentence conclusion as the title,
+  `目标` / `现状` / `下一步` field lines on the first screen, then one table of numbered sub-documents. CLOSE lint
+  now rejects, on what the task changed, an experiment-line readme (one with `NN-*.md` sub-documents beside it)
+  missing those fields, link-only index lines in a readme, and new files under `exps/` named by a bare code such as
+  `w1-post-train.md`. The task reviewer reads only the first screen to answer what is established, where it is
+  stuck and what comes next; term order, deduplication and table form are now `suggest`, and the fixed step table and
+  data lists are no longer required. File names are checked only by CLOSE lint; the reviewer no longer reports them.
+  Migration: existing documents are checked only when a task changes them.
+- `task.md` uses only the template's columns, one short sentence per cell: the task cell is the question it answers,
+  the acceptance cell reads "done → where; not → where", and budgets and details live in the linked design. CLOSE lint
+  rejects task rows this task added whose column count differs from the template (for example an extra 预算上限
+  column). Migration: existing rows are checked only when a task changes them.
 - Harness modules are named for what they own: `harness.review` → `harness.task_review` (it pairs with
   `harness.plan_review` and `prompts/task_review.md`), `harness.page` → `harness.pager`, `harness.runner` →
   `harness.process` (subprocess execution, distinct from the `run.py` CLI), and `harness.attention` →

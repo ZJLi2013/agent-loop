@@ -21,23 +21,20 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 # <项目> Tasks
 
 ## Goal
-<一句话：要解决什么问题。写不出来就不要往下拆。>
+<一句话：要解决什么问题；已完成的部分只给一个链接。写不出来就不要往下拆。>
 
 | P | id | rev | task | 验收检查点 | 状态 | 失败 |
 |---|---|---|---|---|---|---|
-| P0 | y-migration | r2 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 📝 proposed | 0 |
-| P0 | migrate-x-to-y | r1 | 把 X 迁到 Y | `pytest tests/test_y.py` 全绿 | 🚧 blocked y-schema-drift | 1 |
-| P0 | y-schema-drift | r2 | 修 Y 的 schema 漂移 | `validate.py` 退出码 0 | 🔬 doing | 0 |
-| P0 | y-e2e-latency | r2 | 量 Y 的端到端延迟 | p50 ≤ 基线 1.1× | ⬜ todo | 0 |
-| P1 | x-legacy-cleanup | — | 清理 X 的旧路径 | grep 不到 `legacy_x` | ⬜ todo | 0 |
-
-<!-- 每个 task 一行。范围、方案、分析一律写在它链接的设计/实验文档里。 -->
+| P0 | y-schema-drift | r2 | Y 的 schema 漂移能修好吗？（[设计](plans/y/plan.md#y-schema-drift)） | `validate.py` 退出 0 → migrate-x-to-y；不过 → 回 plan | 🔬 doing | 0 |
+| P0 | migrate-x-to-y | r1 | X 迁到 Y 后测试还全绿吗？（[设计](plans/y/plan.md#migrate-x-to-y)） | 全绿 → y-e2e-latency；不绿 → 回 plan | 🚧 blocked y-schema-drift | 1 |
+| P0 | y-e2e-latency | r2 | Y 的端到端延迟在基线 1.1 倍内吗？（[设计](plans/y/plan.md#y-e2e-latency)） | 在 → x-legacy-cleanup；不在 → 回 plan | ⬜ todo | 0 |
+| P1 | x-legacy-cleanup | — | X 的旧路径能全删掉吗？ | grep 不到 `legacy_x` → 完成；还有 → 列出调用方 | ⬜ todo | 0 |
 
 ## Candidates
 
-| P | 候选 | 进入条件 |
-|---|---|---|
-| P1 | 量 Y 在大 batch 下的延迟 | y-e2e-latency 变绿后 |
+| P | 回答什么 | 进入条件 | 估算 |
+|---|---|---|---|
+| 1 | Y 在大 batch 下延迟还达标吗？ | y-e2e-latency 通过 | 2 GPU·h |
 
 ## Triggered
 
@@ -46,7 +43,13 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 Closed: [archive/tasks.md](archive/tasks.md)
 ```
 
-**一行需要换行才读得完，就是细节没下沉。** `task.md` 每轮都被完整读一遍。
+**`task.md` 写给 human 扫一眼就懂，每轮也被完整读一遍；细节一律下沉到链接的设计文档。**
+
+- 只用模板的列，不加列。依赖写成状态格的 `🚧 blocked <id>`；预算、判据细节与分析写进设计节。CLOSE lint 拒绝列数与模板不一致的 task 行。
+- 每格一句短话：task 格写它回答的问题，验收格写「成了 → 去哪；不成 → 去哪」，细节只给设计链接。
+- 不建模板以外的章节：只有 `主线`、`Goal`、`Candidates`（或 `候选`）、`Triggered`，末尾一行 `Closed:`。
+- 候选表每行一个问题、一个进入条件、一个数。
+- human 读的格子不用内部代号；task id 与设计链接除外。
 
 还没开工的候选写进 `## Candidates`，等某个事件才做的后续项写进 `## Triggered`（「<事件>时：<动作>」），
 两节都可省。候选不带设计、状态与 id；写成链接设计文档的 task、过 plan review 后才进活跃表，同时删掉候选行。
@@ -104,8 +107,10 @@ doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing �
 
 1. **可执行或可观测**——一条命令、一个产物、一个数值阈值。「功能正常」「效果变好」不算。
 2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-design` 的「验收门」。
-3. **失败时的去向是已知的**——不必写在表里，但要能按 `when-to-stop`「先自修，再中止」的分类表归类。
+3. **失败时的去向是已知的**——表里写成「不成 → 去哪」半句，并能按 `when-to-stop`「先自修，再中止」的分类表归类。
    归不进任何一类的失败，说明这个 task 拆得不对，回 `work-planning` 重拆。
+
+命令、阈值与判据层写在设计节，表里的验收格只留两个去向。
 
 步长（一个 task 最多跨一个未验证假设、活跃表只写最近 1–2 项）归 `work-planning` Gate 第 2、3 步；
 每项变绿后再生成下一项。

@@ -27,6 +27,7 @@ RETIRED_ELSEWHERE = {
     "reports",
 }
 CLOSED_MARKERS = ("✅ done", "❌ dropped")
+TASK_COLUMNS = 7
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _FENCE = re.compile(r"^ {0,3}(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
 
@@ -40,7 +41,7 @@ def _cells(line: str) -> list[str] | None:
 
 def _task_id(line: str) -> str | None:
     cells = _cells(line)
-    if not cells or len(cells) < 7 or cells[1].lower() == "id":
+    if not cells or len(cells) < TASK_COLUMNS or cells[1].lower() == "id":
         return None
     if not re.fullmatch(r"P\d+", cells[0]):
         return None
