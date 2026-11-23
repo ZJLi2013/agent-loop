@@ -73,7 +73,7 @@ Mainline Review: approved
 | new-task-generalization | 新任务泛化 | 未见任务上的成绩有结论 | ⬜ todo | |
 ```
 
-状态只有 `✅ done`、`▶ next`、`⬜ todo`；至多一行 `▶ next`，且它是第一行非 `✅ done`。
+状态只有 `✅ done`、`▶ next`、`⬜ todo`、`❌ dropped`；至多一行 `▶ next`，且它是第一行非 `✅ done` / `❌ dropped`。
 只写 Goal 级的问题与退出条件，不写 task；plan 格链接这个 Goal 的每份 feature 文档，多份用顿号隔开。`Mainline Review` 只在 Human Review Gate 写；
 交接、改表与支线的规则归 `work-planning`。没有这一节的项目只有一个 Goal。
 
@@ -85,6 +85,10 @@ Mainline Review: approved
 准备不推进 task 状态，review 改了设计就按新设计改准备。
 `dropped` 要在行尾链接说明为什么放弃——
 被否决的候选是长期决定，删掉它下次还会有人重提。
+
+**被动等待带截止日期。** task 行或主线行的状态格写「等 <X>」（等自然案例、真实使用、合并、上游产物）时，同一格写
+`YYYY-MM-DD 前没等到就关`，默认写下当天加 7 天。到期没等到：把该行（主线行即整个 Goal）标 `❌ dropped` 并归档，
+关闭对应 issue，回报里写一句，不问 human。CLOSE lint 拒绝本 task 写下的、缺这句的等待格，也拒绝任何未关闭行里已过的截止日期。
 
 `✅ done / ❌ dropped` 是 CLOSE 转换时的瞬时状态：结论与 evidence 写回后，把整行移到
 `archive/tasks.md`。archive 沿用 7 列 `| P | id | rev | task | 验收检查点 | 状态 | 失败 |`，CLOSE 在 P 格写 `—`、

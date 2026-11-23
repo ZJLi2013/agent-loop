@@ -205,6 +205,10 @@ worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_revi
 
 - reviewer 对主线 Goal 选 `stop` 时，把它在主线表的行改 `✅ done`、下一行改 `▶ next`，为 `▶ next` 的 Goal
   写它的 feature 文档、跑独立 plan review 再开工，不停在 DONE；`Mainline Review` 不是 `approved` 时交 human。
+- `▶ next` 的主线行超过 7 天没改过时，写 feature 文档前先核对它引用的 issue 仍 open、human 原话仍成立；
+  不成立就按 `task-state` 的到期处理把它标 `❌ dropped`，不写 plan。
+- 新 Goal 进主线要 human 显式批准：主线行的问题格引用 human 说「做」或「开始」的原话与出处（issue 评论，或调度窗口转述）。
+  「不在本轮修」「推迟」「以后再说」不进主线：issue 保持 open、不挂 Goal，或直接关闭。
 - 增删 Goal 或改顺序是 `replan`：`Mainline Review` 改 `proposed`，交 human。
 - 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
   开支线要 human 批准。
