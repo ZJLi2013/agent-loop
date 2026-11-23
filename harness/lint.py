@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import subprocess
@@ -68,7 +69,10 @@ def lint_config(root: Path) -> dict[str, Any]:
         version: str | None = metadata.version("agent-loop")
     except metadata.PackageNotFoundError:
         version = None
-    return {"enabled": True, "base": base, "version": version}
+    tracked, untracked, ignored = _candidates(root, base)
+    snapshot = {path: _fingerprint(root / path) for path in [*tracked, *untracked, *ignored]
+                if (root / path).is_file()}
+    return {"enabled": True, "base": base, "version": version, "snapshot": snapshot}
 
 
 def _config(root: Path) -> dict[str, Any]:
@@ -98,6 +102,18 @@ def _markdown(listing: str) -> list[str]:
         for path in listing.split("\0")
         if path.lower().endswith(".md") and path.split("/", 1)[0] not in PRUNED_DIRS
     )
+
+
+def _fingerprint(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _candidates(root: Path, base: str) -> tuple[list[str], list[str], list[str]]:
+    tracked = _markdown(_git(root, "diff", "--name-only", "-z", "--relative", "--diff-filter=d", base, "--"))
+    untracked = _markdown(_git(root, "ls-files", "--others", "--exclude-standard", "-z"))
+    ignored = _markdown(_git(root, "ls-files", "--others", "--ignored", "--exclude-standard", "-z",
+                             "--", FEATURES_DIR, EXPS_DIR))
+    return tracked, untracked, ignored
 
 
 def _added_lines(root: Path, base: str, relative: str) -> set[int]:
@@ -241,7 +257,8 @@ def lint_changed(root: Path) -> list[str]:
     """Problems in the markdown changed since this task's init (HEAD without a task)."""
     root = root.resolve()
     config = _config(root)
-    base = (config.get("lint") or {}).get("base") or "HEAD"
+    settings = config.get("lint") or {}
+    base = settings.get("base") or "HEAD"
     plan_doc = config.get("plan_doc")
     ids = task_ids(root) if plan_doc else set()
     plan = (root / plan_doc).resolve() if plan_doc else None
@@ -261,10 +278,19 @@ def lint_changed(root: Path) -> list[str]:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         return _exempt_lines(lines, ids, sections=path == plan)
 
-    tracked = _markdown(_git(root, "diff", "--name-only", "-z", "--relative", "--diff-filter=d", base, "--"))
-    untracked = _markdown(_git(root, "ls-files", "--others", "--exclude-standard", "-z"))
-    ignored = _markdown(_git(root, "ls-files", "--others", "--ignored", "--exclude-standard", "-z",
-                             "--", FEATURES_DIR, EXPS_DIR))
+    tracked, untracked, ignored = _candidates(root, base)
+    snapshot = settings.get("snapshot", {})
+    if snapshot:
+        def changed(relative: str) -> bool:
+            path = root / relative
+            return path.is_file() and _fingerprint(path) != snapshot.get(relative)
+
+        # A dirty file restored to HEAD still differs from the init snapshot.
+        current_tracked = set(_markdown(_git(root, "ls-files", "--cached", "-z")))
+        tracked = sorted(set(tracked) | (snapshot.keys() & current_tracked))
+        tracked = [path for path in tracked if changed(path)]
+        untracked = [path for path in untracked if changed(path)]
+        ignored = [path for path in ignored if changed(path)]
     problems = [f"{relative}: not tracked by git" for relative in untracked]
     problems += [f"{relative}: ignored by git; {FEATURES_DIR}/ and {EXPS_DIR}/ are tracked" for relative in ignored]
     for relative in tracked:
