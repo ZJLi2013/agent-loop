@@ -84,6 +84,18 @@ def append_journal(root: Path, result: dict[str, Any], limit: int) -> None:
         path.write_text("\n".join(lines[-limit:]) + "\n", encoding="utf-8")
 
 
+def task_journal(root: Path, task_id: str) -> str:
+    path = harness_dir(root) / JOURNAL_FILE
+    if not path.exists():
+        return ""
+    lines = [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line and json.loads(line).get("task_id") == task_id
+    ]
+    return "".join(f"{line}\n" for line in lines)
+
+
 def prune_artifacts(root: Path, limit: int) -> None:
     artifacts = harness_dir(root) / "artifacts"
     runs = sorted(

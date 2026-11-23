@@ -119,6 +119,23 @@ class TaskBoundaryReviewTest(unittest.TestCase):
         self.assertIn("--objection", followup)
         self.assertNotIn("stale", followup)
 
+    def test_reviewer_reads_only_this_tasks_journal(self) -> None:
+        self.init(reviewer_writing(CONTINUE))
+        journal = self.root / ".harness" / "runs.jsonl"
+        with journal.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"run_id": "r0", "task_id": "other", "kind": "exec"}) + "\n")
+
+        run_review(self.root)
+
+        review_dir = self.root / ".harness" / "review"
+        entries = [
+            json.loads(line)
+            for line in (review_dir / "journal.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertTrue(entries)
+        self.assertEqual({entry["task_id"] for entry in entries}, {"t1"})
+        self.assertIn(".harness/review/journal.jsonl", (review_dir / "prompt.md").read_text(encoding="utf-8"))
+
     def test_closing_review_archives_old_handoffs_and_reports_failures(self) -> None:
         real_write = records._atomic_write
         for blocked in (False, True):
@@ -426,6 +443,40 @@ class ReviseTest(unittest.TestCase):
         self.assertEqual((second["decision"], second["attempts"]), ("continue", 1))
         self.assertNotIn("| t1 |", tasks.read_text(encoding="utf-8"))
         self.assertFalse(scratch.exists())
+
+    def test_review_after_revise_reads_only_the_revision(self) -> None:
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@t"]
+        for argv in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "base"]):
+            subprocess.run(git + argv, cwd=self.root, check=True, capture_output=True)
+        doc = self.root / "exp.md"
+        doc.write_text("result uses MRR\nunchanged section\n", encoding="utf-8")
+        invalid = {"decision": "continue", "why": "no next task"}
+        self.init(reviewer_sequence(REVISE, invalid, CONTINUE), run_verifier=False)
+        review_dir = self.root / ".harness" / "review"
+
+        self.assertEqual(verify(self.root)["automatic_review"]["decision"], "revise")
+        doc.write_text("result uses MRR (mean reciprocal rank)\nunchanged section\n", encoding="utf-8")
+        self.assertIsNotNone(verify(self.root)["automatic_review"]["error"])
+        outcome = run_review(self.root)["review"]
+
+        diff = (review_dir / "revise.diff").read_text(encoding="utf-8")
+        prompt = (review_dir / "prompt.md").read_text(encoding="utf-8")
+        self.assertEqual(outcome["decision"], "continue")
+        changed = [
+            line for line in diff.splitlines() if line[:1] in "+-" and not line.startswith(("+++", "---"))
+        ]
+        self.assertEqual(changed, ["-result uses MRR", "+result uses MRR (mean reciprocal rank)"])
+        self.assertIn("revise.diff", prompt)
+        self.assertIn("usage.md lacks the default", prompt)
+
+    def test_review_after_revise_outside_git_reviews_in_full(self) -> None:
+        self.init(reviewer_sequence(REVISE, CONTINUE), run_verifier=False)
+        verify(self.root)
+        verify(self.root)
+        review_dir = self.root / ".harness" / "review"
+
+        self.assertFalse((review_dir / "revise.diff").exists())
+        self.assertNotIn("revise.diff", (review_dir / "prompt.md").read_text(encoding="utf-8"))
 
     def test_other_decisions_still_block_execution(self) -> None:
         self.init(reviewer_sequence({"decision": "ask_human", "why": "pick"}), run_verifier=False)

@@ -7,8 +7,8 @@ from typing import Any
 
 from harness.errors import HarnessError
 from harness.findings import describe, normalize_findings
-from harness.fingerprint import verifier_drift, workspace_fingerprint
-from harness.journal import append_journal, new_run_id, prune_artifacts
+from harness.fingerprint import verifier_drift, workspace_diff, workspace_fingerprint, workspace_tree
+from harness.journal import append_journal, new_run_id, prune_artifacts, task_journal
 from harness.plan import pause_request
 from harness.process import execute_process
 from harness.project import (
@@ -41,6 +41,8 @@ from harness.storage import (
 
 REVIEWER_FILE = "reviewer.json"
 REVIEW_DIR = "review"
+JOURNAL_INPUT = "journal.jsonl"
+REVISE_DIFF = "revise.diff"
 # Plan and task review share this path: configured reviewer commands read it by name (docs/usage.md).
 PROMPT_FILE = "prompt.md"
 DECISIONS = ("continue", "revise", "ask_human", "stop")
@@ -78,6 +80,7 @@ def _prompt(
     previous: dict[str, Any],
     objection: str | None,
     revised_run: str | None,
+    revised_findings: list[dict[str, Any]] | None,
 ) -> str:
     evidence = f"{HARNESS_DIR}/artifacts/{state['last_run_id']}"
     inputs = []
@@ -85,7 +88,9 @@ def _prompt(
         inputs.append(f"- plan document：`{config['plan_doc']}`")
     inputs.append(f"- task 列表：`{_relative(root, task_file(root))}`")
     inputs.append(f"- 验证输出：`{evidence}/stdout.log`、`{evidence}/stderr.log`")
-    inputs.append(f"- 执行记录：`{HARNESS_DIR}/runs.jsonl`")
+    inputs.append(f"- 本 task 的执行记录：`{HARNESS_DIR}/{REVIEW_DIR}/{JOURNAL_INPUT}`")
+    if revised_findings is not None:
+        inputs.append(f"- 退回以来的工作区改动：`{HARNESS_DIR}/{REVIEW_DIR}/{REVISE_DIFF}`")
     index = memory_dir(root) / "INDEX.md"
     if index.exists():
         try:
@@ -110,6 +115,18 @@ def _prompt(
         extra += (
             "\n## 本 task 的退回记录\n\n"
             "本 task 已退回过一次，`revise` 已用掉，本次只能在 `continue` / `ask_human` / `stop` 里选。\n"
+        )
+    if revised_findings is not None:
+        lines = [
+            f"{index}. [{item['level']}] {item['claim']}"
+            for index, item in enumerate(revised_findings, start=1)
+        ]
+        extra += (
+            "\n这次只回答两件事：上次退回的每条 `must` 改了没有；"
+            f"`{HARNESS_DIR}/{REVIEW_DIR}/{REVISE_DIFF}`（退回时到现在的工作区改动）里改到的行有没有带进新问题。"
+            "不重做第 1 步的入口复述与全套核对，不重写 `.harness/review/entry-restatement.md`；"
+            "diff 以外的内容上次已审过，不再据此报 `must`。第 2–4 步照做。\n\n"
+            "上次退回的意见：\n" + ("\n".join(lines) or "（无）") + "\n"
         )
     from harness.plan_review import task_record
 
@@ -193,6 +210,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
                 "Disable and init again to lock the new verifier, then verify"
             )
         revised_run = previous.get("revised_run")
+        revised_baseline = previous.get("revised_baseline")
         if previous.get("verify_run_id") == state.get("last_run_id"):
             if previous.get("decision") and not objection:
                 raise HarnessError(
@@ -211,8 +229,24 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         review_dir.mkdir(parents=True, exist_ok=True)
         decision_path = review_dir / "decision.json"
         decision_path.unlink(missing_ok=True)
+        (review_dir / JOURNAL_INPUT).write_text(
+            task_journal(root, str(state["task_id"])), encoding="utf-8"
+        )
+        diff = None
+        if (
+            revised_run not in (None, previous["verify_run_id"])
+            and revised_baseline
+            and revised_baseline.get("tree")
+        ):
+            diff = workspace_diff(root, revised_baseline["tree"])
+        if diff is None:
+            (review_dir / REVISE_DIFF).unlink(missing_ok=True)
+        else:
+            (review_dir / REVISE_DIFF).write_text(diff, encoding="utf-8")
+        revised_findings = revised_baseline["findings"] if diff is not None else None
         (review_dir / PROMPT_FILE).write_text(
-            _prompt(root, config, state, previous, objection, revised_run), encoding="utf-8"
+            _prompt(root, config, state, previous, objection, revised_run, revised_findings),
+            encoding="utf-8",
         )
 
         run_id = new_run_id()
@@ -282,6 +316,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
         progress_archived = 0
         if decision and decision["decision"] == "revise":
             revised_run = previous["verify_run_id"]
+            revised_baseline = {"tree": workspace_tree(root), "findings": decision["findings"]}
         elif decision:
             close_task(root, config.get("plan_doc"), str(state["task_id"]))
             progress_archived, progress_error = archive_progress(root)
@@ -299,6 +334,7 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             "cleanup_error": cleanup_error,
             "progress_archived": progress_archived,
             "revised_run": revised_run,
+            "revised_baseline": revised_baseline,
             "at": utc_now(),
         }
         if decision:

@@ -29,9 +29,15 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Fixed
 
+- The task review after a `revise` reads only what changed: when the send-back lands, the review record's
+  `revised_baseline` keeps its findings and a git tree of the workspace, and the next verify's review gets
+  `.harness/review/revise.diff` plus those findings, and is told to check only the earlier `must` items and the
+  changed lines instead of redoing the entry restatement and the full checks (#255). Without a git workspace, or for
+  state written before this field, the review runs in full as before.
+- Each task review reads `.harness/review/journal.jsonl`, the `runs.jsonl` lines of the reviewed task only, instead
+  of the whole `.harness/runs.jsonl` (#255).
 - Task review reports the task id, invalid priority cell and required `P<number>` format when a successor
   row uses a priority such as `P8a` or `P15.1`, instead of reporting that the task is not open (#243).
-
 - On a task stopped by an exhausted execution budget, `exec`, `verify` and `resume` report the exhausted budget
   and direct the caller to `disable`, including when a pause request is pending (#248). Refused commands leave
   the task state and pending pause unchanged.
