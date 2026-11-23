@@ -9,8 +9,11 @@
 
 Verified on **Cursor, Codex, and DeepSeek Harness (dsh)**.
 
-agent-loop adds a project control loop to an existing agent. Use it for iterative experiments, engineering
-changes with explicit acceptance criteria, and long tasks that need continuity across context windows.
+agent-loop adds a project control loop to an existing agent. Use it for work whose result is known only after a
+run and decides the next step: iterative experiments, engineering changes chosen by measurement, and the long tasks
+among them that need continuity across context windows. Changes judged by a specification or human preference
+(documents, bug fixes to a known spec, behavior-preserving refactors, configuration) stay outside the loop; the
+criterion is in [`rules/agent-loop.mdc`](rules/agent-loop.mdc).
 You define the Goal and project criteria. A worker executes, an independent verifier checks the result,
 and an optional reviewer interprets the evidence and proposes the next step.
 

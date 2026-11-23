@@ -9,7 +9,7 @@
 
 已在 **Cursor、Codex、DeepSeek Harness (dsh)** 上验证。
 
-agent-loop 为现有 agent 提供项目级控制环。适合多轮实验、需要验证的工程改造，以及需要跨上下文接续的长任务。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer 核对证据、提出下一步，方向变化时交回 human。
+agent-loop 为现有 agent 提供项目级控制环。适合结果要运行后才知道、并按结果选下一步的工作：多轮实验、靠实测选方案的工程改造，以及其中需要跨上下文接续的长任务。对错由规格或 human 偏好决定的改动（文档、按规格修 bug、保持行为的重构、配置）不进环，判据见 [`rules/agent-loop.mdc`](rules/agent-loop.mdc)。你定义 Goal 和项目判据，worker 执行，独立 verifier 验证；可选 reviewer 核对证据、提出下一步，方向变化时交回 human。
 
 ![一个 task 的生命周期](docs/images/task-stages.svg)
 

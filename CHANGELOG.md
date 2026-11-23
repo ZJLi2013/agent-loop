@@ -12,6 +12,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- The loop admits only work that tests an empirical hypothesis whose result is unknown and picks the next step
+  from it. Tasks judged by a specification or human preference (document rewrites and migrations, bug fixes to a
+  known spec, behavior-preserving refactors, configuration, rule text) stay outside it: done directly and accepted
+  by human review, with no plan and no model judging. The rule that sent a project's second exempt rule, schema, or
+  pipeline change through `work-planning` is gone. Document layout, wording, and format constraints need no
+  behavior replay in contributions.
 - `task.md` task tables have four columns, `| id | task | 验收检查点 | 状态 |`; row order within a Goal's table is the
   priority. Harness reads the revision from a `- rev：rN` line in the task's design section (from the archive row once
   closed) and keeps failure counts in `.harness/failures.json`: `agent-loop-harness fail --task <id> --note ...` adds

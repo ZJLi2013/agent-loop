@@ -1,13 +1,15 @@
 ---
-description: 多步任务的稳定内核：按当前状态路由到唯一 policy；失败默认自修，完成必须有独立证据
+description: 实验类多步任务的稳定内核：按当前状态路由到唯一 policy；失败默认自修，完成必须有独立证据
 alwaysApply: true
 ---
 
 # Agent Loop
 
-**任何需要跨回合状态的工作都走这个环；一问一答、单文件小改、纯查询直接做。**
-豁免按项目判：项目没有 plan Goal、它的规则 / schema / pipeline 已经按豁免改过一次时，再改这类东西前
-先经 `work-planning` 写 Goal 并过 Human Review Gate。
+**目标是检验一个结果未知的经验性假设、并按结果选下一步的工作走这个环；一问一答、纯查询直接做。**
+对错由规格或 human 偏好决定的任务（文档改写与迁移、按既定规格修 bug、保持行为的重构、配置、条文）不进环：
+直接做，交 human review 验收，不写 plan、不设模型判读；跑测试判通过或返修不算实验。按实测结果在几种改法里选
+（例：按性能选重构方案）属于实验，进环。这条判定先于下面的路由与各 skill 的触发条件：不进环的任务不因它们
+进入 plan 或实验生命周期，它的 human review 也不由 reviewer 代决替代。
 状态与合法转移以 [`harness/protocol.py`](../harness/protocol.py) 为准。
 
 ## 按状态路由
