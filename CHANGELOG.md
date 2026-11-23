@@ -6,13 +6,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
-- `experiment-design`: behavior acceptance of a rule, skill, reviewer or tool uses existing real cases, trimmed or
-  redacted but with no added trigger; when it depends on an event that has not happened, it waits for one to occur
-  naturally instead of opening, rewriting or rerouting a work item. Synthetic probes, public synthetic reproductions
-  and contract tests are unaffected but do not count as this acceptance. A synthetic replay that does not reproduce a
-  gap is recorded as "not reproduced": on its own it neither justifies a rule change nor shows the current rule covers
-  the gap. `CONTRIBUTING.md` acceptance replays for decision-changing Policy changes follow this, with private raw
-  material kept local and acceptance marked pending when no real case fits.
+- `CONTRIBUTING.md`: behavior replays for Policy changes use scenarios from real work instead of synthetic ones; a
+  synthetic scenario that does not reproduce the gap leaves the rule unchanged and acceptance waits for a real case.
 - `task.md` task tables have four columns, `| id | task | 验收检查点 | 状态 |`; row order within a Goal's table is the
   priority. Harness reads the revision from a `- rev：rN` line in the task's design section (from the archive row once
   closed) and keeps failure counts in `.harness/failures.json`: `agent-loop-harness fail --task <id> --note ...` adds

@@ -95,11 +95,10 @@ changes a decision when, for some input, an agent would run, refuse, or stop a d
 different time, or hand work to a different owner. The pull request states that decision as a contract ("given X,
 the agent does / refuses / stops Y"). It then replays a few scenarios through the real call path, once on the base
 branch and once with the change: the agent or reviewer reads the rules and acts, rather than a check that the prompt
-contains the new sentence. Acceptance scenarios come from real cases, as `experiment-design` requires for behavior
-acceptance; public synthetic scenarios may still serve for diagnosis, controls and regression. Private raw material
-stays local: the pull request records a public description of each case and how it was trimmed or redacted. With no
-fitting real case yet, the pull request marks real-behavior acceptance as pending. One more scenario is a control the
-new rule must not trigger. The pull request records the model, the inputs, and the expected and observed action of
+contains the new sentence. Scenarios come from real work; private material stays local, and the pull request
+describes those inputs without it. A synthetic scenario that does not reproduce the gap proves nothing either way:
+the rule stays as it is and acceptance waits for a real case. One more scenario is a control the new rule must not
+trigger. The pull request records the model, the inputs, and the expected and observed action of
 each run. A small manual or fixed-model replay is enough. A wording change that changes no decision needs no replay.
 
 Tests in `tests/` pin contracts: lifecycle transitions and guards, the invariants a design's module contract
