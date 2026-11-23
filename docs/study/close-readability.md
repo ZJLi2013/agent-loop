@@ -1,6 +1,6 @@
 # 入口文档的逻辑可读性（#237）
 
-**实验线入口要像一份好汇报：human 从项目 readme 一跳打开它，只读首屏就答得出确立了什么（带关键数）、卡在哪、下一步需要什么。** 本页记录入口的结构、支撑它的证据与评测方法的选择；条文落在 `experiment-design` CLOSE self-audit 第 1 项、`task_review.md` 第 1 步、`work-planning` 文档表与 CLOSE lint（[#237](https://github.com/ZJLi2013/agent-loop/issues/237)）。
+**实验线入口要像一份好汇报：human 从项目 readme 一跳打开它，只读首屏就答得出确立了什么（带关键数）、卡在哪、下一步需要什么。** 本页记录入口的结构、支撑它的证据与评测方法的选择；条文落在 `write-for-humans`「给 human 读的项目文档」（入口标准的唯一定义处）、`experiment-design` CLOSE self-audit 第 1 项、`task_review.md` 第 1 步、`work-planning` 文档表与 CLOSE lint（[#237](https://github.com/ZJLi2013/agent-loop/issues/237)）。
 
 ## 入口文档的约束
 

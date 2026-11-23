@@ -43,7 +43,7 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 Closed: [archive/tasks.md](archive/tasks.md)
 ```
 
-**`task.md` 写给 human 扫一眼就懂，每轮也被完整读一遍；细节一律下沉到链接的设计文档。**
+**`task.md` 写给 human 扫一眼就懂（读者与目的见 `write-for-humans`「给 human 读的项目文档」），每轮也被完整读一遍；细节一律下沉到链接的设计文档。**
 
 - 只用模板的列，不加列。行序就是优先级，越靠上越先做，每个 Goal 的表各自排；依赖写成状态格的 `🚧 blocked <id>`；
   预算、判据细节与分析写进设计节。CLOSE lint 拒绝列数与模板不一致的 task 行。
