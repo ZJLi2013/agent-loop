@@ -134,17 +134,6 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(len(list((harness / "artifacts").iterdir())), 1)
         self.assertEqual(len((harness / "runs.jsonl").read_text(encoding="utf-8").splitlines()), 1)
 
-    def test_review_runs_once_and_lists_the_task(self) -> None:
-        self.configure(reviewer_writing({"t1": []}))
-
-        self.review()
-        second = self.review()
-        prompt = self.prompt()
-
-        self.assertEqual(second["tasks"], {})
-        self.assertEqual(self.calls(), "1")
-        self.assertIn("- t1：t1 标题", prompt)
-
     def test_task_id_reused_by_another_plan_is_reviewed_again(self) -> None:
         self.configure(reviewer_writing({"t1": []}))
         self.review()
@@ -198,6 +187,7 @@ class PlanReviewTest(unittest.TestCase):
         result = self.review()
 
         self.assertEqual(sorted(result["tasks"]), ["t2"])
+        self.assertIn("- t2：t2 标题", self.prompt())
         self.assertNotIn("- t1：", self.prompt())
 
     def test_design_changes_within_a_revision_do_not_trigger_another_review(self) -> None:

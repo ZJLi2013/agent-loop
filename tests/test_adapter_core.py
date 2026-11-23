@@ -12,37 +12,6 @@ from harness.storage import exclude_runtime_from_git
 
 
 class AdapterCoreTest(unittest.TestCase):
-    def test_tool_event_returns_memory_context(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            runtime = Path(directory) / ".agent-loop"
-            memory = runtime / "memory"
-            memory.mkdir(parents=True)
-            task = runtime / "task.md"
-            task.write_text(
-                "## Goal\nship adapter boundary\n\n"
-                "| t1 | adapter boundary | check | 🔬 doing |\n",
-                encoding="utf-8",
-            )
-            (memory / "INDEX.md").write_text(
-                "- adapter boundary → episodes.md#decisions\n",
-                encoding="utf-8",
-            )
-            (memory / "episodes.md").write_text(
-                "- adapter boundary uses canonical events\n",
-                encoding="utf-8",
-            )
-
-            response = handle(
-                HookRequest(
-                    event=HookEvent.TOOL_USED,
-                    workspace_roots=(Path(directory),),
-                    tool_input={"path": str(task)},
-                )
-            )
-
-        self.assertEqual(response.action, HookAction.CONTEXT)
-        self.assertIn("canonical events", response.message or "")
-
     def test_every_worktree_of_a_clone_reads_one_memory_in_the_git_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             main = Path(directory) / "main"

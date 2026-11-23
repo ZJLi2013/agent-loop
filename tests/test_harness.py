@@ -278,14 +278,19 @@ class VerifierLockTest(unittest.TestCase):
         )
 
     def test_verifier_file_edit_before_verify_is_refused(self) -> None:
-        self.init(self.ignored)
-        self.ignored.write_text("print('OK')  # loosened\n")
+        for name in ("ignored", "tracked"):
+            with self.subTest(verifier=name):
+                self.tearDown()
+                self.setUp()
+                verifier = getattr(self, name)
+                self.init(verifier)
+                verifier.write_text("print('OK')  # loosened\n")
 
-        with self.assertRaisesRegex(HarnessError, "verify_t1.py changed after init"):
-            verify(self.root)
-        _, state = load_runtime(self.root)
-        self.assertEqual(state["phase"], "ready")
-        self.assertEqual(state["verify_attempts"], 0)
+                with self.assertRaisesRegex(HarnessError, f"{verifier.name} changed after init"):
+                    verify(self.root)
+                _, state = load_runtime(self.root)
+                self.assertEqual(state["phase"], "ready")
+                self.assertEqual(state["verify_attempts"], 0)
 
     def test_verifier_that_rewrites_itself_does_not_pass(self) -> None:
         self.ignored.write_text(
@@ -312,13 +317,6 @@ class VerifierLockTest(unittest.TestCase):
         self.assertIn("is stale", message)
         self.assertIn("verify_t1.py", message)
         self.assertEqual(load_runtime(self.root)[1]["phase"], "failed")
-
-    def test_tracked_verifier_file_edit_is_refused(self) -> None:
-        self.init(self.tracked)
-        self.tracked.write_text("print('OK')  # loosened\n")
-
-        with self.assertRaisesRegex(HarnessError, "verify_tracked.py changed after init"):
-            verify(self.root)
 
     def test_bare_command_verifier_locks_no_files(self) -> None:
         initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])

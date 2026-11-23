@@ -42,28 +42,25 @@ class SyncToDshTest(unittest.TestCase):
     def agents(self) -> str:
         return (self.home / "AGENTS.md").read_text(encoding="utf-8")
 
-    def test_renders_always_rules_and_links_skills(self) -> None:
+    def test_renders_always_rules_links_skills_and_preserves_user_content(self) -> None:
         self.assertEqual(self.sync(self.home).returncode, 0)
-        agents = self.agents()
-        self.assertIn("Keep task state in task.md.", agents)
-        self.assertNotIn("CONDITIONAL_ONLY", agents)
-        self.assertNotIn("alwaysApply", agents)
-        linked = self.home / "skills" / "demo" / "SKILL.md"
-        self.assertEqual(linked.read_bytes(), self.skill.read_bytes())
+        rendered = self.agents()
+        self.assertEqual(rendered.count("Keep task state in task.md."), 1)
+        self.assertNotIn("CONDITIONAL_ONLY", rendered)
+        self.assertNotIn("alwaysApply", rendered)
+        demo = self.home / "skills" / "demo"
+        self.assertEqual((demo / "SKILL.md").read_bytes(), self.skill.read_bytes())
 
-    def test_rerun_is_stable_and_preserves_user_content(self) -> None:
-        (self.home / "skills" / "mine").mkdir(parents=True)
-        (self.home / "skills" / "demo").mkdir()
+        os.rmdir(demo)
+        demo.mkdir()
+        (self.home / "skills" / "mine").mkdir()
         (self.home / "AGENTS.md").write_text("my own rules\n", encoding="utf-8")
-        self.assertEqual(self.sync(self.home).returncode, 1)
-        first = self.agents()
-        self.assertEqual(self.sync(self.home).returncode, 1)
-        self.assertEqual(self.agents(), first)
-        self.assertEqual(first.count("Keep task state in task.md."), 1)
+        for _ in range(2):
+            self.assertEqual(self.sync(self.home).returncode, 1)
+            self.assertEqual(self.agents(), rendered)
         backups = list(self.home.glob("AGENTS.md.backup-*"))
         self.assertEqual([b.read_text(encoding="utf-8") for b in backups], ["my own rules\n"])
-        self.assertTrue((self.home / "skills" / "mine").is_dir())
-        self.assertFalse((self.home / "skills" / "demo" / "SKILL.md").exists())
+        self.assertFalse((demo / "SKILL.md").exists())
         self.assertEqual(list(self.home.glob("skills-backup-*")), [])
         self.assertEqual(sorted(p.name for p in (self.home / "skills").iterdir()), ["demo", "mine"])
 
