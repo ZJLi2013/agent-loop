@@ -14,13 +14,13 @@ from harness.core import initialize
 from harness.errors import HarnessError
 from harness.records import (
     _task_sections,
-    archive_closed_tasks,
     archive_progress,
     archived_task_ids,
     close_task,
     design_location_error,
     leftovers,
     open_task_ids,
+    task_ids,
     task_row,
 )
 from harness.storage import config_digest
@@ -28,11 +28,11 @@ from harness.storage import config_digest
 
 TASKS = """# Tasks
 
-| P | id | rev | task | check | status | fail |
-|---|---|---|---|---|---|---|
-| P0 | t1 | r1 | finished | check | ✅ done | 0 |
-| P0 | t2 | r1 | rejected | check | ❌ dropped | 0 |
-| P0 | t3 | r1 | current | check | 🔬 doing | 0 |
+| id | task | check | status |
+|---|---|---|---|
+| t1 | finished | check | ✅ done |
+| t2 | rejected | check | ❌ dropped |
+| t3 | current | check | 🔬 doing |
 """
 
 
@@ -89,33 +89,49 @@ class RecordLifecycleTest(unittest.TestCase):
             task = runtime / "task.md"
             task.write_text(TASKS, encoding="utf-8")
 
-            moved = archive_closed_tasks(root)
+            close_task(root, None, "t1")
             active = task.read_text(encoding="utf-8")
             archive = (runtime / "archive" / "tasks.md").read_text(
                 encoding="utf-8"
             )
 
-            self.assertEqual(moved, ["t1", "t2"])
             self.assertNotIn("| t1 |", active)
             self.assertNotIn("| t2 |", active)
             self.assertIn("| t3 |", active)
             self.assertIn("archive/tasks.md", active)
-            self.assertIn("| t1 |", archive)
-            self.assertIn("| t2 |", archive)
+            self.assertIn("| — | t1 | — | finished | check | ✅ done | 0 |", archive)
+            self.assertIn("| — | t2 | — | rejected | check | ❌ dropped | 0 |", archive)
             self.assertEqual(archived_task_ids(root), {"t1", "t2"})
 
-    def test_only_rows_led_by_a_priority_are_task_rows(self) -> None:
+    def test_archived_task_id_is_still_known(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / ".agent-loop"
+            (runtime / "archive").mkdir(parents=True)
+            (runtime / "task.md").write_text(TASKS, encoding="utf-8")
+            (runtime / "archive" / "tasks.md").write_text(ARCHIVED, encoding="utf-8")
+
+            close_task(root, None, "t1")
+
+            self.assertEqual(archived_task_ids(root), {"t1", "t2", "t3", "t4", "p2"})
+            self.assertIn("t1", task_ids(root))
+            self.assertEqual(open_task_ids(root), ["t3"])
+
+    def test_only_rows_of_id_tables_are_task_rows(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             runtime = root / ".agent-loop"
             runtime.mkdir()
             (runtime / "task.md").write_text(
-                TASKS + "| step | t4 | r1 | other table | check | 🔬 doing | 0 |\n",
+                TASKS
+                + "\n| step | what | check | status |\n|---|---|---|---|\n| t4 | other table | check | 🔬 doing |\n"
+                + "\n| P | 回答什么 | 进入条件 | 估算 |\n|---|---|---|---|\n| P1 | t5 | later | 🔬 doing |\n",
                 encoding="utf-8",
             )
 
             self.assertEqual(open_task_ids(root), ["t3"])
             self.assertIsNone(task_row(root, "t4"))
+            self.assertIsNone(task_row(root, "P1"))
 
     def test_archiving_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -125,11 +141,11 @@ class RecordLifecycleTest(unittest.TestCase):
             task = runtime / "task.md"
             task.write_text(TASKS, encoding="utf-8")
 
-            archive_closed_tasks(root)
+            close_task(root, None, "t1")
             before = (runtime / "archive" / "tasks.md").read_text(
                 encoding="utf-8"
             )
-            self.assertEqual(archive_closed_tasks(root), [])
+            close_task(root, None, "t1")
             after = (runtime / "archive" / "tasks.md").read_text(
                 encoding="utf-8"
             )
@@ -149,6 +165,7 @@ topic design
 result
 
 ### a1 Data cleanup
+- rev：r1
 id design
 
 ### Workspace (a1, a2)
@@ -177,8 +194,8 @@ class DesignLocationTest(unittest.TestCase):
 
     def link(self, target: str) -> None:
         (self.runtime / "task.md").write_text(
-            "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
-            f"| P0 | a1 | r1 | clean | [设计]({target})；通过 | 🔬 doing | 0 |\n",
+            "| id | task | check | status |\n|---|---|---|---|\n"
+            f"| a1 | clean | [设计]({target})；通过 | 🔬 doing |\n",
             encoding="utf-8",
         )
 
@@ -247,10 +264,10 @@ Mainline Review: approved
 
 ## Goal
 
-| P | id | rev | task | check | status | fail |
-|---|---|---|---|---|---|---|
-| P0 | t11 | r1 | [设计](plans/b/plan.md#t11) | check | 🔬 doing | 0 |
-| P0 | t4 | r1 | reopened | check | ⬜ todo | 0 |
+| id | task | check | status |
+|---|---|---|---|
+| t11 | [设计](plans/b/plan.md#t11) | check | 🔬 doing |
+| t4 | reopened | check | ⬜ todo |
 """
 
 ARCHIVED = """| P | id | rev | task | check | status | fail |

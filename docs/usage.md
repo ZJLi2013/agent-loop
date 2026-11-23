@@ -219,27 +219,28 @@ Plan Revision: 1
 Plan Review: proposed
 ```
 
-创建 `.agent-loop/task.md`，把当前提议的 task 绑定到 `r1`。[示例 task](../examples/minimal-project/task.md) 展示了表格格式，
+创建 `.agent-loop/task.md`，task 表只有 `| id | task | 验收检查点 | 状态 |` 4 列，行序就是优先级；在 plan 里该 task 的设计节写
+`- rev：r1`，把它绑定到 `r1`。[示例 task](../examples/minimal-project/task.md) 展示了表格格式，
 但它为了预批准演示从 `doing` 开始；新项目的 task 应从 `📝 proposed` 开始。
 
-Harness 只把同时满足两条的表格行读作 task：至少 7 列，第一列是 `P` 加数字（`P0`、`P1`…）。主线表、候选表、表头和分隔行
-都不满足，所以不会被当成 task；不满足的 task 行同样读不到：plan review 不审它，`init --task` 找不到它。
+Harness 只把表头首格为 `id`、恰好 4 列的表里的行读作 task；主线表、候选表都不满足。不在这种表里的行读不到：plan review 不审它，
+`init --task` 找不到它。task 的 revision 从它设计节里的 `- rev：rN` 读，关闭后从 `archive/tasks.md` 的归档行读；
+失败计数用 `agent-loop-harness fail --task <id> --note "<试了什么>"` 记进 `.harness/failures.json`，锁定 verifier 通过时清零，
+`status` 输出当前 task 的计数。
 CLOSE lint 拒绝本 task 新增、列数与模板不一致的 task 行（例如多加一列「预算上限」）；预算与细节写进设计节。
-它只查 `.agent-loop/task.md` 里自 lint base 起新增的行，且只查表头前两格是 `P`、`id` 的表；列数取
+它只查 `.agent-loop/task.md` 里自 lint base 起新增的行，且只查表头首格是 `id` 的表；列数取
 `harness/records.py` 的 `TASK_COLUMNS`，运行时不读模板文件。`.agent-loop/` 下的其他文件仍不进 lint。
-没有 `rev` 列的 6 列旧表要迁移，在 id 后补上绑定 plan 的那一列：
 
-```markdown
-| P | id | task | 验收检查点 | 状态 | 失败 |
-| P1 | migrate-x-to-y | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
+还是 7 列 `| P | id | rev | task | 验收检查点 | 状态 | 失败 |` 表的项目，`init` 拒绝并提示迁移：
+
+```sh
+agent-loop-harness migrate-tasks
 ```
 
-改为
-
-```markdown
-| P | id | rev | task | 验收检查点 | 状态 | 失败 |
-| P1 | migrate-x-to-y | r1 | 把 X 迁到 Y | 测试全绿 | 🔬 doing | 0 |
-```
+它只改活跃 `task.md` 和行里链接的设计节：每张表内按 P 稳定排序；验收格与候选表里的 `P<数字>` 改写成那一行的 id，
+在本表命中 0 行或多行时报出引用和候选 id、不写任何文件；rev 写成设计节里的 `- rev：rN`，rev 不是 `—` 却没有设计节的行同样报错；
+非零失败数导入 `.harness/failures.json`。写入前把原文件备份到 `.harness/migrate/<digest>/`，中断后重跑先恢复再从头执行；
+改动都在 git 跟踪的文件里，一次 revert 可撤回。`archive/tasks.md` 保持 7 列，不迁移。
 
 评审计划，然后把它设为 `Plan Review: approved`，并把一个 task 激活为 `🔬 doing`。配置了 reviewer 时，先按下文取得它的
 plan review 建议。

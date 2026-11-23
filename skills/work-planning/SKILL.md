@@ -14,7 +14,7 @@ description: >-
 ## 一份 plan document
 
 默认只建一份文档，不区分 feature / exp。Goal、plan 目录与 task id 用说明内容的短语义名（kebab-case，如
-`scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `P0` 优先级与 `rN` revision。
+`scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `rN` revision。
 
 一个 Goal 的文档只有下面几类，各写各的，不互相复制。每行的「不写什么」都有一个执行点：能按位置或字面判定的由 Harness
 拒绝，只能按含义判定的由 task reviewer 在 CLOSE 核对：
@@ -23,9 +23,9 @@ description: >-
 |---|---|---|---|---|
 | 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；索引每行一句当前事实（可带关键数）加直达实验线入口的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行；task reviewer 在 CLOSE 从它只跟一个链接到入口 |
 | 实验线 readme | `exps/<线>/readme.md`，就是这条线的入口 | 标题一句结论；首屏字段 `目标`、`现状`、`下一步`（研究型另加 `原因`、`已排除`），每行一句白话带关键数；一张子文档表（序号、名称、回答什么、答案、链接） | 数据、设计、读数、重跑（归子文档）、通用术语节、待选项 | CLOSE lint 拒绝缺首屏字段；task reviewer 在 CLOSE 只读首屏答三问 |
-| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线、task 行（问题、`rN`、两个去向、状态、失败计数）、候选 | 设计、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
+| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线、task 行（id、问题、两个去向、状态，行序即优先级）、候选 | 设计、`rN`、失败计数、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
 | plan document | `.agent-loop/plans/<goal>/plan.md`，每 Goal 一份 | Goal、设计、当前结论（每条一句加链接）、脉络、task 设计段、Experiment Log | 项目结论的正文定义 | task reviewer 在 CLOSE 核对 |
-| task 设计 | plan 内以 task id 开头的标题段，或 plan 目录下的 `sub-exp/<id>.md`（并行的独立实验） | 一个 task 的设计 | — | `init` 拒绝指向别处的设计链接 |
+| task 设计 | plan 内以 task id 开头的标题段，或 plan 目录下的 `sub-exp/<id>.md`（并行的独立实验） | 一个 task 的设计，含绑定 revision 的 `- rev：rN` 一行 | — | `init` 拒绝指向别处的设计链接 |
 | 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`），每个研究问题一份，文件名是两位序号加问题名（原实验编号可在正文首行） | 结论（唯一定义处）、支撑数据与它的位置、怎么重跑 | 以 task id 开头的标题、以 task id 为行的表、要 human 选的项、设计 | CLOSE lint 拒绝本 task 新增的这些行，以及 `exps/` 下新增的以代号开头、没有序号的文件名 |
 
 子实验、子 feature 是同一 plan 里的一个 task 设计段，不另起 plan，也不另起项目文档；新 Goal 才有新 plan。
@@ -108,7 +108,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
      每个概念一个 owner，写明替换或复用哪份现有实现；最小迁移顺序，每步可独立合并。它写进第一个 task 的设计，
      那次 plan review 就是独立架构评审：目标是否每个概念一个 owner、第一版该不做什么，修正记进 plan。
      这个 task 关闭前不拆后续 task。
-3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，`rev` 绑定 plan 的 `rN`。task 行链接它的设计：plan 里以
+3. 只把最近 1–2 项写进 `task.md`，状态为 `📝 proposed`，设计节里写 `- rev：rN` 绑定 plan 的 revision。task 行链接它的设计：plan 里以
    task id 开头的标题段，或 plan 目录下 `sub-exp/` 里的文件；CLOSE 只删除前者，`init` 拒绝别处的设计（边界见 `design.md` 的 One plan document）。
 4. 配置 reviewer 时，提交后在同一轮运行 `plan-review`，不留到下一轮：task 在它绑定的每个 revision 下审一次，
    同一 revision 内改设计不重审。Harness 启用、未配 pager 时，plan 停在 `proposed` 而审查没做完，stop hook 不放行。

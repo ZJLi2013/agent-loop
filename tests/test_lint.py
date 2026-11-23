@@ -92,9 +92,9 @@ class LintTest(unittest.TestCase):
         self.assertEqual(lint_changed(self.root), [])
 
     def design_project(self) -> None:
-        header = "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
-        self.write(".agent-loop/task.md", header + "| P0 | w5 | r1 | x | y | 🔬 doing | 0 |\n")
-        self.write(".agent-loop/archive/tasks.md", header + "| P1 | w3 | r1 | x | y | ✅ done | 0 |\n")
+        self.write(".agent-loop/task.md", "| id | task | check | status |\n|---|---|---|---|\n| w5 | x | y | 🔬 doing |\n")
+        self.write(".agent-loop/archive/tasks.md", "| P | id | rev | task | check | status | fail |\n"
+                   "|---|---|---|---|---|---|---|\n| — | w3 | r1 | x | y | ✅ done | 0 |\n")
         self.write("plan.md", "# Plan\n\n## w5 设计\n")
         self.write("exps/topic/notes.md", "# 主题\n\n| w3 | 旧行 |\n")
         self.commit()
@@ -192,24 +192,24 @@ class LintTest(unittest.TestCase):
         self.assertEqual(lint_changed(self.root), [])
 
     def test_task_table_rows_this_task_added_match_the_template(self) -> None:
-        header = "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
-        old = "| P0 | a | r1 | x | y | 🔬 doing | 0 | extra |\n"
+        header = "| id | task | check | status |\n|---|---|---|---|\n"
+        old = "| a | x | y | 🔬 doing | extra |\n"
         self.write(".agent-loop/task.md", header + old)
         self.commit()
         self.assertEqual(lint_changed(self.root), [])
 
         self.write(".agent-loop/task.md", "\n".join([
             "| Goal | 问题 | 退出 | 状态 | plan |", "|---|---|---|---|---|", "| g | q | e | ▶ next | |", "",
-            header + old.rstrip("\n"), "| P1 | b | r1 | x | y | ⬜ todo | 0 | 预算 |", "| P2 | c | r1 | x | y | ⬜ todo | 0 |",
+            header + old.rstrip("\n"), "| b | x | y | ⬜ todo | 预算 |", "| c | x | y | ⬜ todo |",
             "", "| P | 回答什么 | 进入条件 |", "|---|---|---|", "| 1 | q | e |", "",
         ]))
         self.write(".agent-loop/scratch.md", "| a | b |\n")
         self.git("add", "-A")
 
         self.assertEqual(lint_changed(self.root), [
-            ".agent-loop/task.md:8: task table row has 8 cells; the task-state template has 7",
+            ".agent-loop/task.md:8: task table row has 5 cells; the task-state template has 4",
         ])
-        with mock.patch("harness.lint.TASK_COLUMNS", 8):
+        with mock.patch("harness.lint.TASK_COLUMNS", 5):
             self.assertEqual([p.split(": ")[0] for p in lint_changed(self.root)], [".agent-loop/task.md:9"])
 
     def test_wrapper_runs_the_verifier_only_when_lint_passes(self) -> None:

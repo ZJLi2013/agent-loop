@@ -20,7 +20,7 @@ class AdapterCoreTest(unittest.TestCase):
             task = runtime / "task.md"
             task.write_text(
                 "## Goal\nship adapter boundary\n\n"
-                "| P0 | t1 | r1 | adapter boundary | check | 🔬 doing | 0 |\n",
+                "| t1 | adapter boundary | check | 🔬 doing |\n",
                 encoding="utf-8",
             )
             (memory / "INDEX.md").write_text(
@@ -98,8 +98,8 @@ class AdapterCoreTest(unittest.TestCase):
             runtime.mkdir(parents=True)
             task = runtime / "task.md"
             task.write_text(
-                "| P | id | rev | task | check | status | fail |\n"
-                "| P0 | t1 | r1 | work | check | 🔬 doing | 0 |\n",
+                "| id | task | check | status |\n"
+                "| t1 | work | check | 🔬 doing |\n",
                 encoding="utf-8",
             )
 

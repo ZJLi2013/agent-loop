@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 
+from harness import failures
 from harness.errors import HarnessError
 from harness.project import RUNTIME_DIR, memory_dir, runtime_dir, task_file
 from harness.storage import STATE_FILE, harness_dir, load_runtime
@@ -27,9 +28,13 @@ RETIRED_ELSEWHERE = {
     "reports",
 }
 CLOSED_MARKERS = ("✅ done", "❌ dropped")
-TASK_COLUMNS = 7
+TASK_COLUMNS = 4
+# The archive keeps the 7-column rows it always had; CLOSE writes `—` as their priority.
+ARCHIVE_HEADER = "| P | id | rev | task | 验收检查点 | 状态 | 失败 |\n|---|---|---|---|---|---|---|"
+ARCHIVE_COLUMNS = 7
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _FENCE = re.compile(r"^ {0,3}(?P<marker>`{3,}|~{3,})(?P<info>.*)$")
+_REVISION_LINE = re.compile(r"^\s*-\s*rev[：:]\s*(\S+)\s*$")
 
 
 def _cells(line: str) -> list[str] | None:
@@ -39,26 +44,56 @@ def _cells(line: str) -> list[str] | None:
     return [cell.strip() for cell in stripped.strip("|").split("|")]
 
 
-def _task_id(line: str) -> str | None:
-    cells = _cells(line)
-    if not cells or len(cells) < TASK_COLUMNS or cells[1].lower() == "id":
-        return None
-    if not re.fullmatch(r"P\d+", cells[0]):
-        return None
-    return cells[1] or None
+def _separator(cells: list[str]) -> bool:
+    return all(set(cell) <= {"-", ":"} for cell in cells)
 
 
-def _closed(line: str) -> bool:
-    cells = _cells(line)
-    # Mainline rows stay in task.md after their Goal is done.
-    return bool(
-        cells
-        and _task_id(line)
-        and any(
-            cell.startswith(marker)
-            for cell in cells
-            for marker in CLOSED_MARKERS
-        )
+def _task_rows(lines: list[str]) -> list[tuple[int, list[str]]]:
+    """Rows of the tables whose header is `| id | task | 验收检查点 | 状态 |`."""
+    rows = []
+    header: list[str] | None = None
+    for index, line in enumerate(lines):
+        cells = _cells(line)
+        if cells is None:
+            header = None
+        elif header is None:
+            header = cells
+        elif (
+            header[0].lower() == "id"
+            and len(header) == len(cells) == TASK_COLUMNS
+            and cells[0]
+            and not _separator(cells)
+        ):
+            rows.append((index, cells))
+    return rows
+
+
+def _archive_rows(lines: list[str]) -> list[tuple[int, list[str]]]:
+    return [
+        (index, cells)
+        for index, line in enumerate(lines)
+        if (cells := _cells(line))
+        and len(cells) >= ARCHIVE_COLUMNS
+        and cells[1]
+        and cells[1].lower() != "id"
+        and not _separator(cells)
+    ]
+
+
+def _closed(cells: list[str]) -> bool:
+    return cells[3].startswith(CLOSED_MARKERS)
+
+
+def _active_lines(root: Path) -> list[str]:
+    path = task_file(root)
+    return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+
+
+def legacy_task_table(root: Path) -> bool:
+    """task.md still has a `| P | id | rev | ... |` table, which only migrate-tasks converts."""
+    return any(
+        (cells := _cells(line)) and len(cells) == ARCHIVE_COLUMNS and cells[:2] == ["P", "id"]
+        for line in _active_lines(root)
     )
 
 
@@ -69,82 +104,92 @@ def _atomic_write(path: Path, text: str) -> None:
     os.replace(temp, path)
 
 
+def _archive_path(root: Path) -> Path:
+    return runtime_dir(root) / ARCHIVE_DIR / TASK_ARCHIVE
+
+
+def _archive_lines(root: Path) -> list[str]:
+    path = _archive_path(root)
+    return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+
+
 def archived_task_ids(root: Path) -> set[str]:
-    path = runtime_dir(root) / ARCHIVE_DIR / TASK_ARCHIVE
-    if not path.exists():
-        return set()
-    return {
-        task_id
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if (task_id := _task_id(line))
-    }
+    return {cells[1] for _, cells in _archive_rows(_archive_lines(root))}
+
+
+def archived_revision(root: Path, task_id: str) -> str | None:
+    """The rev cell of the newest archive row of task_id; ids restart across Goals."""
+    found = [cells[2] for _, cells in _archive_rows(_archive_lines(root)) if cells[1] == task_id]
+    return found[-1] if found else None
 
 
 def task_ids(root: Path) -> set[str]:
     """Every task id in task.md, open or closed, and in the task archive."""
-    path = task_file(root)
-    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
-    return {task_id for line in lines if (task_id := _task_id(line))} | archived_task_ids(root)
+    return {cells[0] for _, cells in _task_rows(_active_lines(root))} | archived_task_ids(root)
 
 
 def open_task_ids(root: Path, *, plan_doc: str | None = None) -> list[str]:
     path = task_file(root)
-    if not path.exists():
-        return []
+    lines = _active_lines(root)
     plan = (root / plan_doc).resolve() if plan_doc else None
     return [
-        task_id
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if (task_id := _task_id(line))
-        and (cells := _cells(line))
-        and len(cells) >= 6
-        and not _closed(line)
+        cells[0]
+        for index, cells in _task_rows(lines)
+        if not _closed(cells)
         and (
             plan is None
-            or any(target.is_relative_to(plan.parent) for target in _linked_files(line, path.parent))
+            or any(target.is_relative_to(plan.parent) for target in _linked_files(lines[index], path.parent))
         )
     ]
 
 
 def task_links(root: Path, task_ids: list[str]) -> set[Path]:
     path = task_file(root)
-    if not path.exists():
-        return set()
+    lines = _active_lines(root)
     return {
         target
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if _task_id(line) in task_ids
-        for target in _linked_files(line, path.parent)
+        for index, cells in _task_rows(lines)
+        if cells[0] in task_ids
+        for target in _linked_files(lines[index], path.parent)
     }
 
 
 def task_row(root: Path, task_id: str) -> list[str] | None:
-    path = task_file(root)
-    if not path.exists():
-        return None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        cells = _cells(line)
-        if cells and len(cells) >= 6 and _task_id(line) == task_id:
-            return cells
-    return None
-
-
-def task_priority_error(root: Path, task_id: str) -> str | None:
-    """Explain why an otherwise task-shaped row was skipped by the parser."""
-    path = task_file(root)
-    if not path.exists():
-        return None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        cells = _cells(line)
-        if cells and len(cells) >= 7 and cells[1] == task_id and cells[1].lower() != "id":
-            if not re.fullmatch(r"P\d+", cells[0]):
-                return f"row for {task_id} has priority `{cells[0]}`; task rows need P<number>"
-    return None
+    return next((cells for _, cells in _task_rows(_active_lines(root)) if cells[0] == task_id), None)
 
 
 def active_task_status(root: Path, task_id: str) -> str | None:
     cells = task_row(root, task_id)
-    return cells[5] if cells else None
+    return cells[3] if cells else None
+
+
+def design_spans(root: Path, task_id: str, row: str | None = None) -> list[tuple[Path, int, int]]:
+    """The task's design: its sections in the markdown its row links, or a whole linked sub-exp file."""
+    path = task_file(root)
+    if row is None:
+        lines = _active_lines(root)
+        row = next((lines[index] for index, cells in _task_rows(lines) if cells[0] == task_id), None)
+    spans = []
+    for target in sorted(_linked_files(row or "", path.parent)):
+        if target.suffix.lower() != ".md":
+            continue
+        text = target.read_text(encoding="utf-8").splitlines()
+        found = _task_sections(text, task_id)
+        if not found and SUB_EXP in target.parent.parts:
+            found = [(0, len(text))]
+        spans += [(target, start, end) for start, end in found]
+    return spans
+
+
+def design_revision(root: Path, task_id: str) -> str | None:
+    """The `- rev：rN` line of the active task's design, None when it has none."""
+    for target, start, end in design_spans(root, task_id):
+        lines = target.read_text(encoding="utf-8").splitlines()
+        structural = _structural_lines(lines)
+        for index in range(start, end):
+            if structural[index] and (match := _REVISION_LINE.match(lines[index])):
+                return match.group(1)
+    return None
 
 
 _MAINLINE = re.compile(r"^## 主线[ \t]*$(.*?)(?=^## |\Z)", re.M | re.S)
@@ -344,13 +389,10 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
 
 def _mark_done(root: Path, task_id: str) -> None:
     active = task_file(root)
-    if not active.exists():
-        return
-    lines = active.read_text(encoding="utf-8").splitlines()
-    for index, line in enumerate(lines):
-        cells = _cells(line)
-        if cells and len(cells) >= 6 and _task_id(line) == task_id and not _closed(line):
-            cells[5] = "✅ done"
+    lines = _active_lines(root)
+    for index, cells in _task_rows(lines):
+        if cells[0] == task_id and not _closed(cells):
+            cells[3] = "✅ done"
             lines[index] = "| " + " | ".join(cells) + " |"
             _atomic_write(active, "\n".join(lines) + "\n")
             return
@@ -388,57 +430,50 @@ def _drop_sections(root: Path, plan: Path, task_id: str) -> None:
 
 
 def close_task(root: Path, plan_doc: str | None, task_id: str) -> None:
+    """Caller holds state_lock. Each step is safe to rerun, so an interrupted CLOSE completes on the next one."""
     _mark_done(root, task_id)
+    closed = _archive_closed(root)
     if plan_doc and (root / plan_doc).is_file():
         _drop_sections(root, (root / plan_doc).resolve(), task_id)
-    archive_closed_tasks(root)
+    _remove_closed(root)
+    for closed_id in {task_id, *closed}:
+        failures.take(root, closed_id, held=True)
 
 
-def archive_closed_tasks(root: Path) -> list[str]:
+def _archive_closed(root: Path) -> list[str]:
+    """Append every closed row of task.md to the archive with its rev and failure count."""
     active_path = task_file(root)
-    if not active_path.exists():
+    closed = [cells for _, cells in _task_rows(_active_lines(root)) if _closed(cells)]
+    if not closed:
         return []
-
-    text = active_path.read_text(encoding="utf-8")
-    lines = text.splitlines()
-    closed_rows = [line for line in lines if _closed(line)]
-    if not closed_rows:
-        return []
-
-    archive_path = runtime_dir(root) / ARCHIVE_DIR / TASK_ARCHIVE
+    archive_path = _archive_path(root)
     if archive_path.exists():
         archive = archive_path.read_text(encoding="utf-8").rstrip()
     else:
-        table_headers = [
-            line
-            for line in lines
-            if (cells := _cells(line))
-            and (cells[1].lower() == "id" or all(set(c) <= {"-", ":"} for c in cells))
-        ][:2]
-        archive = "\n".join(
-            [
-                "# Closed Tasks",
-                "",
-                "这些行只用于追溯，不参与 SELECT。",
-                "",
-                *table_headers,
-            ]
-        )
-    closed_rows = [
-        _relink(line, active_path.parent, archive_path.parent) for line in closed_rows
-    ]
+        archive = "\n".join(["# Closed Tasks", "", "这些行只用于追溯，不参与 SELECT。", "", ARCHIVE_HEADER])
+    rows = []
+    for task_id, task, check, status in closed:
+        revision = design_revision(root, task_id) or archived_revision(root, task_id) or "—"
+        row = f"| — | {task_id} | {revision} | {task} | {check} | {status} | {failures.count(root, task_id)} |"
+        rows.append(_relink(row, active_path.parent, archive_path.parent))
     # Task ids restart across Goals; only an identical row is a duplicate.
     existing = {line.strip() for line in archive.splitlines()}
-    new_rows = [line for line in closed_rows if line.strip() not in existing]
+    new_rows = [row for row in rows if row not in existing]
     if new_rows:
-        archive = f"{archive}\n" + "\n".join(new_rows)
-    _atomic_write(archive_path, f"{archive}\n")
+        _atomic_write(archive_path, f"{archive}\n" + "\n".join(new_rows) + "\n")
+    return [cells[0] for cells in closed]
 
-    active = "\n".join(line for line in lines if not _closed(line)).rstrip()
+
+def _remove_closed(root: Path) -> None:
+    active_path = task_file(root)
+    lines = _active_lines(root)
+    closed = {index for index, cells in _task_rows(lines) if _closed(cells)}
+    if not closed:
+        return
+    active = "\n".join(line for index, line in enumerate(lines) if index not in closed).rstrip()
     if "archive/tasks.md" not in active:
         active = f"{active}\n\nClosed: [archive/tasks.md](archive/tasks.md)"
     _atomic_write(active_path, f"{active}\n")
-    return [task_id for line in closed_rows if (task_id := _task_id(line))]
 
 
 def _handoff_starts(lines: list[str]) -> list[int]:
@@ -519,9 +554,8 @@ def leftovers(root: Path) -> list[dict[str, str]]:
             plans = _linked_files(" | ".join(cells), tasks.parent)
             done = any(cell.startswith("✅") for cell in cells)
             (done_plans if done else live_plans).update(plans)
-    for line in task_text.splitlines():
-        cells = _cells(line)
-        if cells and len(cells) >= 6 and not _closed(line):
+    for _, cells in _task_rows(task_text.splitlines()):
+        if not _closed(cells):
             live_plans |= _linked_files(" | ".join(cells), tasks.parent)
     live_plans -= done_plans
     # Only a plan's own directory scopes its Goal; a plan directly in .agent-loop/, at the root or outside it scopes

@@ -17,10 +17,10 @@ from harness.goal_review import record_goal_review
 from harness.plan import pause_request
 from harness.task_review import run_review
 
-TASKS = """| P | id | rev | task | check | status | fail |
-|---|---|---|---|---|---|---|
-| P0 | t1 | — | first | check | {status} | 0 |
-| P0 | t2 | — | next | check | 📝 proposed | 0 |
+TASKS = """| id | task | check | status |
+|---|---|---|---|
+| t1 | first | check | {status} |
+| t2 | next | check | 📝 proposed |
 """
 
 

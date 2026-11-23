@@ -1,7 +1,7 @@
 ---
 name: task-state
 description: >-
-  维护 task.md：验收检查点（同时写失败去向）、失败计数、只有一行 doing 的防漂移不变量、
+  维护 task.md：验收检查点（同时写失败去向）、失败计数（存在 Harness）、只有一行 doing 的防漂移不变量、
   跨会话交接笔记。循环本身归 agent-loop rule。
   Use when creating or updating task.md, picking the next task, writing an acceptance
   checkpoint, or resuming work in a new session.
@@ -23,12 +23,12 @@ home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执
 ## Goal
 <一句话：要解决什么问题；已完成的部分只给一个链接。写不出来就不要往下拆。>
 
-| P | id | rev | task | 验收检查点 | 状态 | 失败 |
-|---|---|---|---|---|---|---|
-| P0 | y-schema-drift | r2 | Y 的 schema 漂移能修好吗？（[设计](plans/y/plan.md#y-schema-drift)） | `validate.py` 退出 0 → migrate-x-to-y；不过 → 回 plan | 🔬 doing | 0 |
-| P0 | migrate-x-to-y | r1 | X 迁到 Y 后测试还全绿吗？（[设计](plans/y/plan.md#migrate-x-to-y)） | 全绿 → y-e2e-latency；不绿 → 回 plan | 🚧 blocked y-schema-drift | 1 |
-| P0 | y-e2e-latency | r2 | Y 的端到端延迟在基线 1.1 倍内吗？（[设计](plans/y/plan.md#y-e2e-latency)） | 在 → x-legacy-cleanup；不在 → 回 plan | ⬜ todo | 0 |
-| P1 | x-legacy-cleanup | — | X 的旧路径能全删掉吗？ | grep 不到 `legacy_x` → 完成；还有 → 列出调用方 | ⬜ todo | 0 |
+| id | task | 验收检查点 | 状态 |
+|---|---|---|---|
+| y-schema-drift | Y 的 schema 漂移能修好吗？（[设计](plans/y/plan.md#y-schema-drift)） | `validate.py` 退出 0 → migrate-x-to-y；不过 → 回 plan | 🔬 doing |
+| migrate-x-to-y | X 迁到 Y 后测试还全绿吗？（[设计](plans/y/plan.md#migrate-x-to-y)） | 全绿 → y-e2e-latency；不绿 → 回 plan | 🚧 blocked y-schema-drift |
+| y-e2e-latency | Y 的端到端延迟在基线 1.1 倍内吗？（[设计](plans/y/plan.md#y-e2e-latency)） | 在 → x-legacy-cleanup；不在 → 回 plan | ⬜ todo |
+| x-legacy-cleanup | X 的旧路径能全删掉吗？ | grep 不到 `legacy_x` → 完成；还有 → 列出调用方 | ⬜ todo |
 
 ## Candidates
 
@@ -45,7 +45,8 @@ Closed: [archive/tasks.md](archive/tasks.md)
 
 **`task.md` 写给 human 扫一眼就懂，每轮也被完整读一遍；细节一律下沉到链接的设计文档。**
 
-- 只用模板的列，不加列。依赖写成状态格的 `🚧 blocked <id>`；预算、判据细节与分析写进设计节。CLOSE lint 拒绝列数与模板不一致的 task 行。
+- 只用模板的列，不加列。行序就是优先级，越靠上越先做，每个 Goal 的表各自排；依赖写成状态格的 `🚧 blocked <id>`；
+  预算、判据细节与分析写进设计节。CLOSE lint 拒绝列数与模板不一致的 task 行。
 - 每格一句短话：task 格写它回答的问题，验收格写「成了 → 去哪；不成 → 去哪」，细节只给设计链接。
 - 不建模板以外的章节：只有 `主线`、`Goal`、`Candidates`（或 `候选`）、`Triggered`，末尾一行 `Closed:`。
 - 候选表每行一个问题、一个进入条件、一个数。
@@ -53,7 +54,7 @@ Closed: [archive/tasks.md](archive/tasks.md)
 
 还没开工的候选写进 `## Candidates`，等某个事件才做的后续项写进 `## Triggered`（「<事件>时：<动作>」），
 两节都可省。候选不带设计、状态与 id；写成链接设计文档的 task、过 plan review 后才进活跃表，同时删掉候选行。
-候选表少于 6 列，Harness 不把它当 task 读。
+Harness 只把表头首格为 `id` 的 4 列表当 task 表读，候选表与主线表不受影响。
 
 ### 主线
 
@@ -86,11 +87,14 @@ Mainline Review: approved
 被否决的候选是长期决定，删掉它下次还会有人重提。
 
 `✅ done / ❌ dropped` 是 CLOSE 转换时的瞬时状态：结论与 evidence 写回后，把整行移到
-`archive/tasks.md`。活跃 `task.md` 最多保留最近一个 closed task 的一行指针；超过 5 条 closed 行
+`archive/tasks.md`。archive 沿用 7 列 `| P | id | rev | task | 验收检查点 | 状态 | 失败 |`，CLOSE 在 P 格写 `—`、
+补上 rev 与失败数，配置了 reviewer 时由 Harness 写。活跃 `task.md` 最多保留最近一个 closed task 的一行指针；超过 5 条 closed 行
 说明 consolidation 漏执行，先归档再 SELECT。
 
-`rev` 把 task 绑定到 plan document 的 `Plan Revision: N`，写作 `rN`；不属于 plan
-的维护项写 `—`。revision 何时递增、旧 task 怎么改绑归 `work-planning` 的 Human correction。
+task 绑定 plan document 的 `Plan Revision: N`：在它的设计节里写一行 `- rev：rN`。不属于 plan 的维护项没有设计节，
+也就没有这一行。revision 何时递增、旧 task 怎么改绑（改这一行）归 `work-planning` 的 Human correction。
+还是 7 列 `| P | id | rev | ... |` 表的项目，`init` 会拒绝，先跑一次 `agent-loop-harness migrate-tasks`：同一张表内按 P 排序，
+验收格与候选表里的 `P<数字>` 改写成 task id（在本表命中 0 行或多行就报错、不写任何文件），rev 写进设计节，失败数导入 Harness。
 
 doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing 在 `work-planning` Gate 第 6 步。
 跑到一半要改别的东西时，先挪 `🔬`（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下回 `work-planning` 重拆。**
@@ -122,11 +126,13 @@ doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing �
 
 ## 失败计数
 
-失败列记的是**这个 task 连续失败了几次**，pass 之后清零。它存在的唯一理由是让
+失败计数是**这个 task 连续失败了几次**，锁定 verifier 通过后清零。它存在的唯一理由是让
 `agent-loop` 的自修分流能分辨「第一次失败」和「已经试了三次」——没有计数，
 每次失败看起来都像第一次，于是要么无限重试，要么第一次就上报。
 
-自修一次就 +1，并在该 task 的实验文档里记一行「试了什么、结果如何」。
+计数由 Harness 存在 `.harness/failures.json`，不在 `task.md`：自修一次就跑
+`agent-loop-harness fail --task <id> --note "<试了什么>"`，并在该 task 的实验文档里记一行「试了什么、结果如何」；
+`status` 输出当前 task 的计数。普通 `exec` 成功不清零；CLOSE 把计数写进归档行后删掉该条。
 计数触及 `when-to-stop` 的中止条件时才停。
 
 ## 何时换会话

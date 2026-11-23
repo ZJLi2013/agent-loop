@@ -33,8 +33,14 @@ class HarnessPauseTest(unittest.TestCase):
         self.temp.cleanup()
 
     def write_plan(self, revision: int, review: str) -> None:
+        self.header = (revision, review)
+        self.render_plan()
+
+    def render_plan(self) -> None:
+        revision, review = getattr(self, "header", (1, "proposed"))
         self.plan.write_text(
-            f"# Feature\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n## t1 design\n",
+            f"# Feature\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n"
+            f"## t1 design\n\n- rev：r{getattr(self, 'binding', revision)}\n",
             encoding="utf-8",
         )
 
@@ -42,11 +48,13 @@ class HarnessPauseTest(unittest.TestCase):
         task_dir = self.root / runtime_dir
         task_dir.mkdir(exist_ok=True)
         (task_dir / "task.md").write_text(
-            "| P | id | rev | task | check | status | failures |\n"
-            "|---|---|---|---|---|---|---|\n"
-            f"| P0 | t1 | r{revision} | test | [design](../plan.md#t1-design) | 🔬 doing | 0 |\n",
+            "| id | task | check | status |\n"
+            "|---|---|---|---|\n"
+            "| t1 | test | [design](../plan.md#t1-design) | 🔬 doing |\n",
             encoding="utf-8",
         )
+        self.binding = revision
+        self.render_plan()
 
     def init(self) -> None:
         initialize(
@@ -71,6 +79,13 @@ class HarnessPauseTest(unittest.TestCase):
                 [sys.executable, "-S", "-c", "print('must not run')"],
                 kind="exec",
             )
+
+    def test_task_without_a_revision_line_is_refused(self) -> None:
+        self.write_plan(1, "approved")
+        self.write_task(1)
+        self.plan.write_text(self.plan.read_text(encoding="utf-8").replace("- rev：r1\n", ""), encoding="utf-8")
+        with self.assertRaisesRegex(HarnessError, "write `- rev：rN` in its design section"):
+            self.init()
 
     def test_init_rejects_task_bound_to_another_revision(self) -> None:
         self.write_plan(2, "approved")

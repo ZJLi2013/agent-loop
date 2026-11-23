@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +15,7 @@ from harness.journal import (
     new_run_id,
     prune_artifacts,
 )
-from harness.plan import plan_location, plan_metadata
+from harness.plan import bound_revision, plan_location, plan_metadata
 from harness.process import execute_process
 from harness.project import render_prompt, review_checklist, task_file
 from harness.records import open_task_ids, task_links, task_row
@@ -105,11 +104,6 @@ def _write(root: Path, record: dict[str, Any]) -> None:
     atomic_write_json(_record_path(root, record["task_id"]), record)
 
 
-def _row_revision(cells: list[str]) -> int | None:
-    match = re.fullmatch(r"r(\d+)", cells[2]) if len(cells) > 2 else None
-    return int(match.group(1)) if match else None
-
-
 def last_review(record: dict[str, Any]) -> dict[str, Any] | None:
     return record["reviews"][-1] if record["reviews"] else None
 
@@ -141,7 +135,7 @@ def review_status(root: Path, task_id: str, plan_doc: str) -> str:
         return "not_reviewed"
     if any(item["at"] >= last["at"] for item in record["again"]):
         return "needs_review"
-    bound = _row_revision(cells)
+    bound = bound_revision(root, task_id)
     if bound == plan_metadata(root, plan)[0] and last.get("plan_revision") != bound:
         return "needs_review"
     return "reviewed"
@@ -210,7 +204,7 @@ def _task_lines(root: Path, tasks: list[str]) -> str:
     lines = []
     for task_id in tasks:
         cells = task_row(root, task_id) or []
-        title, check = (cells[3], cells[4]) if len(cells) > 4 else ("", "")
+        title, check = (cells[1], cells[2]) if cells else ("", "")
         lines.append(f"- {task_id}：{title}。验收：{check}")
     return "\n".join(lines)
 
@@ -264,7 +258,7 @@ def run_plan_review(
         if not pending:
             return {"summary": None, "tasks": {}}
         revision = plan_metadata(root, relative)[0]
-        bindings = {task_id: _row_revision(task_row(root, task_id) or []) for task_id in pending}
+        bindings = {task_id: bound_revision(root, task_id) for task_id in pending}
 
         review_dir = _review_dir(root)
         review_dir.mkdir(parents=True, exist_ok=True)
@@ -356,7 +350,7 @@ def run_plan_review(
         # Edits to the plan or its bindings while the reviewer runs void its input, not its run: they are
         # checked before any failure is counted, since the input check also sees them.
         if plan_metadata(root, relative)[0] != revision or any(
-            _row_revision(task_row(root, task_id) or []) != bound for task_id, bound in bindings.items()
+            bound_revision(root, task_id) != bound for task_id, bound in bindings.items()
         ):
             raise HarnessError(
                 f"plan document {relative} or its task bindings changed during the review; run plan-review again"

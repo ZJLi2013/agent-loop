@@ -6,6 +6,14 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- `task.md` task tables have four columns, `| id | task | 验收检查点 | 状态 |`; row order within a Goal's table is the
+  priority. Harness reads the revision from a `- rev：rN` line in the task's design section (from the archive row once
+  closed) and keeps failure counts in `.harness/failures.json`: `agent-loop-harness fail --task <id> --note ...` adds
+  one, a locked-verifier pass clears it, `status` shows it, and CLOSE writes it into the archive row. The archive keeps
+  its seven columns with `—` as P. The successor `P<number>` check from #243 is gone with the column.
+  Migration: `init` refuses a seven-column table; run `agent-loop-harness migrate-tasks` once. It sorts each table by
+  P, rewrites `P<n>` references in acceptance and candidate cells to task ids, moves revisions into design sections and
+  failure counts into Harness, and writes nothing when a reference matches zero or several rows.
 - An experiment line's readme is its entry document and reads like a report: a one-sentence conclusion as the title,
   `目标` / `现状` / `下一步` field lines on the first screen, then one table of numbered sub-documents. CLOSE lint
   now rejects, on what the task changed, an experiment-line readme (one with `NN-*.md` sub-documents beside it)

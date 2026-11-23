@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from harness.errors import HarnessError
-from harness.project import runtime_dir, task_file
+from harness.project import task_file
 from harness.protocol import Event, TransitionError, apply_event
-from harness.records import open_task_ids
+from harness.records import archived_revision, design_revision, open_task_ids, task_row
 from harness.storage import (
     HARNESS_DIR,
     STATE_FILE,
@@ -57,27 +57,32 @@ def plan_metadata(root: Path, plan_path: str) -> tuple[int, str]:
     return int(revision.group(1)), review.group(1)
 
 
+def _revision_cell(root: Path, task_id: str) -> str | None:
+    """`rN` or `—` from the active task's design section, else from its archive row; None when missing."""
+    try:
+        if task_row(root, task_id) is not None:
+            return design_revision(root, task_id) or "—"
+        return archived_revision(root, task_id)
+    except OSError as exc:
+        raise HarnessError(f"cannot read the revision of task {task_id}: {exc}") from exc
+
+
+def bound_revision(root: Path, task_id: str) -> int | None:
+    """The plan revision task_id binds, None when it binds none or is missing."""
+    match = re.fullmatch(r"r(\d+)", _revision_cell(root, task_id) or "")
+    return int(match.group(1)) if match else None
+
+
 def task_plan_revision(root: Path, task_id: str) -> int:
-    active = task_file(root)
-    archive = runtime_dir(root) / "archive" / "tasks.md"
-    for path in (active, archive):
-        if not path.exists():
-            continue
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except OSError as exc:
-            raise HarnessError(f"cannot read {path}: {exc}") from exc
-        for line in lines:
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-            if len(cells) < 7 or cells[1] != task_id:
-                continue
-            match = re.fullmatch(r"r(\d+)", cells[2])
-            if not match:
-                raise HarnessError(f"task {task_id} must bind a revision as rN")
-            return int(match.group(1))
-    raise HarnessError(
-        f"task {task_id} is missing from {active} and {archive}"
-    )
+    value = _revision_cell(root, task_id)
+    if value is None:
+        raise HarnessError(f"task {task_id} is missing from {task_file(root)} and its archive")
+    match = re.fullmatch(r"r(\d+)", value)
+    if not match:
+        raise HarnessError(
+            f"task {task_id} must bind a revision: write `- rev：rN` in its design section"
+        )
+    return int(match.group(1))
 
 
 def pause_request(root: Path) -> dict[str, Any] | None:

@@ -60,29 +60,36 @@ class PlanReviewTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         (self.root / ".agent-loop").mkdir()
+        self.header = (1, "proposed", "alpha")
         self.write_tasks(("t1", "📝 proposed"))
-        self.write_plan(1)
 
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def write_plan(self, revision: int, review: str = "proposed", body: str = "alpha") -> None:
+    def render_plan(self) -> None:
+        revision, review, body = self.header
         (self.root / "plan.md").write_text(
-            f"# Plan\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n{body}\n\n## t1 design\n",
+            f"# Plan\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n{body}\n\n"
+            + "".join(f"## {task_id} design\n\n- rev：r{bound}\n\n" for task_id, bound in self.bindings.items()),
             encoding="utf-8",
         )
 
+    def write_plan(self, revision: int, review: str = "proposed", body: str = "alpha") -> None:
+        self.header = (revision, review, body)
+        self.render_plan()
+
     def write_tasks(self, *rows: tuple[str, ...], revision: int = 1) -> None:
+        self.bindings = {task_id: bound[0] if bound else revision for task_id, _, *bound in rows}
         (self.root / ".agent-loop" / "task.md").write_text(
-            "| P | id | rev | task | check | status | fail |\n"
-            "|---|---|---|---|---|---|---|\n"
+            "| id | task | check | status |\n"
+            "|---|---|---|---|\n"
             + "".join(
-                f"| P0 | {task_id} | r{bound[0] if bound else revision} | {task_id} 标题 "
-                f"| [设计](../plan.md#{task_id}-design) | {status} | 0 |\n"
-                for task_id, status, *bound in rows
+                f"| {task_id} | {task_id} 标题 | [设计](../plan.md#{task_id}-design) | {status} |\n"
+                for task_id, status, *_ in rows
             ),
             encoding="utf-8",
         )
+        self.render_plan()
 
     def configure(self, argv: list[str]) -> None:
         (self.root / ".agent-loop" / "reviewer.json").write_text(
@@ -201,7 +208,8 @@ class PlanReviewTest(unittest.TestCase):
         self.assertEqual(self.review()["tasks"], {})
         self.assertEqual(self.calls(), "1")
 
-    def test_a_new_revision_reviews_the_tasks_bound_to_it(self) -> None:
+    def test_blocked_task_keeps_its_old_revision(self) -> None:
+        """A new revision reviews the tasks rebound to it; a blocked task keeps its old binding unreviewed."""
         self.configure(reviewer_writing({"t1": [], "t2": []}))
         self.write_tasks(("t1", "📝 proposed"), ("t2", "📝 proposed"))
         self.review()
@@ -240,10 +248,9 @@ class PlanReviewTest(unittest.TestCase):
         self.assert_review_discarded()
 
     def test_a_binding_changed_during_the_review_records_nothing(self) -> None:
-        task_md = ".agent-loop/task.md"
         self.reviewer_changing(
-            f"Path({task_md!r}).write_text(Path({task_md!r}).read_text(encoding='utf-8')"
-            ".replace('| r1 |', '| r2 |'), encoding='utf-8')"
+            "Path('plan.md').write_text(Path('plan.md').read_text(encoding='utf-8')"
+            ".replace('rev：r1', 'rev：r2'), encoding='utf-8')"
         )
         self.assert_review_discarded()
 
@@ -458,6 +465,7 @@ class StopGateTest(unittest.TestCase):
     """t1 was reviewed and started under r1; a human correction bumps the plan to r2 and rebinds t1."""
 
     tearDown = PlanReviewTest.tearDown
+    render_plan = PlanReviewTest.render_plan
     write_plan = PlanReviewTest.write_plan
     write_tasks = PlanReviewTest.write_tasks
     configure = PlanReviewTest.configure

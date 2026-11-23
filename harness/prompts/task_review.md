@@ -50,7 +50,8 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
    `task.md` 的 Candidates 就删掉那一行），写好一个 `📝 proposed` task：最多一个未验证假设；表里 task 格写一句问题，
    验收格写「成了 → 去哪；不成 → 去哪」，判据细节与预算写进它链接的本地设计文档；plan 表格里的一行不算设计。设计写成 plan document 里以 task id
    开头的标题段或 linked sub-exp，不放 `.harness/tasks/`：那里在 task 关闭时被删除。
-   新 task 的 `rev` 沿用当前 plan revision。
+   task 表只有 `id / task / 验收检查点 / 状态` 4 列，行序就是优先级，新行插在它该排的位置；新 task 的设计节写一行
+   `- rev：rN`，沿用当前 plan revision。
    结果为否定或意外、或下一个 task 要换方向时，先核对 plan 是否已对照领域结论与业界已有解法；
    没有就让下一个 task 先补这次调研，而不是直接再跑一轮实验。
    {task_id} 是关于同一组件或方法内部、连续第二个被推翻的假设时，这次调研对照的是组件 / 方法类别在社区标准基准上的

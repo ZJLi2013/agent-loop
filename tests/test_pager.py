@@ -35,9 +35,9 @@ def reviewer_writing(decision: dict[str, object]) -> list[str]:
         {"summary": "plan ready", "tasks": {"t1": {"verdict": "accept", "findings": []}}}
     )
     tasks = (
-        "| P | id | rev | task | check | status | fail |\n"
-        "|---|---|---|---|---|---|---|\n"
-        "| P0 | t1 | r1 | demo | check | ✅ done | 0 |\n"
+        "| id | task | check | status |\n"
+        "|---|---|---|---|\n"
+        "| t1 | demo | check | ✅ done |\n"
     )
     code = (
         "from pathlib import Path; "
@@ -57,8 +57,8 @@ class PagerCheckpointTest(unittest.TestCase):
         runtime = self.root / ".agent-loop"
         runtime.mkdir()
         (runtime / "task.md").write_text(
-            "| P | id | rev | task | check | status | fail |\n"
-            "| P0 | t1 | r1 | demo | [design](../plan.md#t1-design) | 🔬 doing | 0 |\n",
+            "| id | task | check | status |\n"
+            "| t1 | demo | [design](../plan.md#t1-design) | 🔬 doing |\n",
             encoding="utf-8",
         )
         (self.root / "fake_pager.py").write_text(FAKE_PAGER, encoding="utf-8")
@@ -78,7 +78,7 @@ class PagerCheckpointTest(unittest.TestCase):
     def write_plan(self, revision: int, review: str) -> None:
         (self.root / "plan.md").write_text(
             f"# Demo\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n"
-            "## Goal\nDemo goal\n\n## t1 design\n",
+            "## Goal\nDemo goal\n\n## t1 design\n\n- rev：r1\n",
             encoding="utf-8",
         )
 
