@@ -153,15 +153,14 @@ def _is_readme(relative: str) -> bool:
 
 
 def _layout_problems(root: Path, relative: str) -> list[str]:
-    """features/<feature>.md holds the first screen and conclusions; exps/<feature>.md only experiment details and data."""
+    """features/<path>.md holds the first screen and conclusions; exps/<path>.md, mirroring it, only details and data."""
     parts = PurePosixPath(relative).parts
     if parts[0] not in (FEATURES_DIR, EXPS_DIR):
         return []
-    if len(parts) != 2:
-        return [f"{relative}: put it directly in {parts[0]}/ as <feature>.md, without subdirectories"]
+    name = PurePosixPath(*parts[1:]).as_posix()
     problems = []
-    if parts[0] == EXPS_DIR and not (root / FEATURES_DIR / parts[1]).is_file():
-        problems.append(f"{relative}: no {FEATURES_DIR}/{parts[1]}; each exp document has a feature of the same name")
+    if parts[0] == EXPS_DIR and not (root / FEATURES_DIR / name).is_file():
+        problems.append(f"{relative}: no {FEATURES_DIR}/{name}; each exp document has a feature of the same path")
     found, sectioned, fenced = set(), False, False
     for number, line in enumerate((root / relative).read_text(encoding="utf-8", errors="replace").splitlines(), 1):
         if _FENCE.match(line):
@@ -174,12 +173,12 @@ def _layout_problems(root: Path, relative: str) -> list[str]:
             if not sectioned and field:
                 found.add(field[1])
             if EXPERIMENT_LOG.match(line):
-                problems.append(f"{relative}:{number}: Experiment Log belongs in {EXPS_DIR}/{parts[1]}")
+                problems.append(f"{relative}:{number}: Experiment Log belongs in {EXPS_DIR}/{name}")
             continue
         heading = _HEADING.match(line)
         if heading and _FEATURE_HEADING.match(heading[1]) or field or _REVISION.match(line):
             problems.append(f"{relative}:{number}: design, conclusions and the first screen belong in "
-                            f"{FEATURES_DIR}/{parts[1]}; an exp holds only experiment details and data")
+                            f"{FEATURES_DIR}/{name}; an exp holds only experiment details and data")
     if parts[0] == FEATURES_DIR and (missing := [field for field in ENTRY_FIELDS if field not in found]):
         problems.append(f"{relative}: entry fields missing before the first ## section: {'、'.join(missing)}")
     return problems
@@ -304,7 +303,7 @@ def lint_changed(root: Path) -> list[str]:
 
     def exempt(relative: str) -> set[int]:
         path = (root / relative).resolve()
-        if not feature or path not in (plan, (root / EXPS_DIR / plan.name).resolve()):
+        if not feature or path not in (plan, (root / EXPS_DIR / plan.relative_to(root / FEATURES_DIR)).resolve()):
             return set()
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         return _exempt_lines(lines, ids, sections=path == plan)

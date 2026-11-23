@@ -162,11 +162,46 @@ class LayoutTest(unittest.TestCase):
 
         problems = lint_changed(self.root)
 
-        self.assertIn("exps/z.md: no features/z.md; each exp document has a feature of the same name", problems)
-        self.assertTrue(any(p.startswith("exps/line/01-q.md: put it directly in exps/") for p in problems), problems)
+        self.assertIn("exps/z.md: no features/z.md; each exp document has a feature of the same path", problems)
+        self.assertIn("exps/line/01-q.md: no features/line/01-q.md; each exp document has a feature of the same path",
+                      problems)
         self.assertEqual(sorted(p.split(": ")[0] for p in problems if p.startswith("exps/a.md")),
                          ["exps/a.md:3", "exps/a.md:4", "exps/a.md:5"])
         self.assertEqual([p for p in problems if p.startswith("exps/b.md")], [])
+
+    def test_nested_features_and_exps_mirror_each_other(self) -> None:
+        self.write("features/g/x.md", PLAN_HEAD.format(name="x") + "## x1 设计\n\n- rev：r1\n")
+        self.write("exps/g/x.md", EXP_HEAD + "## 读数\n\n做法见 [x1 设计](../../features/g/x.md#x1-设计)。\n")
+        self.write("features/g/y.md", "# y\n\nPlan Revision: 1\n\n## Goal\n")
+        self.write("features/g/readme.md", "# g\n\n- 目标：a\n- 现状：a\n- 下一步：a\n\n## 实验\n\n- x 测得 3 项 [x](x.md)\n")
+        self.write("exps/g/readme.md", "# g\n\n| 实验 | 数据 |\n|---|---|\n| x | [x](x.md) |\n")
+        self.write("exps/g/z.md", EXP_HEAD)
+        self.git("add", "-A")
+
+        problems = [p for p in lint_changed(self.root) if p.startswith(("features/g/", "exps/g/"))]
+        self.assertEqual(sorted(problems), [
+            "exps/g/z.md: no features/g/z.md; each exp document has a feature of the same path",
+            "features/g/y.md: entry fields missing before the first ## section: 目标、现状、下一步",
+        ])
+
+        self.tasks(("x1", "../features/g/x.md#x1-设计"))
+        self.assertIsNone(design_location_error(self.root, "x1", "features/g/x.md"))
+        self.write("features/g/readme.md", self.read("features/g/readme.md") + "\n## r1 设计\n")
+        self.tasks(("r1", "../features/g/readme.md#r1-设计"))
+        self.assertIn("must be features/<feature>.md", design_location_error(self.root, "r1", "features/g/readme.md"))
+
+        close_task(self.root, "features/g/x.md", "x1")
+        self.assertIn("做法见 x1 设计。", self.read("exps/g/x.md"))
+
+    def test_a_done_goal_does_not_claim_its_feature_subdirectory(self) -> None:
+        self.write("features/g/x.md", PLAN_HEAD.format(name="x"))
+        self.commit()
+        self.tasks(mainline=(
+            "\n## 主线\n\nMainline Review: approved\n\n| Goal | 问题 | 退出条件 | 状态 | plan |\n|---|---|---|---|---|\n"
+            "| g | g | g | ✅ done | [plan](../features/g/x.md) |\n"))
+        self.write("features/g/notes.md", "notes\n")
+
+        self.assertEqual(leftovers(self.root), [])
 
     def test_untracked_feature_is_refused(self) -> None:
         self.write(".gitignore", "features/c.md\n")
