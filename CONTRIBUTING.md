@@ -97,7 +97,9 @@ the agent does / refuses / stops Y"). It then replays a few public synthetic sce
 once on the base branch and once with the change: the agent or reviewer reads the rules and acts, rather than a
 check that the prompt contains the new sentence. One more scenario is a control the new rule must not trigger. The pull
 request records the model, the inputs, and the expected and observed action of each run. A small manual or
-fixed-model replay is enough. A wording change that changes no decision needs no replay.
+fixed-model replay is enough. A wording change that changes no decision needs no replay. Constraints on document
+layout, wording, or format are accepted by deterministic checks and human review, without replay, even when they
+change where an agent writes something.
 
 Tests in `tests/` pin contracts: lifecycle transitions and guards, the invariants a design's module contract
 names, and formats other tools read. A test that only proves one fix (a bug no contract names, output layout,
@@ -141,8 +143,8 @@ Once either path has chosen the issue, the script reads that issue's labels once
 worktree. It stops with exit 1 when `restores-contract` is missing or another triage label is also present, and
 exits non-zero when the labels cannot be read; in each case it neither fetches, creates a worktree, nor starts
 Codex. A relabel during the run does not stop it, so the maintainer re-checks the triage before merging.
-Proposals and Policy wording need a human decision, and a Policy change that changes a decision is proven by the
-behavior replay described under Pull requests, not by a failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
+Proposals and Policy wording need a human decision, and a Policy change that changes a decision is proven as
+described under Pull requests, not by a failing test. Issues labelled `auto-fix` are not fixed on their own. The maintainer runs `.github/auto-fix/run.ps1` on demand, which
 hands one issue to a sandboxed Codex agent and marks its pull request ready only after CI fails on the agent's
 regression test alone and passes with the fix. It then reverts the test, so the suite does not grow with every fix;
 the test stays in the pull request's history. The script does not read why the first commit failed: a test that
