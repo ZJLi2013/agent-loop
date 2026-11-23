@@ -36,6 +36,8 @@ All notable user-facing changes are documented here. This project follows Semant
   state written before this field, the review runs in full as before.
 - Each task review reads `.harness/review/journal.jsonl`, the `runs.jsonl` lines of the reviewed task only, instead
   of the whole `.harness/runs.jsonl` (#255).
+- Task review reports the task id, invalid priority cell and required `P<number>` format when a successor
+  row uses a priority such as `P8a` or `P15.1`, instead of reporting that the task is not open (#243).
 - On a task stopped by an exhausted execution budget, `exec`, `verify` and `resume` report the exhausted budget
   and direct the caller to `disable`, including when a pause request is pending (#248). Refused commands leave
   the task state and pending pause unchanged.

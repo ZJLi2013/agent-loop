@@ -19,7 +19,13 @@ from harness.project import (
     task_file,
 )
 from harness.protocol import Phase
-from harness.records import CLOSED_MARKERS, active_task_status, archive_progress, close_task
+from harness.records import (
+    CLOSED_MARKERS,
+    active_task_status,
+    archive_progress,
+    close_task,
+    task_priority_error,
+)
 from harness.scratch import clean_task
 from harness.storage import (
     HARNESS_DIR,
@@ -289,7 +295,9 @@ def run_review(root: Path, *, objection: str | None = None) -> dict[str, Any]:
             status = active_task_status(root, next_task) or ""
             if not status or any(marker in status for marker in CLOSED_MARKERS):
                 decision = None
-                error = f"next task {next_task} must be an open task in the task list"
+                error = (
+                    task_priority_error(root, next_task) if not status else None
+                ) or f"next task {next_task} must be an open task in the task list"
             else:
                 from harness.plan_review import task_record
 
