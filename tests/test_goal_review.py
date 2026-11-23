@@ -166,27 +166,22 @@ class AttentionRefreshTest(unittest.TestCase):
         state["last_goal_review_at"] = "2000-01-01T00:00:00+00:00"
         path.write_text(json.dumps(state), encoding="utf-8")
 
-    def test_gate_hands_off_reviewed_task_instead_of_goal_review(self) -> None:
+    def test_gate_hands_off_reviewed_task_by_session_mode_instead_of_goal_review(self) -> None:
         self.verified_with_reviewer(reviewed=True)
 
         followup = completion_gate(self.root) or ""
+        compacted = completion_gate(self.root, None, "new_session") or ""
+        hosted = completion_gate(self.root, None, "host") or ""
         _, state = load_runtime(self.root)
 
         self.assertIn("Reviewer chose continue -> t2", followup)
         self.assertIn("initialize the Harness for t2 and execute it", followup)
-        self.assertIsNone(pause_request(self.root))
-        self.assertEqual(state["phase"], "verified")
-
-    def test_closed_task_hands_off_when_the_session_should_switch(self) -> None:
-        self.verified_with_reviewer(reviewed=True)
-
-        compacted = completion_gate(self.root, None, "new_session") or ""
-        hosted = completion_gate(self.root, None, "host") or ""
-
         self.assertIn("start t2 in a new session", compacted)
         self.assertNotIn("execute it", compacted)
         self.assertIn("End your turn", hosted)
         self.assertIn("first command initializes t2", hosted)
+        self.assertIsNone(pause_request(self.root))
+        self.assertEqual(state["phase"], "verified")
 
 if __name__ == "__main__":
     unittest.main()

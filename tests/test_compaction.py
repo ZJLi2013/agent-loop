@@ -14,9 +14,11 @@ from unittest import mock
 
 from harness import compaction
 from adapters.core import handle
+from adapters.cursor import session_scope
 from adapters.protocol import HookEvent, HookRequest
 from harness import run
 from harness.core import initialize
+from harness.plan import pause_request
 
 HOOK = Path(__file__).resolve().parents[1] / "adapters" / "cursor" / "hooks" / "goal-refresh.py"
 
@@ -66,6 +68,28 @@ class CompactionHandoffTest(unittest.TestCase):
             self.assertEqual(compaction.handoff_mode(self.session), "new_session_1m")
             self.assertIsNone(compaction.handoff_mode(None))
 
+    def test_only_a_first_compaction_below_1m_notifies_and_none_pauses(self) -> None:
+        initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
+        task = self.root / ".agent-loop" / "task.md"
+        task.parent.mkdir()
+        task.write_text("# Tasks\n", encoding="utf-8")
+        payload = {"conversation_id": self.session, "workspace_roots": [str(self.root)]}
+        cases = ((300_000, True, True), (compaction.LARGE_CONTEXT_WINDOW, True, False), (300_000, False, False))
+        with mock.patch.object(session_scope, "_SCOPES", self.root / "session-cache"):
+            session_scope.bind({**payload, "tool_input": {"path": str(task)}})
+            for window, first, notifies in cases:
+                with self.subTest(window=window, first=first):
+                    output = json.loads(_goal_refresh().output_for(
+                        json.dumps({**payload, "context_window_size": window, "is_first_compaction": first})
+                    ))
+                    self.assertEqual(bool(output.get("user_message")), notifies)
+                    self.assertIsNone(pause_request(self.root))
+        with self.subTest("without a harness"), tempfile.TemporaryDirectory() as bare:
+            output = json.loads(_goal_refresh().output_for(
+                json.dumps({"workspace_roots": [bare], "context_window_size": 300_000, "is_first_compaction": True})
+            ))
+            self.assertTrue(output.get("user_message"))
+
     def test_stop_passes_the_handoff_mode_to_the_gate(self) -> None:
         env = {"AGENT_LOOP_SESSION_HOST": ""}
         self.assertIsNone(self.stop_mode(env))
@@ -87,24 +111,25 @@ class CompactionHandoffTest(unittest.TestCase):
             run.main(["--root", str(self.root), "verify"])
         return json.loads(out.getvalue())
 
-    def test_verify_tells_a_hosted_worker_to_end_the_turn(self) -> None:
-        initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
-
-        self.assertNotIn("handoff", self.verify_payload(""))
-        handoff = str(self.verify_payload("1").get("handoff"))
-
-        self.assertIn("no reviewer is configured", handoff)
-        self.assertIn("End your turn", handoff)
-
-    def test_verify_hands_a_compacted_session_off_to_a_new_session(self) -> None:
-        initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
-        compaction.record_compaction(self.session, 300_000)
-
-        handoff = str(self.verify_payload("").get("handoff"))
-
-        self.assertIn("in a new session", handoff)
-        self.assertIn("pick a 1M-context model", handoff)
-        self.assertIn("Do not initialize another task in this session", handoff)
+    def test_verify_hands_off_by_the_session_mode(self) -> None:
+        cases = (
+            ("", None, []),
+            ("1", None, ["no reviewer is configured", "End your turn"]),
+            ("", 300_000, ["in a new session", "pick a 1M-context model",
+                           "Do not initialize another task in this session"]),
+        )
+        for host, window, expected in cases:
+            with self.subTest(host=host, window=window):
+                self.tearDown()
+                self.setUp()
+                initialize(self.root, task_id="t1", verifier_argv=[sys.executable, "-S", "-c", "print('OK')"])
+                if window:
+                    compaction.record_compaction(self.session, window)
+                payload = self.verify_payload(host)
+                if not expected:
+                    self.assertNotIn("handoff", payload)
+                for text in expected:
+                    self.assertIn(text, str(payload.get("handoff")))
 
 
 if __name__ == "__main__":

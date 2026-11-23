@@ -235,6 +235,9 @@ class InstallSkillsTest(unittest.TestCase):
         for name in ("work-planning", "agent-heartbeat", "experiment-design"):
             self.assertEqual(self.target(own / name), install.norm(self.checkout / "skills" / name))
         self.assertEqual(self.run_installer().stdout.count("Linked skill"), 0)
+        shutil.rmtree(own / "code-to-uml-diagram")
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 RULE_PACK_TOML = """\

@@ -29,6 +29,7 @@ class MemoryHookTest(unittest.TestCase):
             task = runtime / "task.md"
             task.write_text("## Goal\ncodec boundary\n", encoding="utf-8")
             (memory / "INDEX.md").write_text("- codec decision\n", encoding="utf-8")
+            (memory / "episodes.md").write_text("- codec boundary uses canonical events\n", encoding="utf-8")
 
             context = HOOK.context_for(
                 {
@@ -39,6 +40,7 @@ class MemoryHookTest(unittest.TestCase):
             )
 
         self.assertIn("codec decision", context or "")
+        self.assertIn("canonical events", context or "")
 
 
 if __name__ == "__main__":

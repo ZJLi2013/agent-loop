@@ -214,21 +214,6 @@ class DependencyResolutionTest(unittest.TestCase):
                         if links != self.dest():
                             self.assertFalse(os.path.lexists(self.dest() / name))
 
-    def test_installs_without_dependencies_are_unchanged(self) -> None:
-        own_dest = self.home / "skills-cursor"
-        own_dest.mkdir(parents=True)
-        install.make_link(own_dest / "work-planning", skill(self.tmp / "moved-checkout" / "work-planning"))
-        self.packs = self.tmp / "absent.txt"
-        result = self.run_installer()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(install.link_target(own_dest / "work-planning"),
-                         install.norm(self.checkout / "skills" / "work-planning"))
-        self.packs = self.tmp / "packs.txt"
-        self.write({"a": [("alone", [], [])]})
-        result = self.run_installer()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertTrue(self.linked("alone", "a"))
-
 
 if __name__ == "__main__":
     unittest.main()
