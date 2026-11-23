@@ -93,11 +93,14 @@ or add text-matching tests where an executable transition/guard test is possible
 A rule, skill, or reviewer-prompt change that changes a decision is accepted by behavior, not by its wording. It
 changes a decision when, for some input, an agent would run, refuse, or stop a different action, keep evidence for a
 different time, or hand work to a different owner. The pull request states that decision as a contract ("given X,
-the agent does / refuses / stops Y"). It then replays a few public synthetic scenarios through the real call path,
-once on the base branch and once with the change: the agent or reviewer reads the rules and acts, rather than a
-check that the prompt contains the new sentence. One more scenario is a control the new rule must not trigger. The pull
-request records the model, the inputs, and the expected and observed action of each run. A small manual or
-fixed-model replay is enough. A wording change that changes no decision needs no replay.
+the agent does / refuses / stops Y"). It then replays a few scenarios through the real call path, once on the base
+branch and once with the change: the agent or reviewer reads the rules and acts, rather than a check that the prompt
+contains the new sentence. Acceptance scenarios come from real cases, as `experiment-design` requires for behavior
+acceptance; public synthetic scenarios may still serve for diagnosis, controls and regression. Private raw material
+stays local: the pull request records a public description of each case and how it was trimmed or redacted. With no
+fitting real case yet, the pull request marks real-behavior acceptance as pending. One more scenario is a control the
+new rule must not trigger. The pull request records the model, the inputs, and the expected and observed action of
+each run. A small manual or fixed-model replay is enough. A wording change that changes no decision needs no replay.
 
 Tests in `tests/` pin contracts: lifecycle transitions and guards, the invariants a design's module contract
 names, and formats other tools read. A test that only proves one fix (a bug no contract names, output layout,
