@@ -16,7 +16,7 @@ alwaysApply: true
 
 | 当前事件 / 状态 | 读 |
 |---|---|
-| 新 Goal、缺 plan Goal、`📝 proposed`、Goal Review、human 纠偏 | `work-planning` |
+| 新 Goal、缺 plan Goal、`📝 proposed`、Goal Review、human 纠偏、human 开讨论（brainstorm） | `work-planning` |
 | 改代码的设计引入新抽象、已有概念的第二份实现或跨模块接口 | `work-planning` 第 2 步的类级设计，图用 `code-to-uml-diagram` |
 | 选择 task、写检查点、维护状态 | `task-state` |
 | 已批准 task 要跑实验 / 验证 | `experiment-design` |
