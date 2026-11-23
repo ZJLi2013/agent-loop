@@ -131,12 +131,12 @@ def _is_readme(relative: str) -> bool:
 
 
 def _layout_problems(root: Path, relative: str) -> list[str]:
-    """features/<goal>.md and exps/<goal>.md sit directly in their directory; an exp opens with the entry fields."""
+    """features/<feature>.md and exps/<feature>.md sit directly in their directory; an exp opens with the entry fields."""
     parts = PurePosixPath(relative).parts
     if parts[0] not in (FEATURES_DIR, EXPS_DIR):
         return []
     if len(parts) != 2:
-        return [f"{relative}: put it directly in {parts[0]}/ as <goal>.md, without subdirectories"]
+        return [f"{relative}: put it directly in {parts[0]}/ as <feature>.md, without subdirectories"]
     if parts[0] == FEATURES_DIR:
         return []
     problems = []

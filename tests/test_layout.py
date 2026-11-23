@@ -10,7 +10,7 @@ from pathlib import Path
 from harness.core import initialize
 from harness.errors import HarnessError
 from harness.lint import lint_changed
-from harness.records import close_task, design_location_error, leftovers, open_task_ids
+from harness.records import close_task, design_location_error, leftovers, mainline_handoff, open_task_ids
 
 PLAN_HEAD = "# {name}\n\nPlan Revision: 1\nPlan Review: approved\n\n## Goal\n\n{name}\n\n"
 EXP_HEAD = "# a\n\n- 目标：a\n- 现状：a\n- 下一步：a\n\n"
@@ -73,11 +73,21 @@ class LayoutTest(unittest.TestCase):
         close_task(self.root, "features/a.md", "a1")
         self.assertIn("## b1 设计", self.read("features/b.md"))
 
+    def test_next_goal_with_two_features_hands_off_to_either(self) -> None:
+        self.write("features/c.md", PLAN_HEAD.format(name="c"))
+        self.tasks(mainline=(
+            "\n## 主线\n\nMainline Review: approved\n\n| Goal | 问题 | 退出条件 | 状态 | plan |\n|---|---|---|---|---|\n"
+            "| a | a | a | ✅ done | [plan](../features/a.md) |\n"
+            "| b | b | b | ▶ next | [b](../features/b.md)、[c](../features/c.md) |\n"))
+
+        self.assertTrue(mainline_handoff(self.root, "features/a.md", "features/c.md"))
+        self.assertFalse(mainline_handoff(self.root, "features/b.md", "features/c.md"))
+
     def test_new_goal_in_old_location_is_refused_even_after_review(self) -> None:
         self.write(".agent-loop/plans/g/plan.md", PLAN_HEAD.format(name="g") + "## g1 设计\n\n- rev：r1\n")
         self.tasks(("g1", "plans/g/plan.md#g1-设计"))
 
-        with self.assertRaisesRegex(HarnessError, "must be features/<goal>.md"):
+        with self.assertRaisesRegex(HarnessError, "must be features/<feature>.md"):
             self.init("g1", ".agent-loop/plans/g/plan.md")
 
     def test_old_plan_with_an_archived_task_is_accepted(self) -> None:

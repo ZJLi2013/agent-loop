@@ -14,18 +14,21 @@ All notable user-facing changes are documented here. This project follows Semant
   Migration: `init` refuses a seven-column table; run `agent-loop-harness migrate-tasks` once. It sorts each table by
   P, rewrites `P<n>` references in acceptance and candidate cells to task ids, moves revisions into design sections and
   failure counts into Harness, and writes nothing when a reference matches zero or several rows.
-- Each Goal has two working documents with the same name, tracked by git and placed directly in their directory:
-  `features/<goal>.md` is the plan document (Goal, design, current conclusions, 脉络, task design sections) and
-  `exps/<goal>.md` holds the experiment (a one-sentence title, `目标` / `现状` / `下一步` field lines on the first screen,
+- Each concrete feature (one change that is designed and accepted on its own, or one research question) has two
+  working documents with the same name, tracked by git and placed directly in their directory; a Goal has one or
+  more features and is defined only in `task.md`, whose mainline row links all of them.
+  `features/<feature>.md` is the plan document (the Goal it serves, design, current conclusions, 脉络, and each
+  task's design as a section) and `exps/<feature>.md` holds the experiment (a one-sentence title, `目标` / `现状` / `下一步` field lines on the first screen,
   conclusions, how to rerun, Experiment Log). `.agent-loop/plans/<goal>/`, `sub-exp/` files, experiment-line readmes and
   numbered `exps/<line>/NN-*.md` sub-documents are gone. `init` refuses a `plan_doc` outside `features/` and a task
   design link into an exp or another feature. Plan review, `leftovers` and CLOSE assign tasks by feature file, so two
-  features in one directory no longer share tasks; CLOSE also unlinks the dropped section in `features/` and `exps/`.
+  features in one directory no longer share tasks, and the mainline handoff accepts any feature linked from the
+  done and the next Goal rows; CLOSE also unlinks the dropped section in `features/` and `exps/`.
   CLOSE lint exempts task ids only in the current feature's task sections and the exp's Experiment Log, rejects an
   exp without its feature or first-screen fields, a subdirectory under either directory, and a gitignored document
   there, and still rejects link-only index lines in a readme. The task reviewer reads the exp's first screen.
   Migration: a Goal already under way keeps its old plan location once one of its tasks is archived and the plan
-  mentions that task id; any other Goal moves its plan to `features/<goal>.md` before the next `init`.
+  mentions that task id; any other Goal moves its plan to `features/<feature>.md` before the next `init`.
 - `task.md` uses only the template's columns, one short sentence per cell: the task cell is the question it answers,
   the acceptance cell reads "done → where; not → where", and budgets and details live in the linked design. CLOSE lint
   rejects task rows this task added whose column count differs from the template (for example an extra 预算上限

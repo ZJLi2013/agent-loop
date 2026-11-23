@@ -223,16 +223,11 @@ def mainline_handoff(root: Path, previous_plan: str | None, plan_doc: str) -> bo
     if index == 0 or any(status != "✅ done" for status in statuses[:index]):
         return False
 
-    def plan_of(cells: list[str]) -> Path | None:
-        link = _TARGET.search(cells[4])
-        parts = _local(link.group(2)) if link else None
-        return (path.parent / parts[0]).resolve() if parts and parts[0] else None
-
-    previous, following = plan_of(rows[index - 1]), plan_of(rows[index])
+    previous, following = (_linked_files(rows[i][4], path.parent) for i in (index - 1, index))
     return (
-        previous == (root / previous_plan).resolve()
-        and following == (root / plan_doc).resolve()
-        and previous != following
+        (root / previous_plan).resolve() in previous
+        and (root / plan_doc).resolve() in following
+        and not previous & following
     )
 
 
@@ -368,7 +363,7 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
     feature = feature_doc(root, plan)
     if not feature and not _in_flight(root, text):
         return (
-            f"plan document {plan_doc} must be {FEATURES_DIR}/<goal>.md, directly under {FEATURES_DIR}/; "
+            f"plan document {plan_doc} must be {FEATURES_DIR}/<feature>.md, directly under {FEATURES_DIR}/; "
             f"a plan elsewhere is accepted only after one of its tasks is archived"
         )
     lines = text.splitlines()

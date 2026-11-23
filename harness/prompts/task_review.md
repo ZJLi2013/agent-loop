@@ -19,7 +19,7 @@ review 的单位是这个 verified task，不是实验记录的一次修改、�
 
 ## 要做的事
 
-1. 先复述入口，再做下面的核对。{task_id} 写入或改动了 exp 文档时，入口是 `exps/<goal>.md`（有多份时逐份）。
+1. 先复述入口，再做下面的核对。{task_id} 写入或改动了 exp 文档时，入口是 `exps/<feature>.md`（有多份时逐份）。
    定位入口只看 task 行与 `git diff --stat`，然后只读入口的标题与首屏（第一个二级标题之前），不看 feature 文档、
    exp 的其余部分与它链接的文档，把三问答案写进 `.harness/review/entry-restatement.md`，写完才读其他文件：
    确立了什么（带关键数）、卡在哪、下一步需要什么。任一问要读到首屏之后才答得出、缺改变下一步的关键数、

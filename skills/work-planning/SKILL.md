@@ -13,8 +13,10 @@ description: >-
 
 ## feature 与 exp 两份文档
 
-每个 Goal 只有两份工作文档：`features/<goal>.md` 写设计，`exps/<goal>.md` 写实验，同名一一对应，直接放在这两个目录下并被
-git 跟踪。Harness 的 plan document（`plan_doc`）就是 feature 文档，下文的 plan 都指它。Goal 与 task id 用说明内容的短语义名
+每个具体 feature 只有两份工作文档：`features/<feature>.md` 写设计，`exps/<feature>.md` 写实验，同名一一对应，直接放在这两个目录下并被
+git 跟踪。一个 feature 是一处能单独设计、单独验收的改动，或一个研究问题；一个 Goal 有一到多个 feature。Goal 只写在 `task.md`：
+主线行的问题与退出条件，加 `## Goal（…）` 一段；主线行的 plan 格链接这个 Goal 的全部 feature。Harness 的 plan document（`plan_doc`）
+就是 feature 文档，下文的 plan 都指它。Goal、feature 与 task id 用说明内容的短语义名
 （kebab-case，如 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `rN` revision。
 
 一个项目的文档只有下面几类，各写各的，不互相复制。每行的「不写什么」都有一个执行点：能按位置或字面判定的由 Harness
@@ -23,25 +25,24 @@ git 跟踪。Harness 的 plan document（`plan_doc`）就是 feature 文档，�
 | 文档 | 位置 | 写什么 | 不写什么 | 执行点 |
 |---|---|---|---|---|
 | 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；每个 feature 一行：一句当前事实（可带关键数）加 feature 与 exp 的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行；task reviewer 在 CLOSE 从它只跟一个链接到 exp 首屏 |
-| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线、task 行（id、问题、两个去向、状态，行序即优先级）、候选 | 设计、`rN`、失败计数、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
-| feature 文档 | `features/<goal>.md`，每 Goal 一份 | Goal、设计、当前结论（每条一句链到 exp）、脉络、task 设计段 | 实验读数与结论正文、逐 run 记录、要 human 选的项 | `init` 拒绝不在 `features/` 下的新 `plan_doc`；task reviewer 在 CLOSE 核对 |
-| task 设计 | feature 文档里以 task id 开头的标题段 | 一个 task 的设计，含绑定 revision 的 `- rev：rN` 一行 | — | `init` 拒绝指向别处（exp、另一个 feature、`.harness/`）的设计链接 |
-| exp 文档 | `exps/<goal>.md`，与 feature 同名 | 标题一句结论；首屏字段 `目标`、`现状`、`下一步`（研究型另加 `原因`、`已排除`），每行一句白话带关键数；结论（唯一定义处）、支撑数据与它的位置、怎么重跑；Experiment Log | 设计（干预、判据、预算）、以 task id 开头的标题、Experiment Log 外以 task id 为行的表、要 human 选的项 | CLOSE lint 拒绝缺首屏字段、没有同名 feature、子目录与未跟踪文件，以及本 task 新增的设计态行；task reviewer 在 CLOSE 只读首屏答三问 |
+| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线（Goal 的问题、退出条件与它的 feature 链接）、task 行（id、问题、两个去向、状态，行序即优先级，链到 feature 里的设计节）、候选 | 设计、`rN`、失败计数、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
+| feature 文档 | `features/<feature>.md`，每个具体 feature 一份 | 所属 Goal 与本 feature 要让什么成真、设计、当前结论（每条一句链到 exp）、脉络；每个 task 的设计是其中以 task id 开头的一节，含绑定 revision 的 `- rev：rN` 一行，CLOSE 时删除 | Goal 的定义（归 `task.md`）、实验读数与结论正文、逐 run 记录、要 human 选的项 | `init` 拒绝不在 `features/` 下的新 `plan_doc`，以及指向别处（exp、另一个 feature、`.harness/`）的 task 设计链接；task reviewer 在 CLOSE 核对 |
+| exp 文档 | `exps/<feature>.md`，与 feature 同名 | 标题一句结论；首屏字段 `目标`、`现状`、`下一步`（研究型另加 `原因`、`已排除`），每行一句白话带关键数；结论（唯一定义处）、支撑数据与它的位置、怎么重跑；Experiment Log | 设计（干预、判据、预算）、以 task id 开头的标题、Experiment Log 外以 task id 为行的表、要 human 选的项 | CLOSE lint 拒绝缺首屏字段、没有同名 feature、子目录与未跟踪文件，以及本 task 新增的设计态行；task reviewer 在 CLOSE 只读首屏答三问 |
 
-子实验、子 feature 是同一 feature 文档里的一个 task 设计段，exp 里的一节结论，不另起文档；新 Goal 才有新的 feature 与 exp。
+task 设计不另起文档，task 行只链到它所在的那一节。feature 下的子步骤与子实验是它的 task 设计段与 exp 里的一节结论；能单独设计、单独验收的另一处改动或另一个研究问题，才开新的 feature 与同名 exp。
 结论只在 exp 文档定义一次，项目 readme 与 feature「当前结论」只放一句并链过去，exp 首屏每个字段一句，进展与状态只在 `task.md`。
 待 human 选的做法走结构化提问（`when-to-stop`），不进任何文档。
 task 关闭时 Harness 删掉它的设计段，不留 archive；要留下的结论写进 exp 文档，当前结论链过去。
 在途 Goal 的旧位置 plan（`features/` 之外）只在它已有 task 归档后才被 `init` 接受，做完冻结；新 Goal 一律用 `features/`。
 
 ```markdown
-# <Goal 名称>
+# <feature 名称>
 
 Plan Revision: 1
 Plan Review: proposed
 
 ## Goal
-<一句话：human 要解决什么问题；产出给人读或给下游用时写明读者>
+<所属 Goal（链到 `task.md` 主线行），一句话写本 feature 要让什么成真；产出给人读或给下游用时写明读者>
 
 ## 设计
 <一句话策略；手写的最终产出样例（不是结果）；2–4 个关键选择，各写替换了什么；不做什么；
@@ -67,7 +68,7 @@ Plan Review: proposed
 <task 设计>
 ```
 
-`exps/<goal>.md`：
+`exps/<feature>.md`：
 
 ```markdown
 # <一句结论>
@@ -164,7 +165,7 @@ agent 写 human 的决定。已结束的阶段行只追加更正行，不改写�
 Harness 拒绝没有 `pause --require-revision` 或 replan 记录的升版。形成 Goal / scope / 优先级修改后：
 
 1. `pause --require-revision --reason "<纠偏>"`；
-2. 更新 plan Goal / 边界，revision +1、review 改 proposed，脉络追加一行旧 Goal → 新 Goal 及原因；
+2. Goal 本身的修改写进 `task.md`；受影响的每份 feature 更新目标与边界，revision +1、review 改 proposed，脉络追加一行旧 Goal → 新 Goal 及原因；
 3. 旧 task 逐项保留、blocked 或 dropped；从旧 Goal 推出的设计与评测数据（筛选标准、prompt、模板、阈值、
    标注集）在 plan 里逐项标 keep / revise / drop，human 提出的按第 1 步处理；旧标注能否作证据见
    `experiment-design` 的验收门。新 task 绑定新 `rN`；保留的 task 核对设计后改绑新 `rN`，因此重审一次，
@@ -203,12 +204,12 @@ worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_revi
 ### 主线交接
 
 - reviewer 对主线 Goal 选 `stop` 时，把它在主线表的行改 `✅ done`、下一行改 `▶ next`，为 `▶ next` 的 Goal
-  写 plan、跑独立 plan review 再开工，不停在 DONE；`Mainline Review` 不是 `approved` 时交 human。
+  写它的 feature 文档、跑独立 plan review 再开工，不停在 DONE；`Mainline Review` 不是 `approved` 时交 human。
 - 增删 Goal 或改顺序是 `replan`：`Mainline Review` 改 `proposed`，交 human。
 - 由故障或基础设施问题引出的 Goal 是支线：不进主线表，plan 头部写 `Side of: <主线 Goal>` 与预算，
   开支线要 human 批准。
 
-Goal 完成或 pivot 时冻结 feature 文档为 as-built：只留 Goal、设计、当前结论、边界与脉络；exp 文档留结论与 Experiment Log，
+feature 完成或 pivot 时冻结它的 feature 文档为 as-built：只留 Goal、设计、当前结论、边界与脉络；exp 文档留结论与 Experiment Log，
 两份都不删、不搬。主线行改 `✅ done` 时，否定发现进 memory 的 `rejected`。在途 Goal 用旧位置 plan 时，冻结后它的目录只剩
 plan document，其它文件进入 `leftovers`，按 CLOSE 第 4 步处理；暂停中的 Goal 不进。具体格式分别归
 `experiment-design`、`task-state`、`agent-memory`，本 skill 只拥有 task / Goal 的退役时机。

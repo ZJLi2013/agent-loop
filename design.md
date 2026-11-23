@@ -9,8 +9,8 @@
 ## 结论
 
 架构收敛为三层：**Stable Kernel / Policies / Adapters**。平台事件先归一为内部 hook protocol，
-平台 codec 只翻译输入与输出，不拥有控制逻辑。每个 Goal 只有两份工作文档：
-`features/<goal>.md` 写设计（Harness 的 plan document），同名的 `exps/<goal>.md` 写实验，不另起子实验文档。Kernel 只拥有状态、事件、转移与 guard；
+平台 codec 只翻译输入与输出，不拥有控制逻辑。每个具体 feature 只有两份工作文档：
+`features/<feature>.md` 写设计（Harness 的 plan document），同名的 `exps/<feature>.md` 写实验，不另起子实验文档；一个 Goal 有一到多个 feature，Goal 只写在 `task.md`。Kernel 只拥有状态、事件、转移与 guard；
 skills 只解释某个状态下怎么做；platform adapters 只接原生事件。新增需求先归类，再决定是配置、policy、
 adapter 还是确实需要扩展 kernel。
 
@@ -188,7 +188,7 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
 - 设计态内容：本 task 写下的行不是以 task id 开头的标题、首格是 task id 的表行，也不含 `待 human`；同样以 allow 标记豁免。
   task id 取 `task.md` 与 task archive 的全部 task 行（`records.task_ids`），在一次调用开始时连同 config 的 `plan_doc` 读一次；
   没有 config 或 `plan_doc` 时只查 `待 human`。`plan_doc` 是 feature 文档时，只有它里面当前 task id 开头的标题段，与同名
-  `exps/<goal>.md` 的 `## Experiment Log` 节豁免这一类；在途 Goal 的旧位置 plan 及其子实验目录整份豁免。链接与残留词照查。
+  `exps/<feature>.md` 的 `## Experiment Log` 节豁免这一类；在途 Goal 的旧位置 plan 及其子实验目录整份豁免。链接与残留词照查。
 - 布局：`features/`、`exps/` 下改过的文档必须直接放在目录里；exp 要有同名 feature，第一个 `## ` 之前要有 `目标`、`现状`、
   `下一步` 三个字段行；这两个目录里被 gitignore 的文档逐个报出。
 - 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
@@ -270,31 +270,32 @@ Policy 回答「这个状态下怎么做」，不重新定义转移：
 
 ### Feature 与 exp 文档
 
-每个 Goal 两份文档，同名一一对应，直接放在项目根的两个目录下并被 git 跟踪：
+每个具体 feature 两份文档，同名一一对应，直接放在项目根的两个目录下并被 git 跟踪；Goal 的问题与退出条件只在 `task.md` 的主线行，
+主线行的 plan 格链接这个 Goal 的全部 feature：
 
 ```text
-features/<goal>.md   Plan Revision / Plan Review
-                     Goal
-                     设计（策略、手写的产出样例、关键选择、不做什么、验收怎么判）
-                     当前结论（每条一句，链到 exp）
-                     脉络（一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision；不放读数与链接）
-                     ---  以下是执行细节：human 在 Gate 只读上面几节
-                     系统 / Pipeline（确实存在才写）
-                     <task id> 标题段（task 设计）
-exps/<goal>.md       首屏：目标 / 现状 / 下一步
-                     结论（唯一定义处）、支撑数据、怎么重跑
-                     Experiment Log
+features/<feature>.md  Plan Revision / Plan Review
+                       Goal（所属 Goal 与本 feature 要让什么成真）
+                       设计（策略、手写的产出样例、关键选择、不做什么、验收怎么判）
+                       当前结论（每条一句，链到 exp）
+                       脉络（一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision；不放读数与链接）
+                       ---  以下是执行细节：human 在 Gate 只读上面几节
+                       系统 / Pipeline（确实存在才写）
+                       <task id> 标题段（task 设计）
+exps/<feature>.md      首屏：目标 / 现状 / 下一步
+                       结论（唯一定义处）、支撑数据、怎么重跑
+                       Experiment Log
 ```
 
 各放哪、写什么与不写什么，由 `work-planning` 的文档表拥有。Harness 参数 `plan_doc` 指向 feature 文档。
 
 task CLOSE 时，Experiment Log 的多轮记录合并成 task 结论并入脉络的当前阶段行，换方向时开新行；读数与
 链接留在 Experiment Log；task 设计段在 CLOSE 时删除，不归档。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。
-Goal CLOSE / pivot 时冻结 feature 文档为 as-built，两份文件都不删、不搬（条款归 `work-planning` 的主线交接）；
+feature 完成或 pivot 时冻结它的 feature 文档为 as-built，两份文件都不删、不搬（条款归 `work-planning` 的主线交接）；
 run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit。closed task 与旧交接快照同样移出活跃
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 
-Goal 按文件认，不按目录：`records.open_task_ids(plan_doc=…)` 只收链接落在这份 feature 里的 task，plan review、`leftovers`
+Goal 与 task 按文件认，不按目录：主线交接（`records.mainline_handoff`）认上一行 plan 格里任一 feature 交到 `▶ next` 行任一 feature；`records.open_task_ids(plan_doc=…)` 只收链接落在这份 feature 里的 task，plan review、`leftovers`
 与 CLOSE 都读它；`features/` 本身不是任何 Goal 的目录，`leftovers` 不在里面认领文件。
 
 CLOSE 只删除以 task id 开头的标题段（连同标题前的 `<a id>`），`.agent-loop/`、`features/`、`exps/` 里指向它们的链接改成纯文字，

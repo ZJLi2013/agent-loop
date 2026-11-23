@@ -74,7 +74,7 @@ Mainline Review: approved
 ```
 
 状态只有 `✅ done`、`▶ next`、`⬜ todo`；至多一行 `▶ next`，且它是第一行非 `✅ done`。
-只写 Goal 级的问题与退出条件，不写 task。`Mainline Review` 只在 Human Review Gate 写；
+只写 Goal 级的问题与退出条件，不写 task；plan 格链接这个 Goal 的每份 feature 文档，多份用顿号隔开。`Mainline Review` 只在 Human Review Gate 写；
 交接、改表与支线的规则归 `work-planning`。没有这一节的项目只有一个 Goal。
 
 状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。

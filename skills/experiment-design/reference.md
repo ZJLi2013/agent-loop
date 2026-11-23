@@ -56,7 +56,7 @@ domain 名这份权重根本没训过、`num_frames=16` 被静默截成 13。样
 
 ## 三、归档与冻结的做法
 
-`features/<goal>.md` 在 Goal 冻结时按 `work-planning` 改为 as-built，不删除、不搬。在文档顶部加：
+`features/<feature>.md` 在 feature 冻结时按 `work-planning` 改为 as-built，不删除、不搬。在文档顶部加：
 
 ```markdown
 > Status: as-built (frozen YYYY-MM)。最新设计以 <活文档> 为准。
