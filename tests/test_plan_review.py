@@ -59,6 +59,7 @@ class PlanReviewTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
+        (self.root / "features").mkdir()
         (self.root / ".agent-loop").mkdir()
         self.header = (1, "proposed", "alpha")
         self.write_tasks(("t1", "📝 proposed"))
@@ -68,7 +69,7 @@ class PlanReviewTest(unittest.TestCase):
 
     def render_plan(self) -> None:
         revision, review, body = self.header
-        (self.root / "plan.md").write_text(
+        (self.root / "features" / "plan.md").write_text(
             f"# Plan\n\nPlan Revision: {revision}\nPlan Review: {review}\n\n{body}\n\n"
             + "".join(f"## {task_id} design\n\n- rev：r{bound}\n\n" for task_id, bound in self.bindings.items()),
             encoding="utf-8",
@@ -84,7 +85,7 @@ class PlanReviewTest(unittest.TestCase):
             "| id | task | check | status |\n"
             "|---|---|---|---|\n"
             + "".join(
-                f"| {task_id} | {task_id} 标题 | [设计](../plan.md#{task_id}-design) | {status} |\n"
+                f"| {task_id} | {task_id} 标题 | [设计](../features/plan.md#{task_id}-design) | {status} |\n"
                 for task_id, status, *_ in rows
             ),
             encoding="utf-8",
@@ -104,13 +105,13 @@ class PlanReviewTest(unittest.TestCase):
         return (self.root / ".harness" / "review" / "prompt.md").read_text(encoding="utf-8")
 
     def review(self) -> dict[str, object]:
-        return run_plan_review(self.root, plan_doc="plan.md")
+        return run_plan_review(self.root, plan_doc="features/plan.md")
 
     def init(self, task_id: str = "t1") -> dict[str, object]:
         _, state = initialize(
             self.root,
             task_id=task_id,
-            plan_doc="plan.md",
+            plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
         )
         return state
@@ -120,7 +121,7 @@ class PlanReviewTest(unittest.TestCase):
         initialize(
             self.root,
             task_id="t1",
-            plan_doc="plan.md",
+            plan_doc="features/plan.md",
             verifier_argv=[sys.executable, "-S", "-c", "print('OK')"],
             max_artifacts=1,
             max_journal_entries=1,
@@ -137,15 +138,18 @@ class PlanReviewTest(unittest.TestCase):
     def test_task_id_reused_by_another_plan_is_reviewed_again(self) -> None:
         self.configure(reviewer_writing({"t1": []}))
         self.review()
-        (self.root / "next.md").write_text(
-            "# Next\n\nPlan Revision: 1\nPlan Review: proposed\n", encoding="utf-8"
+        (self.root / "features" / "next.md").write_text(
+            "# Next\n\nPlan Revision: 1\nPlan Review: proposed\n\n## t1 design\n\n- rev：r1\n", encoding="utf-8"
         )
+        tasks = self.root / ".agent-loop" / "task.md"
+        tasks.write_text(tasks.read_text(encoding="utf-8").replace("features/plan.md#t1", "features/next.md#t1"),
+                         encoding="utf-8")
 
-        report = run_plan_review(self.root, plan_doc="next.md")
+        report = run_plan_review(self.root, plan_doc="features/next.md")
 
         self.assertEqual(list(report["tasks"]), ["t1"])
         self.assertEqual(self.calls(), "2")
-        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="next.md")[0])
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="features/next.md")[0])
 
     def test_lock_is_free_while_the_reviewer_runs(self) -> None:
         slow = reviewer_writing({"t1": []})
@@ -206,8 +210,8 @@ class PlanReviewTest(unittest.TestCase):
         self.write_plan(2)
         self.write_tasks(("t1", "🔬 doing", 2), ("t2", "🚧 blocked", 1))
 
-        self.assertEqual(review_status(self.root, "t1", "plan.md"), "needs_review")
-        self.assertEqual(review_status(self.root, "t2", "plan.md"), "reviewed")
+        self.assertEqual(review_status(self.root, "t1", "features/plan.md"), "needs_review")
+        self.assertEqual(review_status(self.root, "t2", "features/plan.md"), "reviewed")
         self.assertEqual(list(self.review()["tasks"]), ["t1"])
         self.assertEqual(self.review()["tasks"], {})
         self.assertEqual(self.calls(), "2")
@@ -221,7 +225,7 @@ class PlanReviewTest(unittest.TestCase):
         failed = self.root / ".harness" / "plan-review" / "failed.json"
         failed.parent.mkdir(parents=True, exist_ok=True)
         failed.write_text(json.dumps({
-            "plan_doc": "plan.md", "plan_revision": 1, "count": 1, "error": "x", "run_id": "r", "reported": False,
+            "plan_doc": "features/plan.md", "plan_revision": 1, "count": 1, "error": "x", "run_id": "r", "reported": False,
         }))
         before = failed.read_bytes()
 
@@ -233,13 +237,13 @@ class PlanReviewTest(unittest.TestCase):
 
     def test_a_revision_bumped_during_the_review_records_nothing(self) -> None:
         self.reviewer_changing(
-            "Path('plan.md').write_text(Path('plan.md').read_text().replace('Revision: 1', 'Revision: 2'))"
+            "Path('features/plan.md').write_text(Path('features/plan.md').read_text().replace('Revision: 1', 'Revision: 2'))"
         )
         self.assert_review_discarded()
 
     def test_a_binding_changed_during_the_review_records_nothing(self) -> None:
         self.reviewer_changing(
-            "Path('plan.md').write_text(Path('plan.md').read_text(encoding='utf-8')"
+            "Path('features/plan.md').write_text(Path('features/plan.md').read_text(encoding='utf-8')"
             ".replace('rev：r1', 'rev：r2'), encoding='utf-8')"
         )
         self.assert_review_discarded()
@@ -258,9 +262,9 @@ class PlanReviewTest(unittest.TestCase):
         self.assertFalse((self.root / ".harness" / "plan-review" / "failed.json").exists())
 
     def test_an_edit_to_a_reviewer_input_voids_the_review(self) -> None:
-        self.reviewer_changing("Path('plan.md').write_text(Path('plan.md').read_text() + 'edited\\n')")
+        self.reviewer_changing("Path('features/plan.md').write_text(Path('features/plan.md').read_text() + 'edited\\n')")
 
-        with self.assertRaisesRegex(HarnessError, "inputs changed during the review: plan.md"):
+        with self.assertRaisesRegex(HarnessError, "inputs changed during the review: features/plan.md"):
             self.review()
 
         self.assertEqual(task_record(self.root, "t1")["reviews"], [])
@@ -302,7 +306,7 @@ class PlanReviewTest(unittest.TestCase):
         with self.assertRaisesRegex(HarnessError, "no reviewer item 3"):
             respond_task(self.root, "t1", items=["3=applied"])
 
-        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md")[0])
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="features/plan.md")[0])
 
     def test_human_items_wait_for_the_human(self) -> None:
         human = {**MUST, "human": True}
@@ -311,28 +315,28 @@ class PlanReviewTest(unittest.TestCase):
         self.review()
         respond_task(self.root, "t1", items=["1=applied"])
 
-        ready, reason = plan_review_ready(self.root, "t1", plan_doc="plan.md")
+        ready, reason = plan_review_ready(self.root, "t1", plan_doc="features/plan.md")
         self.assertFalse(ready)
         self.assertIn("--approve t1", reason or "")
-        self.assertTrue(plan_review_ready(self.root, "t2", plan_doc="plan.md")[0])
+        self.assertTrue(plan_review_ready(self.root, "t2", plan_doc="features/plan.md")[0])
 
         approve_task(self.root, "t1", reason="选方案 A")
-        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="plan.md", review="approved")[0])
+        self.assertTrue(plan_review_ready(self.root, "t1", plan_doc="features/plan.md", review="approved")[0])
         with self.assertRaisesRegex(HarnessError, "human decision"):
-            plan_review_ready(self.root, "t1", plan_doc="plan.md", review="unreviewed")
+            plan_review_ready(self.root, "t1", plan_doc="features/plan.md", review="unreviewed")
 
     def test_cli_respond_approve_and_again(self) -> None:
         from harness.run import main
 
         self.configure(reviewer_writing({"t1": [MUST]}))
         self.review()
-        base = ["--root", str(self.root), "plan-review", "--plan-doc", "plan.md"]
+        base = ["--root", str(self.root), "plan-review", "--plan-doc", "features/plan.md"]
 
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(main([*base, "--respond", "t1", "--item", "1=applied"]), 0)
             self.assertEqual(main([*base, "--approve", "t1", "--reason", "批"]), 0)
             self.assertEqual(main([*base, "--again", "t1", "--reason", "再审"]), 0)
-        self.assertEqual(review_status(self.root, "t1", "plan.md"), "needs_review")
+        self.assertEqual(review_status(self.root, "t1", "features/plan.md"), "needs_review")
         for argv in (
             [*base, "--reason", "x"],
             [*base, "--respond", "t1"],
@@ -384,14 +388,14 @@ class PlanReviewTest(unittest.TestCase):
         path.write_text(json.dumps({
             "task_id": "T1",
             "reviews": [{"digest": "x", "findings": [], "summary": "", "source": "plan_review", "run_id": "r",
-                         "at": "2026-10-01T00:00:00+00:00", "plan_doc": "plan.md"}],
+                         "at": "2026-10-01T00:00:00+00:00", "plan_doc": "features/plan.md"}],
             "approvals": [],
             "again": [],
         }), encoding="utf-8")
         before = path.read_bytes()
         entries = {
             "run_plan_review": self.review,
-            "plan_review_ready": lambda: plan_review_ready(self.root, "t1", plan_doc="plan.md"),
+            "plan_review_ready": lambda: plan_review_ready(self.root, "t1", plan_doc="features/plan.md"),
             "respond_task": lambda: respond_task(self.root, "t1", items=["1=applied"]),
             "approve_task": lambda: approve_task(self.root, "t1", reason="ok"),
         }
@@ -415,7 +419,7 @@ class PlanReviewTest(unittest.TestCase):
         }), encoding="utf-8")
 
         self.assertEqual(task_record(self.root, "t1")["reviews"][0]["findings"][0]["level"], "suggest")
-        self.assertEqual(review_status(self.root, "t1", "plan.md"), "needs_review")
+        self.assertEqual(review_status(self.root, "t1", "features/plan.md"), "needs_review")
         self.assertEqual(list(self.review()["tasks"]), ["t1"])
         self.assertEqual(self.review()["tasks"], {})
         self.assertEqual(self.calls(), "1")
@@ -432,7 +436,7 @@ class PlanReviewTest(unittest.TestCase):
         tracked.parent.mkdir()
         tracked.write_text("a\n", encoding="utf-8")
         git("init", "-q")
-        git("add", "plan.md", ".agent-loop/memory/facts.md")
+        git("add", "features/plan.md", ".agent-loop/memory/facts.md")
         git("commit", "-q", "-m", "init")
         self.configure(reviewer_writing({"t1": []}))
 

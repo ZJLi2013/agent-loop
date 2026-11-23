@@ -9,8 +9,8 @@
 ## 结论
 
 架构收敛为三层：**Stable Kernel / Policies / Adapters**。平台事件先归一为内部 hook protocol，
-平台 codec 只翻译输入与输出，不拥有控制逻辑。工作文档默认只有一份 plan document，
-需要拆分时只增加 linked sub-exp，不另造 feature / exp 两套生命周期。Kernel 只拥有状态、事件、转移与 guard；
+平台 codec 只翻译输入与输出，不拥有控制逻辑。每个具体 feature 只有两份工作文档：
+`features/<feature>.md` 写设计（Harness 的 plan document），同名的 `exps/<feature>.md` 写实验，不另起子实验文档；一个 Goal 有一到多个 feature，Goal 只写在 `task.md`。Kernel 只拥有状态、事件、转移与 guard；
 skills 只解释某个状态下怎么做；platform adapters 只接原生事件。新增需求先归类，再决定是配置、policy、
 adapter 还是确实需要扩展 kernel。
 
@@ -66,7 +66,7 @@ agent-loop 只维护三类公开保证：
 | 决策权限 | 每个 human 检查点一个 `page.key`；`review_failed` 的 key 含 `review.run_id` | `Plan Review`: `approved` / `unreviewed` / `proposed`；pause（`human` / `goal_review`，`require_revision`）；`review.attempts`（异议一次）；`review.report_requested`（reviewer 失败只报一次） | human 经 Gate、`pause`、pager 回复；按 reviewer 开工只能写 `unreviewed`；init 锁定 reviewer 与 pager 命令 | plan document 头部；`.harness/pause.json`；`state.json` 的 `review` / `page`；`.harness/pager-state.json`；`config.json` 的 `reviewer` / `pager` | `tests/test_harness_pause.py`、`tests/test_pager.py` |
 | 调度 | 决策的 `verify_run_id` 等于 `last_run_id` 才算本次已审 | `continue` / `revise` / `ask_human` / `stop` 与 `next_task`；task 行 `🔬 doing`；主线 `▶ next` / `✅ done` 与 `Mainline Review`；Goal attention 到期（`actions_since_goal_review` 达到 `after_actions`，或距 `last_goal_review_at`、没有时距 `created_at` 的秒数达到 `after_seconds`） | task reviewer 写决策，Harness 校验后落盘；human 与 worker 改 `task.md`；runner 累加计数 | `state.json` 的 `review`；`.harness/review/decision.json`；`task.md` 的 task 表与 `## 主线`；`config.json` 的 `goal_review` | `tests/test_task_review.py`、`tests/test_goal_review.py` |
 | 会话归属 | 会话 id，依次取 `AGENT_LOOP_SESSION_ID`、`CURSOR_CONVERSATION_ID`、`DSH_SESSION_ID` | `owner` 等于请求的会话、属于别的会话或为空；Cursor 会话绑定的项目；followup 已发 | init 写 `owner`；Cursor hook 读 `task.md` 时绑定它所在的项目，项目是自带 `.git` 的目录，或 workspace 内没有上级目录含 `.agent-loop/task.md` 的目录（测试 fixture 与示例因此属于外层项目）；completion gate 写 followup 标记 | `state.json` 的 `owner`；系统 temp 的 `agent-loop-cursor-sessions/<sha256>`、`agent-loop-followups/<sha256>` | `tests/test_harness_stop.py`、`tests/test_cursor_session_scope.py` |
-| 记录寿命 | closed task 按 task id 归档，它的 plan 设计段删除；`init` 只接受 CLOSE 能删除的设计位置（见 [One plan document](#one-plan-document)）；`.agent-loop/` 的其余文件按名字里的已关闭 task id 或所在的已关闭 Goal plan 目录认领 | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或已删；scratch 存在或已删；`progress.md` 的交接段数；[`leftovers`](#leftovers)（认领到已关闭记录、没被现行文档提到、也不受保护的文件，只报不删）；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）移走第一段以外的交接段；worker 处理 `leftovers`；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；`progress.md` → `archive/progress-YYYY-MM.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py`、`tests/test_task_review.py` |
+| 记录寿命 | closed task 按 task id 归档，它的 plan 设计段删除；`init` 只接受 `features/` 下的新 plan 与 CLOSE 能删除的设计位置（见 [Feature 与 exp 文档](#feature-与-exp-文档)）；`.agent-loop/` 的其余文件按名字里的已关闭 task id 或所在的已关闭 Goal 旧 plan 目录认领 | active / `✅ done` / `❌ dropped`；task 设计段在 plan 中或已删；scratch 存在或已删；`progress.md` 的交接段数；[`leftovers`](#leftovers)（认领到已关闭记录、没被现行文档提到、也不受保护的文件，只报不删）；journal 与 artifacts 条数 | Harness CLOSE（reviewer 决策落盘后，或 `clean-task`）移走第一段以外的交接段；worker 处理 `leftovers`；runner 按 `limits` 裁剪 | `task.md` → `archive/tasks.md`；`progress.md` → `archive/progress-YYYY-MM.md`；`.harness/tasks/<id>/`；`runs.jsonl`、`artifacts/` | `tests/test_records.py`、`tests/test_scratch.py`、`tests/test_task_review.py` |
 
 <a id="task-row"></a>
 task 行按读它的操作定义，主线表与候选表的行不属于任何一种：
@@ -187,7 +187,11 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
   `待验证|待确认|在跑|预计|TBD|TODO`，被命中的那一行写 `<!-- lint: allow -->` 即豁免。fenced code 与行内 code 不查。
 - 设计态内容：本 task 写下的行不是以 task id 开头的标题、首格是 task id 的表行，也不含 `待 human`；同样以 allow 标记豁免。
   task id 取 `task.md` 与 task archive 的全部 task 行（`records.task_ids`），在一次调用开始时连同 config 的 `plan_doc` 读一次；
-  没有 config 或 `plan_doc` 时只查 `待 human`。`plan_doc` 与它目录下 `sub-exp/` 的文件只豁免这一类，链接与残留词照查。
+  没有 config 或 `plan_doc` 时只查 `待 human`。`plan_doc` 是 feature 文档时，只有它里面当前 task id 开头的标题段，与同名
+  `exps/<feature>.md` 的 `## Experiment Log` 节豁免这一类；在途 Goal 的旧位置 plan 及其子实验目录整份豁免。链接与残留词照查。
+- 布局：`features/`、`exps/` 下改过的文档必须直接放在目录里；feature 第一个 `## ` 之前要有 `目标`、`现状`、`下一步` 三个字段行，
+  不含 `## Experiment Log`；exp 要有同名 feature，不含 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、字段行与 `- rev：` 行；
+  围栏代码块里的行不查；这两个目录里被 gitignore 的文档逐个报出。
 - 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
   并返回它的退出码，没给命令时退出 0。git 调用失败经 `HarnessError` 退出 2。
 
@@ -211,7 +215,7 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
     plan、`*-archive.md` 与 `archive/` 是历史，其中的提及不算。
   - 受保护：`.agent-loop/` 顶层的 `task.md`、`progress.md`、`memory/`、`archive/`、`reviewer.json`、`pager.json`、
     `review-checklist.md`、`reports/`（各有自己的退役规则，不参与扫描）；主线行与上述未关闭表格行链接的 plan 文档、
-    未完成 Goal 的 `*-archive.md` 与 `sub-exp/`（`✅ done` Goal 冻结后 plan 目录只留 plan document），任意 `archive/` 下的文件；active Harness 的 config 锁定的 verifier 文件（删掉它会让
+    未完成 Goal 旧 plan 目录里的 `*-archive.md` 与子实验目录（`✅ done` Goal 冻结后旧 plan 目录只留 plan document），任意 `archive/` 下的文件；active Harness 的 config 锁定的 verifier 文件（删掉它会让
     completion gate 判证据 stale）。锁定集合经 `harness.storage.load_runtime` 读：没有 `.harness/state.json` 或 Harness
     不 active 时为空；读不出或 `config_sha256` 不符时锁定集合未知，`leftovers` 返回空列表。`status` 先 `load_runtime`
     再调用它，state 损坏时 `status` 失败。
@@ -263,41 +267,48 @@ Policy 回答「这个状态下怎么做」，不重新定义转移：
 | 事实、结论与经验检索 | `agent-memory` |
 | 无人值守的 review / blocked 处理 | `agent-loop` 的最小常驻 policy |
 
-`work-planning` 拥有 plan document 的稳定头部；`experiment-design` 只拥有 Experiment Log /
-sub-exp 的假设、判据与证据。一个知识点只能有一个 owner；其它位置只留路由或链接。
+`work-planning` 拥有 feature 文档与文档表；`experiment-design` 只拥有 exp 文档里实验的假设、判据与证据。一个知识点只能有一个 owner；其它位置只留路由或链接。
 
-### One plan document
+### Feature 与 exp 文档
 
-默认一份文档同时承担 plan 与 evidence index：
+每个具体 feature 两份文档，同名一一对应，直接放在项目根的两个目录下并被 git 跟踪；Goal 的问题与退出条件只在 `task.md` 的主线行，
+主线行的 plan 格链接这个 Goal 的全部 feature：
 
 ```text
-Plan Revision / Plan Review
-Goal
-设计（策略、手写的产出样例、关键选择、不做什么、验收怎么判）
-当前结论
-脉络（一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision；不放读数与链接）
----  以下是执行细节：human 在 Gate 只读上面几节
-系统 / Pipeline（确实存在才写）
-<task id> 标题段（task 设计）
-Experiment Log
+features/<feature>.md  Plan Revision / Plan Review
+                       首屏：目标 / 现状 / 下一步
+                       Goal（所属 Goal 与本 feature 要让什么成真）
+                       设计（策略、手写的产出样例、关键选择、不做什么、验收怎么判）
+                       当前结论（结论的唯一定义处，每条一句带关键数，链到 exp）
+                       脉络（一个阶段一行：回答同一个问题的一段 task，或一次 Plan Revision；不放读数与链接）
+                       ---  以下是执行细节：human 在 Gate 只读上面几节
+                       系统 / Pipeline（确实存在才写）
+                       <task id> 标题段（task 设计）
+exps/<feature>.md      每个实验一节：配置与输入、读数表、复现命令与产物位置
+                       Experiment Log
 ```
 
-一个 Goal 有哪几类文档、各放哪、写什么与不写什么，由 `work-planning` 的文档表拥有。
-
-单个实验直接追加到 `Experiment Log`。只有同一 Goal 下出现多个独立实验、详细日志开始遮蔽稳定头部、
-或需要并行维护时，才拆 linked `sub-exp/<id>.md`；plan document 始终保留结论与链接。
-Harness 参数叫 `plan_doc`，不关心文件名是 feature、exp 还是其它名字。
+各放哪、写什么与不写什么，由 `work-planning` 的文档表拥有。Harness 参数 `plan_doc` 指向 feature 文档。
 
 task CLOSE 时，Experiment Log 的多轮记录合并成 task 结论并入脉络的当前阶段行，换方向时开新行；读数与
-链接留在 Experiment Log；task 设计段在 CLOSE 时删除，不归档。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。Goal CLOSE / pivot 时冻结 plan 为 as-built。task CLOSE 不删 sub-exp，只按 evidence 指针读取；主线行改 `✅ done` 时 sub-exp 的关键点并进头部后删除，冻结后 plan 目录只剩 plan document（条款归 `work-planning` 的主线交接）；
+链接留在 Experiment Log；task 设计段在 CLOSE 时删除，不归档。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。
+feature 完成或 pivot 时冻结它的 feature 文档为 as-built，两份文件都不删、不搬（条款归 `work-planning` 的主线交接）；
 run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit。closed task 与旧交接快照同样移出活跃
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 
-CLOSE 只删除以 task id 开头的标题段（连同标题前的 `<a id>`），`.agent-loop/` 里指向它们的链接改成纯文字，所以 `init --plan-doc` 在准入时
-检查 task 设计的位置：task 行里的本地链接相对 `task.md` 解析；指向 plan 的链接必须全部落在这类标题段内（按标题的
-GitHub slug 或段首 `<a id>` 匹配），且至少一个链接合格；plan 目录下 `sub-exp/` 里已存在的文件也合格，
-CLOSE 不删它。主题标题、共用标题、不带 anchor 的 plan 链接与 `sub-exp/` 外的文件（含 plan 同目录的项目实验记录与
-`.harness/tasks/<id>/`）都不合格：plan 在项目根或实验线目录时，「plan 目录下任何文件」会把项目实验记录算成设计。slug 与 GitHub 不一致（如重复标题的 `-1` 后缀）时表现为误拒，修法是在 task 标题前加 `<a id>`，guard 不猜。
+Goal 与 task 按文件认，不按目录：主线交接（`records.mainline_handoff`）认上一行 plan 格里任一 feature 交到 `▶ next` 行任一 feature；`records.open_task_ids(plan_doc=…)` 只收链接落在这份 feature 里的 task，plan review、`leftovers`
+与 CLOSE 都读它；`features/` 本身不是任何 Goal 的目录，`leftovers` 不在里面认领文件。
+
+CLOSE 只删除以 task id 开头的标题段（连同标题前的 `<a id>`），`.agent-loop/`、`features/`、`exps/` 里指向它们的链接改成纯文字，
+所以 `init --plan-doc` 在准入时由 `records.design_location_error` 检查两件事：
+
+- plan 位置：`plan_doc` 必须是 `features/` 的直接子文件。别处的 plan 只在已进入执行时接受：`archive/tasks.md` 里至少一个
+  已关闭 task 的 id 出现在 plan 正文里；plan review 记录与 task 绑定不算凭证。
+- task 设计位置：task 行里的本地链接相对 `task.md` 解析；指向 plan 的链接必须全部落在这类标题段内（按标题的
+  GitHub slug 或段首 `<a id>` 匹配），且至少一个链接合格。主题标题、共用标题、不带 anchor 的 plan 链接、exp、另一个
+  feature 与 `.harness/tasks/<id>/` 都不合格。slug 与 GitHub 不一致（如重复标题的 `-1` 后缀）时表现为误拒，修法是在 task
+  标题前加 `<a id>`，guard 不猜。
+
 旧 plan 里已写在主题标题下的设计不会被追溯迁移；它们的 task 再次 `init` 前须按上述位置改写。
 
 CLOSE self-audit 是 `experiment-design` 的 Policy 步骤，不增加状态：worker 在 locked verifier 前回读

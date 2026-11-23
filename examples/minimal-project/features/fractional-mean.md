@@ -3,6 +3,10 @@
 Plan Revision: 1
 Plan Review: approved
 
+- **目标**: `average([1, 2])` returns `1.5` and empty input still raises.
+- **现状**: integer division; the fractional-mean test fails.
+- **下一步**: switch to true division and rerun the locked verifier.
+
 ## Goal
 
 Fix the arithmetic mean without changing the empty-input contract.
@@ -15,7 +19,7 @@ returns `1.5`. Not done: no change to the tests or the empty-input check. Accept
 
 ## Current conclusion
 
-The example uses integer division, so the fractional-mean test should fail.
+The example uses integer division, so the fractional-mean test should fail ([exp](../exps/fractional-mean.md)).
 This fixture is pre-approved for the walkthrough; review your own project plans before execution.
 
 ## Thread
@@ -33,9 +37,3 @@ Execution details below; the human need not read them.
 
 `average.py` uses integer division. Switch it to true division; `test_average.py` pins the fractional mean and
 the empty-input error. Acceptance: both tests pass and the evidence is fresh.
-
-## Experiment Log
-
-| Exp | Hypothesis | Status | Evidence | Conclusion |
-|---|---|---|---|---|
-| 1 | True division preserves fractional means and rejects empty input | Pending | test_average.py | — |

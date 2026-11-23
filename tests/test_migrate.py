@@ -155,6 +155,13 @@ class MigrateTasksTest(unittest.TestCase):
     def test_init_without_reviewer_reads_four_columns(self) -> None:
         self.write(FIXED)
         migrate_tasks(self.root)
+        plan = self.root / ".agent-loop" / "plans" / "g" / "plan.md"
+        plan.write_text(plan.read_text(encoding="utf-8") + "\n## Experiment Log\n\n| a0 | run | pass |\n",
+                        encoding="utf-8")
+        archive = self.root / ".agent-loop" / "archive" / "tasks.md"
+        archive.parent.mkdir(exist_ok=True)
+        archive.write_text("| P | id | rev | task | 验收检查点 | 状态 | 失败 |\n|---|---|---|---|---|---|---|\n"
+                           "| — | a0 | r3 | 旧 | done | ✅ done | 0 |\n", encoding="utf-8")
 
         _, state = initialize(
             self.root, task_id="a", plan_doc=".agent-loop/plans/g/plan.md",

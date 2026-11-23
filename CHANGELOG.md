@@ -14,14 +14,23 @@ All notable user-facing changes are documented here. This project follows Semant
   Migration: `init` refuses a seven-column table; run `agent-loop-harness migrate-tasks` once. It sorts each table by
   P, rewrites `P<n>` references in acceptance and candidate cells to task ids, moves revisions into design sections and
   failure counts into Harness, and writes nothing when a reference matches zero or several rows.
-- An experiment line's readme is its entry document and reads like a report: a one-sentence conclusion as the title,
-  `目标` / `现状` / `下一步` field lines on the first screen, then one table of numbered sub-documents. CLOSE lint
-  now rejects, on what the task changed, an experiment-line readme (one with `NN-*.md` sub-documents beside it)
-  missing those fields, link-only index lines in a readme, and new files under `exps/` named by a bare code such as
-  `w1-post-train.md`. The task reviewer reads only the first screen to answer what is established, where it is
-  stuck and what comes next; term order, deduplication and table form are now `suggest`, and the fixed step table and
-  data lists are no longer required. File names are checked only by CLOSE lint; the reviewer no longer reports them.
-  Migration: existing documents are checked only when a task changes them.
+- Each concrete feature (one change that is designed and accepted on its own, or one research question) has two
+  working documents with the same name, tracked by git and placed directly in their directory; a Goal has one or
+  more features and is defined only in `task.md`, whose mainline row links all of them.
+  `features/<feature>.md` is the plan document and holds design and key conclusions (`目标` / `现状` / `下一步` field
+  lines on the first screen, the Goal it serves, design, current conclusions as the only place a conclusion is defined,
+  脉络, and each task's design as a section); `exps/<feature>.md` holds only experiment details and data
+  (setup and inputs, readings, how to rerun, Experiment Log). `.agent-loop/plans/<goal>/`, `sub-exp/` files, experiment-line readmes and
+  numbered `exps/<line>/NN-*.md` sub-documents are gone. `init` refuses a `plan_doc` outside `features/` and a task
+  design link into an exp or another feature. Plan review, `leftovers` and CLOSE assign tasks by feature file, so two
+  features in one directory no longer share tasks, and the mainline handoff accepts any feature linked from the
+  done and the next Goal rows; CLOSE also unlinks the dropped section in `features/` and `exps/`.
+  CLOSE lint exempts task ids only in the current feature's task sections and the exp's Experiment Log, rejects a
+  feature without first-screen fields or with an Experiment Log, an exp without its feature or with Goal / design /
+  conclusion / 脉络 headings, field lines or revision lines, a subdirectory under either directory, and a gitignored document
+  there, and still rejects link-only index lines in a readme. The task reviewer reads the feature's first screen.
+  Migration: a Goal already under way keeps its old plan location once one of its tasks is archived and the plan
+  mentions that task id; any other Goal moves its plan to `features/<feature>.md` before the next `init`.
 - `task.md` uses only the template's columns, one short sentence per cell: the task cell is the question it answers,
   the acceptance cell reads "done → where; not → where", and budgets and details live in the linked design. CLOSE lint
   rejects task rows this task added whose column count differs from the template (for example an extra 预算上限

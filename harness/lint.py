@@ -10,14 +10,14 @@ from urllib.parse import unquote, urlsplit
 
 from harness.errors import HarnessError
 from harness.project import RUNTIME_DIR
-from harness.records import SUB_EXP, TASK_COLUMNS, task_ids
+from harness.records import EXPS_DIR, FEATURES_DIR, SUB_EXP, TASK_COLUMNS, _task_sections, feature_doc, task_ids
 from harness.storage import CONFIG_FILE, HARNESS_DIR, harness_dir, read_json
 
 LINT_ARGV = ["agent-loop-harness", "lint", "--changed"]
 ALLOW = "<!-- lint: allow -->"
 LEFTOVER = re.compile(r"待验证|待确认|在跑|预计|TBD|TODO")
 PENDING = re.compile(r"待\s*human")
-DESIGN_STATE = "design-state content belongs in the plan's task section"
+DESIGN_STATE = "design-state content belongs in the feature's task section"
 PRUNED_DIRS = (HARNESS_DIR, RUNTIME_DIR)
 TASK_FILE = f"{RUNTIME_DIR}/task.md"
 
@@ -34,8 +34,9 @@ _FIELD = re.compile(r"^\s*(?:[-*]\s+)?(?:\*\*)?(目标|现状|下一步)(?:\*\*)
 _SECTION = re.compile(r"^\s{0,3}##\s")
 _INDEX_LINE = re.compile(r"^\s*(?:[-*+]\s|\d+\.\s|\|)")
 _WORD = re.compile(r"[^\W\d_]")
-_ORDERED = re.compile(r"^\d{2}-")
-_CODE_NAME = re.compile(r"^[a-z]{1,4}\d+[a-z]?(?:-|$)")
+EXPERIMENT_LOG = re.compile(r"^\s{0,3}##\s+Experiment Log\s*$")
+_FEATURE_HEADING = re.compile(r"(Goal|设计|当前结论|结论|脉络)\s*$")
+_REVISION = re.compile(r"^\s*[-*]\s+rev\s*[：:]\s*r\d+")
 
 
 def _git(root: Path, *args: str) -> str:
@@ -131,27 +132,51 @@ def _is_readme(relative: str) -> bool:
     return PurePosixPath(relative).name.lower() == "readme.md"
 
 
-def _entry_problem(root: Path, relative: str) -> str | None:
-    """An experiment-line readme (one with numbered sub-docs beside it) must open with the entry fields."""
-    source = root / relative
-    if not any(_ORDERED.match(path.name) for path in source.parent.glob("*.md")):
-        return None
-    found = set()
-    for line in source.read_text(encoding="utf-8", errors="replace").splitlines():
+def _layout_problems(root: Path, relative: str) -> list[str]:
+    """features/<feature>.md holds the first screen and conclusions; exps/<feature>.md only experiment details and data."""
+    parts = PurePosixPath(relative).parts
+    if parts[0] not in (FEATURES_DIR, EXPS_DIR):
+        return []
+    if len(parts) != 2:
+        return [f"{relative}: put it directly in {parts[0]}/ as <feature>.md, without subdirectories"]
+    problems = []
+    if parts[0] == EXPS_DIR and not (root / FEATURES_DIR / parts[1]).is_file():
+        problems.append(f"{relative}: no {FEATURES_DIR}/{parts[1]}; each exp document has a feature of the same name")
+    found, sectioned, fenced = set(), False, False
+    for number, line in enumerate((root / relative).read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if _FENCE.match(line):
+            fenced = not fenced
+        if fenced or _FENCE.match(line):
+            continue
+        sectioned = sectioned or bool(_SECTION.match(line))
+        field = _FIELD.match(line)
+        if parts[0] == FEATURES_DIR:
+            if not sectioned and field:
+                found.add(field[1])
+            if EXPERIMENT_LOG.match(line):
+                problems.append(f"{relative}:{number}: Experiment Log belongs in {EXPS_DIR}/{parts[1]}")
+            continue
+        heading = _HEADING.match(line)
+        if heading and _FEATURE_HEADING.match(heading[1]) or field or _REVISION.match(line):
+            problems.append(f"{relative}:{number}: design, conclusions and the first screen belong in "
+                            f"{FEATURES_DIR}/{parts[1]}; an exp holds only experiment details and data")
+    if parts[0] == FEATURES_DIR and (missing := [field for field in ENTRY_FIELDS if field not in found]):
+        problems.append(f"{relative}: entry fields missing before the first ## section: {'、'.join(missing)}")
+    return problems
+
+
+def _exempt_lines(lines: list[str], ids: set[str], *, sections: bool) -> set[int]:
+    """Line numbers where task ids are legitimate: a feature's task sections, or an exp's Experiment Log."""
+    if sections:
+        return {index + 1 for task_id in ids for start, end in _task_sections(lines, task_id)
+                for index in range(start, end)}
+    exempt, inside = set(), False
+    for number, line in enumerate(lines, 1):
         if _SECTION.match(line):
-            break
-        if field := _FIELD.match(line):
-            found.add(field[1])
-    missing = [field for field in ENTRY_FIELDS if field not in found]
-    if not missing:
-        return None
-    return f"{relative}: entry fields missing before the first ## section: {'、'.join(missing)}"
-
-
-def _code_named(relative: str) -> bool:
-    path = PurePosixPath(relative)
-    return ("exps" in path.parts[:-1] and not _is_readme(relative)
-            and not _ORDERED.match(path.name) and bool(_CODE_NAME.match(path.stem)))
+            inside = bool(EXPERIMENT_LOG.match(line))
+        elif inside and line.strip().startswith("|"):
+            exempt.add(number)
+    return exempt
 
 
 def _task_table_problems(root: Path, added: set[int]) -> list[str]:
@@ -178,7 +203,8 @@ def _task_table_problems(root: Path, added: set[int]) -> list[str]:
     return problems
 
 
-def _check(root: Path, relative: str, added: set[int] | None, ids: set[str] | None) -> list[str]:
+def _check(root: Path, relative: str, added: set[int] | None, ids: set[str] | None,
+           exempt: set[int] = frozenset()) -> list[str]:
     source = root / relative
     problems = []
     index = _is_readme(relative)
@@ -201,7 +227,7 @@ def _check(root: Path, relative: str, added: set[int] | None, ids: set[str] | No
                 problems.append(
                     f"{relative}:{number}: leftover {word[0]!r}; finish the line or mark it {ALLOW}"
                 )
-            if ids is not None and (reason := _design_state(prose, ids)):
+            if ids is not None and number not in exempt and (reason := _design_state(prose, ids)):
                 problems.append(f"{relative}:{number}: {reason}; {DESIGN_STATE} or mark it {ALLOW}")
             if (index and _INDEX_LINE.match(prose) and _INLINE_LINK.search(prose)
                     and not _WORD.search(_INLINE_LINK.sub("", prose))):
@@ -220,26 +246,32 @@ def lint_changed(root: Path) -> list[str]:
     ids = task_ids(root) if plan_doc else set()
     plan = (root / plan_doc).resolve() if plan_doc else None
 
+    feature = plan is not None and feature_doc(root, plan)
+
     def design_ids(relative: str) -> set[str] | None:
         path = (root / relative).resolve()
-        if plan and (path == plan or path.is_relative_to(plan.parent / SUB_EXP)):
+        if plan and not feature and (path == plan or path.is_relative_to(plan.parent / SUB_EXP)):
             return None
         return ids
 
+    def exempt(relative: str) -> set[int]:
+        path = (root / relative).resolve()
+        if not feature or path not in (plan, (root / EXPS_DIR / plan.name).resolve()):
+            return set()
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        return _exempt_lines(lines, ids, sections=path == plan)
+
     tracked = _markdown(_git(root, "diff", "--name-only", "-z", "--relative", "--diff-filter=d", base, "--"))
     untracked = _markdown(_git(root, "ls-files", "--others", "--exclude-standard", "-z"))
-    created = _markdown(_git(root, "diff", "--name-only", "-z", "--relative", "--diff-filter=AR", base, "--"))
+    ignored = _markdown(_git(root, "ls-files", "--others", "--ignored", "--exclude-standard", "-z",
+                             "--", FEATURES_DIR, EXPS_DIR))
     problems = [f"{relative}: not tracked by git" for relative in untracked]
-    problems += [
-        f"{relative}: code-named file; name it <two-digit order>-<question>.md"
-        for relative in sorted({*created, *untracked}) if _code_named(relative)
-    ]
+    problems += [f"{relative}: ignored by git; {FEATURES_DIR}/ and {EXPS_DIR}/ are tracked" for relative in ignored]
     for relative in tracked:
-        problems += _check(root, relative, _added_lines(root, base, relative), design_ids(relative))
+        problems += _check(root, relative, _added_lines(root, base, relative), design_ids(relative), exempt(relative))
     for relative in untracked:
-        problems += _check(root, relative, None, design_ids(relative))
-    problems += [reason for relative in [*tracked, *untracked]
-                 if _is_readme(relative) and (reason := _entry_problem(root, relative))]
+        problems += _check(root, relative, None, design_ids(relative), exempt(relative))
+    problems += [reason for relative in [*tracked, *untracked] for reason in _layout_problems(root, relative)]
     if (root / TASK_FILE).is_file() and _git(root, "diff", "--name-only", "--relative", base, "--", TASK_FILE).strip():
         problems += _task_table_problems(root, _added_lines(root, base, TASK_FILE))
     return problems

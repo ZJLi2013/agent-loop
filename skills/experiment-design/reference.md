@@ -56,15 +56,13 @@ domain 名这份权重根本没训过、`num_frames=16` 被静默截成 13。样
 
 ## 三、归档与冻结的做法
 
-项目被跟踪的 feature 文档在功能落地且不再迭代时归档，不删除；`.agent-loop/plans/` 下的 plan 目录不归本节，
-Goal 冻结时按 `work-planning` 只留 plan document。在文档顶部加：
+`features/<feature>.md` 在 feature 冻结时按 `work-planning` 改为 as-built，不删除、不搬。在文档顶部加：
 
 ```markdown
 > Status: as-built (frozen YYYY-MM)。最新设计以 <活文档> 为准。
 ```
 
-之后该文档只读。耐久的 rationale 上提到活文档，feature 文档退化为「链接活文档 + 保留实验证据」；
-可选移入 `docs/archive/`。**partN / featureN 这类内部序号不外泄**——它们只在本仓库有意义。
+之后该文档只读。耐久的 rationale 上提到活文档，feature 文档退化为「链接活文档 + 保留设计与脉络」，实验证据留在同名 exp。**partN / featureN 这类内部序号不外泄**——它们只在本仓库有意义。
 
 ---
 
