@@ -4,6 +4,12 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ## [Unreleased]
 
+### Fixed
+
+- `lint --changed` snapshots pre-existing dirty and untracked markdown at `init`, so unchanged earlier work
+  no longer blocks the verifier. Subsequent edits to those files remain in scope; existing configurations
+  without a snapshot retain their HEAD baseline until the next `init`.
+
 ### Changed
 
 - `task.md` task tables have four columns, `| id | task | 验收检查点 | 状态 |`; row order within a Goal's table is the
