@@ -155,7 +155,7 @@ def _code_named(relative: str) -> bool:
 
 
 def _task_table_problems(root: Path, added: set[int]) -> list[str]:
-    """Rows this task added to a `| P | id |` table must have the template's column count."""
+    """Rows this task added to an `| id | task |` table must have the template's column count."""
     problems = []
     task_table = in_table = False
     lines = (root / TASK_FILE).read_text(encoding="utf-8", errors="replace").splitlines()
@@ -167,7 +167,7 @@ def _task_table_problems(root: Path, added: set[int]) -> list[str]:
         cells = [cell.strip() for cell in stripped.strip("|").split("|")]
         if not in_table:
             in_table = True
-            task_table = cells[:2] == ["P", "id"]
+            task_table = cells[0] == "id"
         if not task_table or number not in added or not stripped.strip("|-: "):
             continue
         if len(cells) != TASK_COLUMNS:

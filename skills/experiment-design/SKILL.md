@@ -19,7 +19,7 @@ task CLOSE 时把确立的结论写进项目实验记录（各文档的位置与
 
 ## 准入：plan 先于实验
 
-task 必须已获批准（不是 `📝 proposed`），且 plan document 已有 Goal；task 的 `rev` 必须等于
+task 必须已获批准（不是 `📝 proposed`），且 plan document 已有 Goal；task 设计节的 `- rev：rN` 必须等于
 plan 的 `Plan Revision`，`Plan Review` 必须是 `approved` 或 `unreviewed`。缺任一项就停止，
 回 `work-planning` 补齐。
 

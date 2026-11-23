@@ -29,6 +29,8 @@ Execution details below; the human need not read them.
 
 ## fractional-mean Fix fractional means
 
+- rev：r1
+
 `average.py` uses integer division. Switch it to true division; `test_average.py` pins the fractional mean and
 the empty-input error. Acceptance: both tests pass and the evidence is fresh.
 

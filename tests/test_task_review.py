@@ -10,7 +10,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from harness import records
+from harness import failures, records
+from harness.plan import plan_can_run, task_plan_revision
 from harness.core import (
     HarnessError,
     clean_scratch,
@@ -21,14 +22,14 @@ from harness.core import (
     verify,
 )
 from harness.plan_review import record_task_review, task_record
-from harness.records import archive_closed_tasks, close_task
+from harness.records import close_task
 from harness.task_review import run_review
 
 DECISION = ".harness/review/decision.json"
-REWRITTEN_TASKS = """| P | id | rev | task | check | status | fail |
-|---|---|---|---|---|---|---|
-| P0 | t1 | — | first | check | ✅ done | 0 |
-| P0 | t2 | — | next | check | 📝 proposed | 0 |
+REWRITTEN_TASKS = """| id | task | check | status |
+|---|---|---|---|
+| t1 | first | check | ✅ done |
+| t2 | next | check | 📝 proposed |
 """
 
 
@@ -252,8 +253,7 @@ class TaskBoundaryReviewTest(unittest.TestCase):
             )
         task = self.root / ".agent-loop" / "task.md"
         task.write_text(
-            task.read_text(encoding="utf-8")
-            + "| P0 | t3 | — | human pick | check | 🔬 doing | 0 |\n",
+            "| id | task | check | status |\n|---|---|---|---|\n| t3 | human pick | check | 🔬 doing |\n",
             encoding="utf-8",
         )
 
@@ -426,7 +426,7 @@ class ReviseTest(unittest.TestCase):
         tasks = self.root / ".agent-loop" / "task.md"
 
         self.assertEqual((review["decision"], review["error"]), ("revise", None))
-        self.assertIn("| t1 | — | first | check | 🔬 doing |", tasks.read_text(encoding="utf-8"))
+        self.assertIn("| t1 | first | check | 🔬 doing |", tasks.read_text(encoding="utf-8"))
         self.assertTrue((scratch / "kit.py").exists())
         followup = completion_gate(self.root) or ""
         self.assertIn("sent t1 back", followup)
@@ -515,13 +515,12 @@ CONTINUE = {"decision": "continue", "next_task": "t2", "why": "next hypothesis"}
 PLAN_HEAD = "# Plan\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## 脉络\nt2\n"
 PLAN_WITH_T1 = (
     PLAN_HEAD
-    + '\n<a id="t1-design"></a>\n### t1 本地设计\ninput\n### t1 boundary review\nok\n'
-    + "### t2 本地设计\nnext\n"
+    + '\n<a id="t1-design"></a>\n### t1 本地设计\n- rev：r1\ninput\n### t1 boundary review\nok\n'
+    + "### t2 本地设计\n- rev：r1\nnext\n"
 )
-PLAN_MOVED = PLAN_HEAD + "\n### t2 本地设计\nnext\n"
+PLAN_MOVED = PLAN_HEAD + "\n### t2 本地设计\n- rev：r1\nnext\n"
 PLAN_TASKS = (
-    REWRITTEN_TASKS.replace("| — |", "| r1 |")
-    .replace("| first | check |", "| first | [设计](../plan.md#t1-design) |")
+    REWRITTEN_TASKS.replace("| first | check |", "| first | [设计](../plan.md#t1-design) |")
     .replace("| next | check |", "| next | [设计](../plan.md#t2-本地设计) |")
 )
 
@@ -586,10 +585,34 @@ class ClosedPlanSectionTest(unittest.TestCase):
             encoding="utf-8"
         )
 
+    def close(self) -> None:
+        failures.add(self.root, "t1", "first try")
+        self.init(plan_reviewer((CONTINUE, PLAN_WITH_T1, False)))
+        self.assertEqual(failures.count(self.root, "t1"), 0)
+        self.assertEqual(run_review(self.root)["review"]["decision"], "continue")
+
+    def test_four_column_task_runs_from_init_to_archive(self) -> None:
+        self.close()
+
+        archive = (self.root / ".agent-loop" / "archive" / "tasks.md").read_text(encoding="utf-8")
+        self.assertIn("| P | id | rev | task | 验收检查点 | 状态 | 失败 |", archive)
+        self.assertIn("| — | t1 | r1 | first | 设计 | ✅ done | 0 |", archive)
+        self.assertNotIn("t1 本地设计", (self.root / "plan.md").read_text(encoding="utf-8"))
+        self.assertNotIn("| t1 |", (self.root / ".agent-loop" / "task.md").read_text(encoding="utf-8"))
+        self.assertNotIn("t1", json.loads((self.root / ".harness" / "failures.json").read_text())["tasks"])
+
+    def test_closed_task_revision_comes_from_the_archive(self) -> None:
+        self.close()
+
+        config, state = load_runtime(self.root)
+        self.assertEqual(task_plan_revision(self.root, "t1"), 1)
+        self.assertEqual(plan_can_run(self.root, config, state), (True, None))
+        self.assertNotIn("binds", completion_gate(self.root) or "")
+
 SUCCESSOR_TASKS = (
-    "| P | id | rev | task | check | status | fail |\n"
-    "|---|---|---|---|---|---|---|\n"
-    "| P0 | t2 | r{revision} | next | [设计](../plan.md#t2-本地设计) | 🔬 doing | 0 |\n"
+    "| id | task | check | status |\n"
+    "|---|---|---|---|\n"
+    "| t2 | next | [设计](../plan.md#t2-本地设计) | 🔬 doing |\n"
 )
 
 
@@ -606,7 +629,7 @@ class HumanSuccessorTest(unittest.TestCase):
         self.assertEqual(run_review(self.root)["review"]["decision"], decision)
 
     def human_decides(self, revision: int, review: str) -> None:
-        plan = PLAN_MOVED.replace("Plan Revision: 1", f"Plan Revision: {revision}")
+        plan = PLAN_MOVED.replace("Plan Revision: 1", f"Plan Revision: {revision}").replace("rev：r1", f"rev：r{revision}")
         (self.root / "plan.md").write_text(
             plan.replace("Plan Review: unreviewed", f"Plan Review: {review}"), encoding="utf-8"
         )
@@ -682,10 +705,10 @@ DONE_SIDE = "| A | a | a | ✅ done | [plan](../side/plan.md) |"
 NEXT_B = "| B | b | b | ▶ next | [plan](../next/plan.md) |"
 TODO_C = "| C | c | c | ⬜ todo | |"
 HANDOFF_TASKS = (
-    "## Goal\n\n| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
-    "| P0 | {task} | r1 | next | [设计](../next/plan.md#t2-design) | 🔬 doing | 0 |\n"
+    "## Goal\n\n| id | task | check | status |\n|---|---|---|---|\n"
+    "| {task} | next | [设计](../next/plan.md#t2-design) | 🔬 doing |\n"
 )
-NEXT_PLAN = "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## t2 design\n"
+NEXT_PLAN = "# Next\n\nPlan Revision: 1\nPlan Review: unreviewed\n\n## t2 design\n\n- rev：r1\n"
 
 
 class MainlineHandoffTest(unittest.TestCase):
@@ -757,11 +780,11 @@ class MainlineHandoffTest(unittest.TestCase):
         task_md = self.root / ".agent-loop" / "task.md"
         task_md.write_text(
             MAINLINE.format(review="approved", rows=DONE_A)
-            + "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
-            + "| P0 | t1 | r1 | first | check | ✅ done | 0 |\n",
+            + "| id | task | check | status |\n|---|---|---|---|\n"
+            + "| t1 | first | check | ✅ done |\n",
             encoding="utf-8",
         )
-        archive_closed_tasks(self.root)
+        close_task(self.root, None, "t1")
         text = task_md.read_text(encoding="utf-8")
         self.assertIn(DONE_A, text)
         self.assertNotIn("| t1 |", text)
@@ -769,14 +792,14 @@ class MainlineHandoffTest(unittest.TestCase):
 CLOSE_PLAN = (
     "# Plan\n\nPlan Revision: 1\nPlan Review: approved\n\n"
     "## 脉络\n| t1 | 甲 | [t1 设计](#t1-design) | 做 t2 |\n\n"
-    '<a id="t1-design"></a>\n### t1 本地设计\n输入见 [t2 设计](#t2-design)。\n\n'
-    '<a id="t2-design"></a>\n### t2 本地设计\nnext\n'
+    '<a id="t1-design"></a>\n### t1 本地设计\n- rev：r1\n输入见 [t2 设计](#t2-design)。\n\n'
+    '<a id="t2-design"></a>\n### t2 本地设计\n- rev：r1\nnext\n'
 )
 CLOSE_TASKS = (
-    "| P | id | rev | task | check | status | fail |\n"
-    "|---|---|---|---|---|---|---|\n"
-    "| P0 | t1 | r1 | 甲 | [设计](plan.md#t1-design)；通过 | 🔬 doing | 0 |\n"
-    "| P0 | t2 | r1 | 乙 | [设计](plan.md#t2-design)；通过 | 📝 proposed | 0 |\n"
+    "| id | task | check | status |\n"
+    "|---|---|---|---|\n"
+    "| t1 | 甲 | [设计](plan.md#t1-design)；通过 | 🔬 doing |\n"
+    "| t2 | 乙 | [设计](plan.md#t2-design)；通过 | 📝 proposed |\n"
 )
 
 
@@ -801,10 +824,10 @@ class CloseTaskTest(unittest.TestCase):
         plan = (self.runtime / "plan.md").read_text(encoding="utf-8")
         rows = (self.runtime / "archive" / "tasks.md").read_text(encoding="utf-8")
         other = (self.runtime / "sub-exp" / "x.md").read_text(encoding="utf-8")
-        self.assertIn("| t1 | r1 | 甲 | 设计；通过 | ✅ done |", rows)
+        self.assertIn("| — | t1 | r1 | 甲 | 设计；通过 | ✅ done | 0 |", rows)
         self.assertNotIn("t1 本地设计", plan)
         self.assertIn("## 脉络\n| t1 | 甲 | t1 设计 | 做 t2 |", plan)
-        self.assertIn('<a id="t2-design"></a>\n### t2 本地设计\nnext\n', plan)
+        self.assertIn('<a id="t2-design"></a>\n### t2 本地设计\n- rev：r1\nnext\n', plan)
         self.assertIn("[设计](plan.md#t2-design)", (self.runtime / "task.md").read_text(encoding="utf-8"))
         self.assertEqual(other, "见 t1 设计。\n")
         self.assertEqual(list(self.runtime.rglob("*-archive.md")), [])

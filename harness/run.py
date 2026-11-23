@@ -38,7 +38,9 @@ from harness.plan_review import (  # noqa: E402
     respond_task,
     run_plan_review,
 )
-from harness.records import leftovers  # noqa: E402
+from harness import failures  # noqa: E402
+from harness.migrate import migrate_tasks  # noqa: E402
+from harness.records import leftovers, task_row  # noqa: E402
 from harness.scratch import scratch_path, strays  # noqa: E402
 from harness.storage import STATE_FILE, harness_dir  # noqa: E402
 from harness.task_review import review_followup, run_review  # noqa: E402
@@ -178,6 +180,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="scan the markdown changed since this task's init (the only scope)",
     )
     lint.add_argument("command", nargs=argparse.REMAINDER)
+    fail = commands.add_parser("fail", help="count one self-repair attempt of a task")
+    fail.add_argument("--task", required=True)
+    fail.add_argument("--note", required=True, help="what was tried")
+    commands.add_parser(
+        "migrate-tasks", help="convert task.md's 7-column task tables to the 4-column form"
+    )
     commands.add_parser("status", help="print current config and state")
     commands.add_parser(
         "clean-task", help="remove the verified task's scratch directory"
@@ -312,6 +320,14 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             command = _command(args.command)
             return subprocess.run(command, cwd=root).returncode if command else 0
+        if args.action == "fail":
+            if task_row(root, args.task) is None:
+                raise HarnessError(f"task {args.task} is not in the task list")
+            print(json.dumps({"task_id": args.task, "failures": failures.add(root, args.task, args.note)}))
+            return 0
+        if args.action == "migrate-tasks":
+            print(json.dumps(migrate_tasks(root), ensure_ascii=False, indent=2))
+            return 0
         if args.action == "status":
             config, state = load_runtime(root)
             print(
@@ -319,6 +335,7 @@ def main(argv: list[str] | None = None) -> int:
                     {
                         "config": config,
                         "state": state,
+                        "failures": failures.count(root, str(state["task_id"])),
                         "pause": pause_request(root),
                         "scratch": scratch_path(state["task_id"]),
                         "strays": strays(root, state["task_id"]),

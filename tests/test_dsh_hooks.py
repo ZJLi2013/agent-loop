@@ -23,7 +23,7 @@ class DshHooksTest(unittest.TestCase):
         self.root = Path(self.tmp.name) / "proj"
         self.task = self.root / ".agent-loop" / "task.md"
         self.task.parent.mkdir(parents=True)
-        self.task.write_text("# Tasks\n| P1 | g1 | — | probe | ok | 🔬 doing | 0 |\n", encoding="utf-8")
+        self.task.write_text("# Tasks\n| g1 | probe | ok | 🔬 doing |\n", encoding="utf-8")
         markers = Path(self.tmp.name) / "markers"
         markers.mkdir()
         self.env = {**os.environ, "TEMP": str(markers), "TMP": str(markers), "TMPDIR": str(markers),

@@ -44,10 +44,12 @@ from harness.pager import load_pager, page_followup
 from harness.plan_review import plan_review_ready, run_plan_review, stop_followup
 from harness.process import execute_process
 from harness.protocol import Event, Phase, TransitionError, apply_event
+from harness import failures
 from harness.records import (
     active_task_status,
     archive_progress,
     design_location_error,
+    legacy_task_table,
     mainline_handoff,
 )
 from harness.scratch import clean_task, scratch_path, task_dir
@@ -124,6 +126,11 @@ def initialize(
         raise HarnessError("Goal Review action and time thresholds cannot be negative")
 
     root = root.resolve()
+    if legacy_task_table(root):
+        raise HarnessError(
+            "task.md still uses the 7-column `| P | id | rev | ... |` table; "
+            "run agent-loop-harness migrate-tasks first"
+        )
     lint_settings = lint_config(root) if lint else {"enabled": False}
     locked_files = verifier_files(root, verifier_argv, evidence_files)
     base = harness_dir(root)
@@ -203,13 +210,14 @@ def initialize(
     review: str | None = None
     if plan_doc:
         revision, review = plan_metadata(root, plan_doc)
+        # The revision lives in the design section, so its location is checked first.
+        if misplaced := design_location_error(root, task_id, plan_doc):
+            raise HarnessError(misplaced)
         task_revision = task_plan_revision(root, task_id)
         if task_revision != revision:
             raise HarnessError(
                 f"task {task_id} binds r{task_revision}, plan is r{revision}"
             )
-        if misplaced := design_location_error(root, task_id, plan_doc):
-            raise HarnessError(misplaced)
         if reviewer:
             ready, reason = plan_review_ready(
                 root, task_id, plan_doc=plan_doc, review=review
@@ -510,6 +518,7 @@ def run_command(
             if contract_passed:
                 _transition(state, Event.VERIFY_PASSED)
                 state["verified_fingerprint"] = workspace_fingerprint(root)
+                failures.reset(root, str(state["task_id"]), held=True)
             else:
                 state["verify_attempts"] = int(state["verify_attempts"]) + 1
                 if result["outcome"] == "pass":
