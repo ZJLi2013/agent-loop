@@ -192,6 +192,8 @@ CLOSE lint 由 `harness/lint.py` 拥有，是 locked verifier 命令的前段，
 - 布局：`features/`、`exps/` 下改过的文档必须直接放在目录里；feature 第一个 `## ` 之前要有 `目标`、`现状`、`下一步` 三个字段行，
   不含 `## Experiment Log`；exp 要有同名 feature，不含 `Goal`、`设计`、`当前结论`、`结论`、`脉络` 标题、字段行与 `- rev：` 行；
   围栏代码块里的行不查；这两个目录里被 gitignore 的文档逐个报出。
+- 等待截止：`.agent-loop/task.md` 里表头有 `状态` 列的表，未关闭行的状态格含 `YYYY-MM-DD 前没等到就关` 且日期早于今天时报出；
+  本 task 写下的状态格含「等」（不含等价、等于、等同、等级、等号）却没有这句时报出。
 - 输出与退出码：每条违规一行 `lint: <路径>[:<行>]: <原因>` 写到 stderr，有违规时退出 1、不运行原 verifier；无违规时运行原 verifier
   并返回它的退出码，没给命令时退出 0。git 调用失败经 `HarnessError` 退出 2。
 

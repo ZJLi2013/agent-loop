@@ -4,6 +4,7 @@ import hashlib
 import re
 import shutil
 import subprocess
+from datetime import date
 from importlib import metadata
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -38,6 +39,9 @@ _WORD = re.compile(r"[^\W\d_]")
 EXPERIMENT_LOG = re.compile(r"^\s{0,3}##\s+Experiment Log\s*$")
 _FEATURE_HEADING = re.compile(r"(Goal|设计|当前结论|结论|脉络)\s*$")
 _REVISION = re.compile(r"^\s*[-*]\s+rev\s*[：:]\s*r\d+")
+_WAIT = re.compile(r"等(?![价于同级号])")
+_DEADLINE = re.compile(r"(\d{4}-\d{2}-\d{2})\s*前没等到就关")
+_CLOSED_STATUS = ("✅", "❌")
 
 
 def _git(root: Path, *args: str) -> str:
@@ -219,6 +223,33 @@ def _task_table_problems(root: Path, added: set[int]) -> list[str]:
     return problems
 
 
+def _wait_problems(root: Path, added: set[int]) -> list[str]:
+    """A `状态` cell that waits needs a deadline when this task wrote it; a passed deadline is reported on any open row."""
+    problems, column = [], None
+    for number, line in enumerate((root / TASK_FILE).read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        stripped = line.strip()
+        if not (stripped.startswith("|") and stripped.endswith("|")):
+            column = None
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if column is None:
+            column = cells.index("状态") if "状态" in cells else -1
+            continue
+        if column < 0 or column >= len(cells) or not stripped.strip("|-: "):
+            continue
+        status = cells[column]
+        if status.startswith(_CLOSED_STATUS):
+            continue
+        if deadline := _DEADLINE.search(status):
+            if date.fromisoformat(deadline[1]) < date.today():
+                problems.append(f"{TASK_FILE}:{number}: wait deadline {deadline[1]} has passed; "
+                                "mark the row ❌ dropped and archive it")
+        elif number in added and _WAIT.search(status):
+            problems.append(f"{TASK_FILE}:{number}: passive wait without a deadline; "
+                            "add 'YYYY-MM-DD 前没等到就关' to the status")
+    return problems
+
+
 def _check(root: Path, relative: str, added: set[int] | None, ids: set[str] | None,
            exempt: set[int] = frozenset()) -> list[str]:
     source = root / relative
@@ -298,6 +329,10 @@ def lint_changed(root: Path) -> list[str]:
     for relative in untracked:
         problems += _check(root, relative, None, design_ids(relative), exempt(relative))
     problems += [reason for relative in [*tracked, *untracked] for reason in _layout_problems(root, relative)]
-    if (root / TASK_FILE).is_file() and _git(root, "diff", "--name-only", "--relative", base, "--", TASK_FILE).strip():
-        problems += _task_table_problems(root, _added_lines(root, base, TASK_FILE))
+    if (root / TASK_FILE).is_file():
+        added = set()
+        if _git(root, "diff", "--name-only", "--relative", base, "--", TASK_FILE).strip():
+            added = _added_lines(root, base, TASK_FILE)
+            problems += _task_table_problems(root, added)
+        problems += _wait_problems(root, added)
     return problems

@@ -181,6 +181,40 @@ class LintTest(unittest.TestCase):
         with mock.patch("harness.lint.TASK_COLUMNS", 5):
             self.assertEqual([p.split(": ")[0] for p in lint_changed(self.root)], [".agent-loop/task.md:9"])
 
+    def test_passive_waits_this_task_wrote_need_a_deadline(self) -> None:
+        self.write(".agent-loop/task.md", "| id | task | 验收检查点 | 状态 |\n|---|---|---|---|\n"
+                   "| a | x | y | 🚧 blocked（等自然案例） |\n")
+        self.commit()
+        self.write(".agent-loop/task.md", "\n".join([
+            "| Goal | 问题 | 退出条件 | 状态 | plan |", "|---|---|---|---|---|",
+            "| g | q | e | ⏳ 等 human 合并 | |", "",
+            "| id | task | 验收检查点 | 状态 |", "|---|---|---|---|",
+            "| a | x | y | 🚧 blocked（等自然案例） |",
+            "| b | x | y | 🚧 blocked（等真实使用） |",
+            "| c | x | y | 🚧 blocked（等真实使用，2999-01-01 前没等到就关） |",
+            "| d | x | 等价类各一例 | ⬜ todo |", "",
+        ]))
+        self.git("add", "-A")
+
+        problems = lint_changed(self.root)
+
+        self.assertEqual([p.split(": ")[0] for p in problems],
+                         [".agent-loop/task.md:3", ".agent-loop/task.md:8"], problems)
+        self.assertTrue(all("passive wait without a deadline" in p for p in problems), problems)
+
+    def test_rows_past_their_wait_deadline_are_reported(self) -> None:
+        self.write(".agent-loop/task.md", "\n".join([
+            "| id | task | 验收检查点 | 状态 |", "|---|---|---|---|",
+            "| a | x | y | 🚧 blocked（等真实使用，2000-01-01 前没等到就关） |",
+            "| b | x | y | ✅ done（等到了，2000-01-01 前没等到就关） |",
+            "| c | x | y | 🚧 blocked（等真实使用，2999-01-01 前没等到就关） |", "",
+        ]))
+        self.commit()
+
+        self.assertEqual(lint_changed(self.root), [
+            ".agent-loop/task.md:3: wait deadline 2000-01-01 has passed; mark the row ❌ dropped and archive it",
+        ])
+
     def test_wrapper_runs_the_verifier_only_when_lint_passes(self) -> None:
         argv = ["--root", str(self.root), "lint", "--changed", "--", sys.executable, "-c", "raise SystemExit(3)"]
         self.assertEqual(run.main(argv), 3)

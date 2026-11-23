@@ -12,6 +12,11 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Passive waits expire. A `task.md` status that waits for something carries `YYYY-MM-DD 前没等到就关` (default
+  seven days); when it passes, the row or the whole mainline Goal is marked `❌ dropped`, archived, and its issue
+  closed without asking. CLOSE lint reports waits this task wrote without a deadline and any open row past its
+  deadline. A Goal enters the mainline only with the human's quoted "do" or "start"; deferrals stay off it, and a
+  `▶ next` Goal untouched for seven days is re-checked against its issue before any plan is written.
 - The loop admits only work that tests an empirical hypothesis whose result is unknown and picks the next step
   from it. Tasks judged by a specification or human preference (document rewrites and migrations, bug fixes to a
   known spec, behavior-preserving refactors, configuration, rule text) stay outside it: done directly and accepted
