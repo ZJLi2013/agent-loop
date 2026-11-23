@@ -193,6 +193,42 @@ class LintTest(unittest.TestCase):
         self.assertFalse(marker.exists())
         self.assertIn("lint: new.md: not tracked by git", err.getvalue())
 
+    def test_init_excludes_existing_dirty_and_untracked_markdown(self) -> None:
+        self.write("old.md", "TODO: earlier edit\n[gone](missing.md)\n")
+        self.write("staged.md", "TODO: earlier staged file\n")
+        self.git("add", "staged.md")
+        self.write("untracked.md", "TODO: earlier untracked file\n")
+        with ON_PATH:
+            self.init(lint=True)
+
+        self.assertEqual(lint_changed(self.root), [])
+        marker = self.root / "ran"
+        self.assertEqual(run.main([
+            "--root", str(self.root), "lint", "--changed", "--",
+            sys.executable, "-c", f"open({str(marker)!r}, 'w').close()",
+        ]), 0)
+        self.assertTrue(marker.exists())
+
+        # Staging unchanged pre-existing content does not make it task work.
+        self.git("add", "untracked.md")
+        self.assertEqual(lint_changed(self.root), [])
+        for name in ("old.md", "staged.md", "untracked.md"):
+            self.write(name, "TODO: task edit\n")
+        self.write("new.md", "TODO: new task file\n")
+        problems = lint_changed(self.root)
+        for name in ("old.md", "staged.md", "untracked.md", "new.md"):
+            self.assertTrue(any(p.startswith(f"{name}:1: leftover") for p in problems), problems)
+        self.assertIn("new.md: not tracked by git", problems)
+
+    def test_restoring_dirty_markdown_to_head_is_a_task_change(self) -> None:
+        self.write("old.md", "[gone](missing.md)\n")
+        self.commit()
+        self.write("old.md", "# Clean at init\n")
+        with ON_PATH:
+            self.init(lint=True)
+        self.git("checkout", "HEAD", "--", "old.md")
+        self.assertTrue(any(p.startswith("old.md:1: dead link") for p in lint_changed(self.root)))
+
     def test_init_prepends_lint_without_locking_it(self) -> None:
         self.init(lint=False)
         off = json.loads((self.root / ".harness" / "config.json").read_text(encoding="utf-8"))
