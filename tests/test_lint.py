@@ -140,6 +140,78 @@ class LintTest(unittest.TestCase):
         self.assertEqual(len(hits), 1, hits)
         self.assertTrue(hits[0].startswith("exps/topic/notes.md:6: '待 human'"), hits)
 
+    def test_experiment_line_readme_needs_entry_fields(self) -> None:
+        self.write("exps/line/01-does-x-help.md", "# 01\n")
+        self.write("exps/line/readme.md", "# 结论\n\n- **目标**：少误判。\n\n## 实验\n- **现状**：x\n")
+        self.write("exps/other/readme.md", "# 无编号分文档\n")
+        self.git("add", "-A")
+
+        problems = lint_changed(self.root)
+
+        self.assertEqual(problems, ["exps/line/readme.md: entry fields missing before the first ## section: 现状、下一步"])
+        self.write("exps/line/readme.md", "# 结论\n\n- **目标**：少误判。\n- **现状**：没变好。\n- 下一步：重训。\n")
+        self.assertEqual(lint_changed(self.root), [])
+
+    def test_link_only_index_lines_in_readmes(self) -> None:
+        self.write("readme.md", "\n".join([
+            "# 项目", "",
+            "- [bootstrap-loop](old.md)",
+            "| 01 | [实验](old.md) |",
+            "- 第 250 步止损（[post-train](old.md)）",
+            "| [前一轮](old.md) | 闭环停在二次微调 |",
+            "- [allowed](old.md) <!-- lint: allow -->",
+        ]))
+        self.write("docs/notes.md", "- [only a link](../old.md)\n")
+        self.git("add", "-A")
+
+        problems = lint_changed(self.root)
+
+        self.assertEqual([p.split(": ")[0] for p in problems], ["readme.md:3", "readme.md:4"], problems)
+        self.assertTrue(all("link-only index line" in p for p in problems), problems)
+
+    def test_code_named_experiment_files(self) -> None:
+        for name in ("exps/line/w1-post-train.md", "exps/line/rt1.md", "exps/line/01-does-continued-training-help.md",
+                     "exps/line/does-4-views-help.md", "docs/v2-notes.md"):
+            self.write(name, "# x\n")
+        self.git("add", "-A")
+
+        problems = lint_changed(self.root)
+
+        self.assertEqual(problems, [
+            "exps/line/rt1.md: code-named file; name it <two-digit order>-<question>.md",
+            "exps/line/w1-post-train.md: code-named file; name it <two-digit order>-<question>.md",
+        ])
+
+    def test_unchanged_readme_is_not_checked(self) -> None:
+        self.write("exps/line/w1.md", "# 旧\n")
+        self.write("exps/line/01-a.md", "# 旧\n")
+        self.write("exps/line/readme.md", "# 旧\n\n- [w1](w1.md)\n")
+        self.commit()
+        self.write("exps/line/01-a.md", "# 改\n")
+
+        self.assertEqual(lint_changed(self.root), [])
+
+    def test_task_table_rows_this_task_added_match_the_template(self) -> None:
+        header = "| P | id | rev | task | check | status | fail |\n|---|---|---|---|---|---|---|\n"
+        old = "| P0 | a | r1 | x | y | 🔬 doing | 0 | extra |\n"
+        self.write(".agent-loop/task.md", header + old)
+        self.commit()
+        self.assertEqual(lint_changed(self.root), [])
+
+        self.write(".agent-loop/task.md", "\n".join([
+            "| Goal | 问题 | 退出 | 状态 | plan |", "|---|---|---|---|---|", "| g | q | e | ▶ next | |", "",
+            header + old.rstrip("\n"), "| P1 | b | r1 | x | y | ⬜ todo | 0 | 预算 |", "| P2 | c | r1 | x | y | ⬜ todo | 0 |",
+            "", "| P | 回答什么 | 进入条件 |", "|---|---|---|", "| 1 | q | e |", "",
+        ]))
+        self.write(".agent-loop/scratch.md", "| a | b |\n")
+        self.git("add", "-A")
+
+        self.assertEqual(lint_changed(self.root), [
+            ".agent-loop/task.md:8: task table row has 8 cells; the task-state template has 7",
+        ])
+        with mock.patch("harness.lint.TASK_COLUMNS", 8):
+            self.assertEqual([p.split(": ")[0] for p in lint_changed(self.root)], [".agent-loop/task.md:9"])
+
     def test_wrapper_runs_the_verifier_only_when_lint_passes(self) -> None:
         argv = ["--root", str(self.root), "lint", "--changed", "--", sys.executable, "-c", "raise SystemExit(3)"]
         self.assertEqual(run.main(argv), 3)

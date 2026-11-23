@@ -21,15 +21,15 @@ description: >-
 
 | 文档 | 位置 | 写什么 | 不写什么 | 执行点 |
 |---|---|---|---|---|
-| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句、文档索引，都只放链接 | 进展、结论、revision、task 清单与状态、设计 | task reviewer 在 CLOSE 核对 |
-| 实验线 readme | `exps/<线>/readme.md` | 每环一行：状态词加链接 | 结论正文、设计、待选项 | task reviewer 在 CLOSE 核对 |
-| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线、task 行（状态、`rN`、检查点、预算、失败计数）、候选 | 设计、读数、结论 | Harness 解析 task 行 |
+| 项目入口 readme | 项目根 `readme.md` | 长线方向、当前 Goal 一句；索引每行一句当前事实（可带关键数）加直达实验线入口的链接，不套第二层纯链接 readme | 进展、revision、task 清单与状态、设计 | CLOSE lint 拒绝本 task 写的纯链接索引行；task reviewer 在 CLOSE 从它只跟一个链接到入口 |
+| 实验线 readme | `exps/<线>/readme.md`，就是这条线的入口 | 标题一句结论；首屏字段 `目标`、`现状`、`下一步`（研究型另加 `原因`、`已排除`），每行一句白话带关键数；一张子文档表（序号、名称、回答什么、答案、链接） | 数据、设计、读数、重跑（归子文档）、通用术语节、待选项 | CLOSE lint 拒绝缺首屏字段；task reviewer 在 CLOSE 只读首屏答三问 |
+| `task.md` | `.agent-loop/task.md`，每项目一份 | 主线、task 行（问题、`rN`、两个去向、状态、失败计数）、候选 | 设计、预算、读数、结论、模板外的列与章节 | Harness 解析 task 行；CLOSE lint 拒绝列数与模板不一致的新增行 |
 | plan document | `.agent-loop/plans/<goal>/plan.md`，每 Goal 一份 | Goal、设计、当前结论（每条一句加链接）、脉络、task 设计段、Experiment Log | 项目结论的正文定义 | task reviewer 在 CLOSE 核对 |
 | task 设计 | plan 内以 task id 开头的标题段，或 plan 目录下的 `sub-exp/<id>.md`（并行的独立实验） | 一个 task 的设计 | — | `init` 拒绝指向别处的设计链接 |
-| 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`），每个研究问题一份，按问题命名 | 结论（唯一定义处）、支撑数据与它的位置、怎么重跑 | 以 task id 开头的标题、以 task id 为行的表、待 human 选的项、设计 | CLOSE lint 拒绝本 task 新增的这些行 |
+| 项目实验记录 | 项目被跟踪的文档树（`docs/`、`exps/<问题>/`），每个研究问题一份，文件名是两位序号加问题名（原实验编号可在正文首行） | 结论（唯一定义处）、支撑数据与它的位置、怎么重跑 | 以 task id 开头的标题、以 task id 为行的表、要 human 选的项、设计 | CLOSE lint 拒绝本 task 新增的这些行，以及 `exps/` 下新增的以代号开头、没有序号的文件名 |
 
 子实验、子 feature 是同一 plan 里的一个 task 设计段，不另起 plan，也不另起项目文档；新 Goal 才有新 plan。
-结论只在项目实验记录定义一次，readme 与 plan「当前结论」只放一句并链过去，进展与状态只在 `task.md`。
+结论只在项目实验记录定义一次，项目 readme 与 plan「当前结论」只放一句并链过去，实验线 readme 首屏每个字段一句，进展与状态只在 `task.md`。
 待 human 选的做法走结构化提问（`when-to-stop`），不进任何文档。
 task 关闭时 Harness 删掉它的设计段，不留 archive；要留下的结论写进项目实验记录，当前结论与 Experiment Log 链过去。
 `sub-exp/` 在 Goal 冻结时并进头部后删除。
