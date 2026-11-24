@@ -13,7 +13,7 @@ description: >-
 
 ## feature 与 exp 两份文档
 
-每个具体 feature 只有两份工作文档：`features/<feature>.md` 写设计，`exps/<feature>.md` 写实验，同路径一一对应并被 git 跟踪；`<feature>` 可以带子目录（`features/<组>/<名>.md` 对应 `exps/<组>/<名>.md`），两侧逐级镜像。一个 feature 是一处能单独设计、单独验收的改动，或一个研究问题下的一组实验；一个 Goal 有一到多个 feature。Goal 只写在 `task.md`：主线行的问题与退出条件，加 `## Goal（…）` 一段；主线行的 plan 格链接这个 Goal 的全部 feature。Harness 的 plan document（`plan_doc`）就是 feature 文档，下文的 plan 都指它。Goal、feature 与 task id 用说明内容的短语义名（kebab-case，如 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `rN` revision。
+每个具体 feature 只有两份工作文档：`features/<feature>.md` 写设计，`exps/<feature>.md` 写实验，同路径一一对应并被 git 跟踪；`<feature>` 可以带子目录（`features/<组>/<名>.md` 对应 `exps/<组>/<名>.md`），两侧逐级镜像。`features/` 与 `exps/` 是同一目录下的一对，可以在项目根，也可以在项目内任一子目录：项目下的每个子目录是一个独立实验组时（如 `<组>/features/` 对应 `<组>/exps/`），各组各有一对；本文的 `features/`、`exps/` 都指这一对。把现有文档改到本规范时保留项目的目录嵌套：`features/` 建在现有 `exps/` 的同级，现有文件与目录不移动、不删除、不重命名，只新增或改写与 exp 一一对应的 feature 文档。一个 feature 是一处能单独设计、单独验收的改动，或一个研究问题下的一组实验；一个 Goal 有一到多个 feature。Goal 只写在 `task.md`：主线行的问题与退出条件，加 `## Goal（…）` 一段；主线行的 plan 格链接这个 Goal 的全部 feature。Harness 的 plan document（`plan_doc`）就是 feature 文档，下文的 plan 都指它。Goal、feature 与 task id 用说明内容的短语义名（kebab-case，如 `scene-runtime-refactor`），不用 `s2`、`t3` 这类序号；序号只留给 `rN` revision。
 
 一个项目的文档只有下面几类，各写各的，不互相复制。「不写什么」里能按位置或字面判定的由 Harness 拒绝；其余按本表由写的人守，task reviewer 只审内容，不审格式与分工：
 
