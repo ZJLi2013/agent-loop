@@ -9,8 +9,7 @@ description: >-
 
 # Self Report
 
-**边界**：项目自身的失败归 `when-to-stop` 与 `agent-memory` 的 lessons；他人仓库的 PR / Issue 不归本 skill；
-披露、脱敏、去私料的规则归 `external-output-boundary`，本 skill 只做发布前的机器检查。
+**边界**：项目自身的失败归 `when-to-stop` 与 `agent-memory` 的 lessons；他人仓库的 PR / Issue 不归本 skill；披露、脱敏、去私料的规则归 `external-output-boundary`，本 skill 只做发布前的机器检查。
 
 上报不改变当前 task 的状态与失败计数；发布或存稿后回到原来的 task。
 
@@ -18,17 +17,13 @@ description: >-
 
 三样都写得出才上报，否则记进项目 `lessons`：
 
-- agent-loop 的文件与行，以及已安装 checkout 的 commit（`git -C <checkout> rev-parse --short HEAD`；Cursor 安装时
-  checkout 是 `~/.cursor/harness` junction 指向的仓库）；
+- agent-loop 的文件与行，以及已安装 checkout 的 commit（`git -C <checkout> rev-parse --short HEAD`；Cursor 安装时checkout 是 `~/.cursor/harness` junction 指向的仓库）；
 - 期望与实际；
-- 自带的最小复现：Harness / adapter 缺陷给在 agent-loop 公开 checkout 上可重建的命令，以及合成的 `state.json` /
-  `task.md` 片段；Policy 缺陷引原句与它导致的动作。
+- 自带的最小复现：Harness / adapter 缺陷给在 agent-loop 公开 checkout 上可重建的命令，以及合成的 `state.json` / `task.md` 片段；Policy 缺陷引原句与它导致的动作。
 
 ## 2. 内容来源
 
-标题、正文、评论只由三类材料组成：agent-loop 仓库里的代码与规则原文、可在公开 checkout 上重建的合成复现、
-对期望与实际行为的自述。项目里的任何原文（日志、文档、代码、transcript、数据、指标）都不进正文；
-离开它说不清的报告只存草稿。检查脚本无命中不代表满足这一条。
+标题、正文、评论只由三类材料组成：agent-loop 仓库里的代码与规则原文、可在公开 checkout 上重建的合成复现、对期望与实际行为的自述。项目里的任何原文（日志、文档、代码、transcript、数据、指标）都不进正文；离开它说不清的报告只存草稿。检查脚本无命中不代表满足这一条。
 
 ## 3. 去重
 
@@ -40,8 +35,7 @@ gh issue list --repo ZJLi2013/agent-loop --state all --search "<关键词>"
 
 ## 4. 起草
 
-- bug 按 `.github/ISSUE_TEMPLATE/bug.yml` 的字段写成 `###` 小节（Safety check、Commit or release、Environment、
-  Layer、Reproduction、Expected boundary、Actual result and evidence），提案按 `feature.yml`。
+- bug 按 `.github/ISSUE_TEMPLATE/bug.yml` 的字段写成 `###` 小节（Safety check、Commit or release、Environment、Layer、Reproduction、Expected boundary、Actual result and evidence），提案按 `feature.yml`。
 - 标题 `[bug] …` / `[proposal] …`，陈述缺陷本身。
 - 末尾一行 `AI use:`，写工具、模型，以及发布前无人审阅。语态归 `write-for-humans`。
 
@@ -61,11 +55,8 @@ gh issue create --repo ZJLi2013/agent-loop --title "<标题>" --body-file body.m
   --label from-agent --label <bug|proposal> --label <kernel|policy|adapter>
 ```
 
-只有 `bug` 且层为 `kernel` / `adapter` 时再加 `--label auto-fix`。proposal 和 policy 措辞要 human 取舍，
-也写不出能证明修复的失败测试，留给 human 改。
+只有 `bug` 且层为 `kernel` / `adapter` 时再加 `--label auto-fix`。proposal 和 policy 措辞要 human 取舍，也写不出能证明修复的失败测试，留给 human 改。
 
-评论同样先过检查，再 `gh issue comment <N> --repo ZJLi2013/agent-loop --body-file comment.md`。
-正文一律用 `--body-file`：PowerShell 把多行字符串作参数传给 `gh` 时会丢掉换行。
+评论同样先过检查，再 `gh issue comment <N> --repo ZJLi2013/agent-loop --body-file comment.md`。正文一律用 `--body-file`：PowerShell 把多行字符串作参数传给 `gh` 时会丢掉换行。
 
-检查未通过、超过当日上限或 `gh` 失败时，存为项目内 `.agent-loop/reports/<YYYY-MM-DD>-<slug>.md`
-（首行标题，其后正文，末尾附未通过的检查输出），并告诉 human。
+检查未通过、超过当日上限或 `gh` 失败时，存为项目内 `.agent-loop/reports/<YYYY-MM-DD>-<slug>.md`（首行标题，其后正文，末尾附未通过的检查输出），并告诉 human。
