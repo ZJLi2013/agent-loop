@@ -1,7 +1,6 @@
 # Skills Index
 
-Skills are the **Policies** layer defined in [`design.md`](../design.md): each one explains how to act in a
-specific state. They do not redefine state transitions, runtime guards, or another skill's document format.
+Skills are the **Policies** layer defined in [`design.md`](../design.md): each one explains how to act in a specific state. They do not redefine state transitions, runtime guards, or another skill's document format.
 
 ```text
 skills/<skill-name>/SKILL.md
@@ -45,8 +44,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 | plan reviewer 的 prompt、报告与按 task × Plan Revision 的审查记录 | `harness/prompts/plan_review.md`（校验与记录在 `harness/plan_review.py`） |
 | 平台事件接线 | `adapters/<platform>/` |
 
-Bugbot 不读 rules 或 skills。PR 上的 review 标准只能放目标 repo 的 `.cursor/BUGBOT.md` 或
-Cursor dashboard Team / Repository Rules。
+Bugbot 不读 rules 或 skills。PR 上的 review 标准只能放目标 repo 的 `.cursor/BUGBOT.md` 或Cursor dashboard Team / Repository Rules。
 
 ## Adding behavior
 
@@ -57,5 +55,4 @@ Cursor dashboard Team / Repository Rules。
 3. 平台接线 → adapter / hook；
 4. 只有新生命周期状态、事件或不可绕过 guard 才改 Kernel。
 
-新增段落必须删除被替代路径。不要用另一个 skill 重述相同流程；长 runbook 放 `reference.md`，
-可复用命令放 `scripts/`。
+新增段落必须删除被替代路径。不要用另一个 skill 重述相同流程；长 runbook 放 `reference.md`，可复用命令放 `scripts/`。
