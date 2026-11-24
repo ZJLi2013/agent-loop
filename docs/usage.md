@@ -415,6 +415,20 @@ agent-loop-harness goal-review --decision continue --evidence "The failed test i
 
 证据支持时用 `replan` 或 `stop`。`continue` 不会绕过必需的计划修订。
 
+## 和 agent 讨论一个还没收窄的议题
+
+议题还说不清该做哪个实验时，在项目会话里说「brainstorm <议题>」开一次讨论；agent 不会自己开。例：
+
+> brainstorm：新模型没比旧基线好，下一批训练数据该怎么采？要定的是下一轮实验做什么，预算 50 GPU·h 以内。
+
+1. 局外 reviewer 在独立上下文里先起草，它看得到议题、约束和已有读数，看不到 agent 的倾向；局内 agent 带全部上下文逐条回应，
+   双方各至多 3 次。讨论稿在 `.agent-loop/discussions/<日期>-<议题>.md`，你随时可以读，也可以直接在对话里插话。
+2. 收尾时你收到一道选择题：至多 5 条候选（例：「扩初态覆盖，每初态采 1 条」「同初态多采 4 条」「先跑 0 GPU 统计再定」），
+   每条写改变哪个下一步、第一步与成本。一条都不选也可以。
+3. 选中的进计划：改已有方向时 agent 按纠偏流程升版，再走 plan review；没选中但以后可能做的进 `task.md` 候选。
+   落盘后讨论稿删除，讨论里不跑实验。项目规则另有规定时（讨论稿放哪、局外用哪个模型）从项目规则，完整写法见
+   `work-planning` 的「讨论」。
+
 ## Memory 与长任务观察
 
 把 agent-loop 仓库 `skills/agent-memory/templates/` 下的四个 Markdown 模板复制到
