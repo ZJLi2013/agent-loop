@@ -18,6 +18,7 @@ alwaysApply: true
 |---|---|
 | 新 Goal、缺 plan Goal、`📝 proposed`、Goal Review、human 纠偏、human 开讨论（brainstorm） | `work-planning` |
 | 改代码的设计引入新抽象、已有概念的第二份实现或跨模块接口 | `work-planning` 第 2 步的类级设计，图用 `code-to-uml-diagram` |
+| 写或改项目 readme、feature、exp、分组 readme 与 task 设计段，决定怎么拆 feature | `project-docs` |
 | 选择 task、写检查点、维护状态 | `task-state` |
 | 已批准 task 要跑实验 / 验证 | `experiment-design` |
 | 失败、重试、预算或停机判断，要给 human 推荐或选项 | `when-to-stop` |

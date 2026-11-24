@@ -14,6 +14,7 @@ Descriptions stay in context; bodies load only when the current event matches.
 | Skill | Owns |
 |---|---|
 | `work-planning` | Goal → plan document → proposed task → review；Goal Review、RECONCILE 与 task / Goal CLOSE |
+| `project-docs` | 项目 readme、feature 与 exp、分组 readme、讨论稿的分工与组织，feature 怎么拆，冻结后留什么 |
 | `task-state` | 活跃 `task.md`、closed-task archive、检查点、失败计数、当前交接快照 |
 | `experiment-design` | 实验假设、决策门、验收门、单轮 exp 记录、verifier 前 CLOSE self-audit |
 | `agent-memory` | facts / episodes / lessons 的准入、检索、写回与去重 |
@@ -33,8 +34,9 @@ Descriptions stay in context; bodies load only when the current event matches.
 |---|---|
 | 状态、事件、合法转移 | `harness/protocol.py` |
 | Goal、review、revision、attention refresh、人工纠偏 | `work-planning` |
+| 项目文档的分工、布局与模板 | `project-docs` |
 | task schema 与检查点 | `task-state` |
-| 实验设计与 exp 文档 | `experiment-design` |
+| 实验的假设、判据与证据 | `experiment-design` |
 | 自修上限、预算与中止 | `when-to-stop` rule |
 | 人类可读输出 | `write-for-humans` rule |
 | 对外披露 / 脱敏 / 去私料 | `external-output-boundary` rule |

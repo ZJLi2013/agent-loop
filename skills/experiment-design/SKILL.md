@@ -10,7 +10,7 @@ description: >-
 # Experiment-Driven Documentation
 
 把「假设 → 设计 → 执行 → 结果 → 分析 → 下一步」记进 plan document 的 task 设计段与 Experiment Log，
-task CLOSE 时把确立的结论写进项目实验记录（各文档的位置与禁写项见 `work-planning` 的文档表），让任何人
+task CLOSE 时把确立的结论写进项目实验记录（各文档的位置与禁写项见 `project-docs` 的文档表），让任何人
 （包括未来的自己）能复现思路与决策依据。
 
 **边界**：被选中的 task 要跑一轮验证时用。只管实验设计（假设、方案、预期、判据）与 evidence；Goal、当前结论、
@@ -69,7 +69,7 @@ GPU 占用、大量 token）。**便宜的是写，贵的是跑和读。**
 ## 文档结构：一篇一个结论
 
 主线、解释性膨胀、组织轴与语态（含保留「关于世界的否定发现」与「排除 / 不做」表）归 `write-for-humans`。
-本轮的结论写进 feature 的「当前结论」，细节与数据写进 `exps/<feature>.md`：每个实验一节，逐 run 记录进 Experiment Log（布局归 `work-planning`）。另守四条：
+本轮的结论写进 feature 的「当前结论」，细节与数据写进 `exps/<feature>.md`：每个实验一节，逐 run 记录进 Experiment Log（布局归 `project-docs`）。另守四条：
 
 1. 当前结论每条一句、能独立成立；写出三条并列的「核心结论」＝还没想清哪个是主的。
 2. 每条结论带的关键数 ≤ 3 个，按重要性排，不按实验编号排；方法与前提（环境、换算、参数核实）放 exp 的实验节。
@@ -134,7 +134,7 @@ Experiment Log 为入口。这里不新增 Harness state 或 manifest；最终 d
    不为它改项目文档或开 PR；否定发现（排除过的方案及其依据、被推翻的假设）也跟着读数留在 Experiment Log，
    阻止重试的那条按 `agent-memory` 写进 `episodes.md`，不进项目文档；证据确立或修正了项目此后的行为、接口或约束时，按上句写进文档，
    带上表达它必需的数值、适用条件与证据链接；
-   按本 task 的结果重写 feature 首屏（字段见 `work-planning` 文档表，标准见 `write-for-humans`「给 human 读的项目文档」）；
+   按本 task 的结果重写 feature 首屏（字段见 `project-docs` 文档表，标准见 `write-for-humans`「给 human 读的项目文档」）；
    exp 每个实验一节，写配置与输入、读数与它的位置、怎么重跑，原实验编号只出现在节的首行；只给读懂结论必需的实验专有词，
    在首次出现处半句话带过，不建通用术语节；要 human 选的做法与 task 状态不进 feature 与 exp，归 `task.md` 与结构化提问；
 2. 删除设计阶段的过渡内容、被结果覆盖的假设、重复读数、旧 Next Step 与临时 TODO；

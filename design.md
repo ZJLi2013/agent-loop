@@ -263,13 +263,14 @@ Policy 回答「这个状态下怎么做」，不重新定义转移：
 |---|---|
 | Goal → plan document → proposed task → review | `work-planning` |
 | 新增持久状态或读写边界前的模块契约 | `work-planning` |
+| 项目文档的分工、布局与模板 | `project-docs` |
 | SELECT / task 状态与检查点 | `task-state` |
 | 实验假设、判据、记录 | `experiment-design` |
 | 失败分类与 Auto-Stop | `when-to-stop` |
 | 事实、结论与经验检索 | `agent-memory` |
 | 无人值守的 review / blocked 处理 | `agent-loop` 的最小常驻 policy |
 
-`work-planning` 拥有 feature 文档与文档表；`experiment-design` 只拥有 exp 文档里实验的假设、判据与证据。一个知识点只能有一个 owner；其它位置只留路由或链接。
+`project-docs` 拥有文档表与 feature / exp 的布局，`work-planning` 拥有何时写、谁批准；`experiment-design` 只拥有 exp 文档里实验的假设、判据与证据。一个知识点只能有一个 owner；其它位置只留路由或链接。
 
 ### Feature 与 exp 文档
 
@@ -291,11 +292,11 @@ exps/<feature>.md      每个实验一节：配置与输入、读数表、复现
                        Experiment Log
 ```
 
-各放哪、写什么与不写什么，由 `work-planning` 的文档表拥有。Harness 参数 `plan_doc` 指向 feature 文档。
+各放哪、写什么与不写什么，由 `project-docs` 的文档表拥有。Harness 参数 `plan_doc` 指向 feature 文档。
 
 task CLOSE 时，Experiment Log 的多轮记录合并成 task 结论并入脉络的当前阶段行，换方向时开新行；读数与
 链接留在 Experiment Log；task 设计段在 CLOSE 时删除，不归档。脉络由做决定的一方当场写，CLOSE、replan 与冻结都保留。
-feature 完成或 pivot 时冻结它的 feature 文档为 as-built，两份文件都不删、不搬（条款归 `work-planning` 的主线交接）；
+feature 完成或 pivot 时冻结它的 feature 文档为 as-built，两份文件都不删、不搬（时机归 `work-planning` 的主线交接，冻结后留什么归 `project-docs`「冻结」）；
 run 输出的位置与删除时机见 `experiment-design` 的 CLOSE self-audit。closed task 与旧交接快照同样移出活跃
 `.agent-loop/task.md` / `progress.md`；`disproved / rejected` 因仍会阻止重复试错而保留在 memory。
 

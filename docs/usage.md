@@ -153,7 +153,7 @@ dsh 适配器是新加的，实际项目里跑得还少，下面的清单会随�
   completion gate 约束。
 - **没有压缩事件。** dsh 不会显示 Cursor 的首次小窗口压缩提示；Harness 行为不受影响。
 - **memory 索引只在会话开始时注入一次。** 桥接不传工具调用的文件路径，读 `task.md` 时不会再注入。
-- **`AGENTS.md` 是生成的副本。** rules 改动后要重跑 `sync-to-dsh.ps1`；skills 是链接，跟着仓库变。
+- **`AGENTS.md` 是生成的副本。** rules 改动后要重跑 `sync-to-dsh.ps1`；skills 逐个链接，已有 skill 的改动跟着仓库变，新增的 skill 要重跑它才装上。
 - **hooks 依赖仓库原位。** `hooks.json` 用的是仓库的绝对路径，仓库移动或切到不含 `adapters/dsh/` 的分支后 hooks 失败。
 - **只在 Windows 上验证过。** 安装脚本是 PowerShell；其他平台直接运行 `python scripts/install-skills.py --host dsh`，
   rules 与 skills 都由它处理。
