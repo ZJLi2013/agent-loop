@@ -193,6 +193,29 @@ class LayoutTest(unittest.TestCase):
         close_task(self.root, "features/g/x.md", "x1")
         self.assertIn("做法见 x1 设计。", self.read("exps/g/x.md"))
 
+    def test_a_group_directory_holds_its_own_pair(self) -> None:
+        self.write("lab/features/x.md", PLAN_HEAD.format(name="x") + "## x1 设计\n\n- rev：r1\n")
+        self.write("lab/exps/x.md", EXP_HEAD + "## 读数\n\n做法见 [x1 设计](../features/x.md#x1-设计)。\n"
+                   "\n## Experiment Log\n\n| x1 | run | pass |\n")
+        self.write("lab/features/y.md", PLAN_HEAD.format(name="y") + "## Experiment Log\n")
+        self.write("lab/exps/z.md", EXP_HEAD)
+        self.write("other/features/w.md", PLAN_HEAD.format(name="w") + "沿用 [x1 设计](../../lab/features/x.md#x1-设计)。\n")
+        self.write("plans/g/exps/run.md", "# run\n\n## 当前结论\n")
+        self.tasks(("x1", "../lab/features/x.md#x1-设计"))
+        self.configure("lab/features/x.md")
+        self.git("add", "-A")
+
+        problems = [p for p in lint_changed(self.root) if p.startswith(("lab/", "plans/"))]
+        self.assertEqual(sorted(problems), [
+            "lab/exps/z.md: no lab/features/z.md; each exp document has a feature of the same path",
+            "lab/features/y.md:14: Experiment Log belongs in lab/exps/y.md",
+        ])
+
+        self.assertIsNone(design_location_error(self.root, "x1", "lab/features/x.md"))
+        close_task(self.root, "lab/features/x.md", "x1")
+        self.assertIn("做法见 x1 设计。", self.read("lab/exps/x.md"))
+        self.assertIn("沿用 x1 设计。", self.read("other/features/w.md"))
+
     def test_a_done_goal_does_not_claim_its_feature_subdirectory(self) -> None:
         self.write("features/g/x.md", PLAN_HEAD.format(name="x"))
         self.commit()

@@ -130,9 +130,45 @@ def task_ids(root: Path) -> set[str]:
     return {cells[0] for _, cells in _task_rows(_active_lines(root))} | archived_task_ids(root)
 
 
+def doc_pair(root: Path, path: Path) -> tuple[str, Path, Path] | None:
+    """For a document under <dir>/features/ or <dir>/exps/: its side, <dir>, and its path within the side.
+
+    <dir> is the project root or any subdirectory, so a project keeps its existing nesting. Below the root an exps/
+    pairs only with a features/ beside it; a legacy plan's own exps/ directory is not a pair.
+    """
+    root = root.resolve()
+    path = path.resolve()
+    if not path.is_relative_to(root):
+        return None
+    parts = path.relative_to(root).parts
+    for index, part in enumerate(parts[:-1]):
+        base = root.joinpath(*parts[:index])
+        side = os.path.normcase(part)
+        if side == FEATURES_DIR or side == EXPS_DIR and (index == 0 or (base / FEATURES_DIR).is_dir()):
+            return side, base, Path(*parts[index + 1:])
+    return None
+
+
+def _pair_docs(root: Path, plan: Path) -> list[Path]:
+    """Markdown files in every features/ and exps/ pair of the project; without git, only root's and the plan's."""
+    listed = _git_files(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md")
+    if listed is not None:
+        return [doc for doc in listed if doc.is_file() and doc_pair(root, doc)]
+    pair = doc_pair(root, plan)
+    bases = {root.resolve(), *([pair[1]] if pair else [])}
+    return [doc for base in bases for side in (FEATURES_DIR, EXPS_DIR) for doc in (base / side).rglob("*.md")]
+
+
 def feature_doc(root: Path, plan: Path) -> bool:
-    """Any document under features/ except a group readme, which is an entry and holds no task designs."""
-    return (root / FEATURES_DIR).resolve() in plan.parents and plan.name.lower() != "readme.md"
+    """Any document under a features/ directory except a group readme, which is an entry and holds no task designs."""
+    pair = doc_pair(root, plan)
+    return pair is not None and pair[0] == FEATURES_DIR and plan.name.lower() != "readme.md"
+
+
+def mirror(root: Path, path: Path) -> Path:
+    """The same-path document on the other side of a features/ and exps/ pair."""
+    side, base, name = doc_pair(root, path)
+    return base / (EXPS_DIR if side == FEATURES_DIR else FEATURES_DIR) / name
 
 
 def _belongs(root: Path, plan: Path, target: Path) -> bool:
@@ -364,7 +400,8 @@ def design_location_error(root: Path, task_id: str, plan_doc: str) -> str | None
     feature = feature_doc(root, plan)
     if not feature and not _in_flight(root, text):
         return (
-            f"plan document {plan_doc} must be {FEATURES_DIR}/<feature>.md (subdirectories allowed, not readme.md); "
+            f"plan document {plan_doc} must be {FEATURES_DIR}/<feature>.md under the project root or a subdirectory "
+            f"(subdirectories allowed, not readme.md); "
             f"a plan elsewhere is accepted only after one of its tasks is archived"
         )
     lines = text.splitlines()
@@ -436,7 +473,7 @@ def _drop_sections(root: Path, plan: Path, task_id: str) -> None:
     ]
     _atomic_write(plan, _unlink("\n".join(kept), plan, plan, dropped).rstrip() + "\n")
 
-    docs = [*runtime_dir(root).rglob("*.md"), *(root / FEATURES_DIR).rglob("*.md"), *(root / EXPS_DIR).rglob("*.md")]
+    docs = [*runtime_dir(root).rglob("*.md"), *_pair_docs(root, plan)]
     for doc in docs:
         if doc.resolve() == plan:
             continue
@@ -586,7 +623,8 @@ def leftovers(root: Path) -> list[dict[str, str]]:
         if base in directory.parents:
             return True
         return (tracked is not None and untracked is not None and root in directory.parents
-                and directory != base and root / FEATURES_DIR not in (directory, *directory.parents))
+                and directory != base
+                and FEATURES_DIR not in map(os.path.normcase, directory.relative_to(root).parts))
 
     plan_dirs = {plan.parent: plan for plan in live_plans if scopes(plan.parent)}
     plan_dirs.update({plan.parent: plan for plan in done_plans if scopes(plan.parent) and plan.parent not in plan_dirs})

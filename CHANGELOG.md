@@ -12,6 +12,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- `features/` and `exps/` are a pair inside one directory, at the project root or any subdirectory, so a project whose
+  subdirectories are independent experiment groups keeps its layout. `init`, CLOSE lint and CLOSE link cleanup accept
+  `<group>/features/<feature>.md` with its mirror in `<group>/exps/`; below the root an `exps/` without a `features/`
+  beside it is not a pair. Migrating existing docs keeps the existing nesting and files.
 - Brainstorm drafts are kept in `discussions/` at the project root, committed with the feature and linked from its
   history section; `.agent-loop/` is git-excluded and lint rejects links into it.
 - Passive waits expire. A `task.md` status that waits for something carries `YYYY-MM-DD 前没等到就关` (default
