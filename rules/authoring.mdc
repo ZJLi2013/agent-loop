@@ -36,8 +36,8 @@ alwaysApply: false
 | | 软上限 | 超了怎么办 |
 |---|---|---|
 | skill description | 5 行 | 把正文内容搬回正文；边界声明能删就删 |
-| SKILL.md 正文 | 150 行 | 先砍，砍不动再拆 `reference.md` / `scripts/` |
-| rule | 80 行 | 先砍，砍不动说明它其实是个 skill |
+| SKILL.md 正文 | 103 行 | 先砍，砍不动再拆 `reference.md` / `scripts/` |
+| rule | 58 行 | 先砍，砍不动说明它其实是个 skill |
 
 段落、列表项、表格行各写一行，不按行宽硬折；只有代码块与 frontmatter 保留原样换行。
 
