@@ -12,6 +12,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Brainstorm drafts are kept in `discussions/` at the project root, committed with the feature and linked from its
+  history section; `.agent-loop/` is git-excluded and lint rejects links into it.
 - Passive waits expire. A `task.md` status that waits for something carries `YYYY-MM-DD 前没等到就关` (default
   seven days); when it passes, the row or the whole mainline Goal is marked `❌ dropped`, archived, and its issue
   closed without asking. CLOSE lint reports waits this task wrote without a deadline and any open row past its

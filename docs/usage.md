@@ -422,8 +422,8 @@ agent-loop-harness goal-review --decision continue --evidence "The failed test i
 > brainstorm：新模型没比旧基线好，下一批训练数据该怎么采？预算 50 GPU·h 以内。
 
 局外 reviewer 在独立上下文里先起草（看不到 agent 的倾向），局内 agent 带全部上下文逐条回应，双方各至多 3 次，不跑实验。
-双方同意后，设计直接写进对应 feature 的设计节，讨论稿删除；你照常审这次 feature 改动。到上限仍有分歧时，你会收到
-一道提问，列出分歧点与双方的主张、依据，由你定；这是讨论里唯一来问你的时候。讨论稿在 `.agent-loop/discussions/` 下；完整写法见 `work-planning` 的「讨论」。
+双方同意后，设计直接写进对应 feature 的设计节；讨论稿留在项目根 `discussions/`，由 feature 脉络链接，随这次 feature 改动
+一起给你审。到上限仍有分歧时，你会收到一道提问，列出分歧点与双方的主张、依据，由你定；这是讨论里唯一来问你的时候。完整写法见 `work-planning` 的「讨论」。
 
 ## Memory 与长任务观察
 
