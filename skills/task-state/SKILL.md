@@ -9,8 +9,6 @@ description: >-
 
 # Task State
 
-控制流与路由在 `agent-loop` rule（常驻）。本 skill 只管它读写的那些文件。
-
 ## `task.md` 是任务状态的唯一真相源
 
 一个项目一份，放在 **`.agent-loop/task.md`**——和 `.agent-loop/progress.md` 同一个home，也避开仓库自带的 `task.md` / `TODO.md`。活跃文件只放可执行状态；closed history 放`.agent-loop/archive/tasks.md`，并从活跃文件链接过去。archive 是历史，不是第二份 backlog。
@@ -43,13 +41,11 @@ Closed: [archive/tasks.md](archive/tasks.md)
 
 **`task.md` 写给 human 扫一眼就懂（读者与目的见 `write-for-humans`「给 human 读的项目文档」），每轮也被完整读一遍；细节一律下沉到链接的设计文档。**
 
-- 只用模板的列，不加列。行序就是优先级，越靠上越先做，每个 Goal 的表各自排；依赖写成状态格的 `🚧 blocked <id>`；预算、判据细节与分析写进设计节。CLOSE lint 拒绝列数与模板不一致的 task 行。
-- 每格一句短话：task 格写它回答的问题，验收格写「成了 → 去哪；不成 → 去哪」，细节只给设计链接。
-- 不建模板以外的章节：只有 `主线`、`Goal`、`Candidates`（或 `候选`）、`Triggered`，末尾一行 `Closed:`。
-- 候选表每行一个问题、一个进入条件、一个数。
+- 列与章节只用模板里的（不放的内容见 `project-docs` 的 `task.md` 行）。行序就是优先级，越靠上越先做，每个 Goal 的表各自排；依赖写成状态格的 `🚧 blocked <id>`。
+- 每格一句短话：task 格写它回答的问题，验收格写「成了 → 去哪；不成 → 去哪」，命令、阈值与判据层只在设计节。
 - human 读的格子不用内部代号；task id 与设计链接除外。
 
-还没开工的候选写进 `## Candidates`，等某个事件才做的后续项写进 `## Triggered`（「<事件>时：<动作>」），两节都可省。候选不带设计、状态与 id；写成链接设计文档的 task、过 plan review 后才进活跃表，同时删掉候选行。Harness 只把表头首格为 `id` 的 4 列表当 task 表读，候选表与主线表不受影响。
+还没开工的候选写进 `## Candidates`（或 `候选`），每行一个问题、一个进入条件、一个数；等某个事件才做的后续项写进 `## Triggered`（「<事件>时：<动作>」），两节都可省。候选不带设计、状态与 id；写成链接设计文档的 task、过 plan review 后才进活跃表，同时删掉候选行。Harness 只把表头首格为 `id` 的 4 列表当 task 表读，候选表与主线表不受影响。
 
 ### 主线
 
@@ -70,49 +66,31 @@ Mainline Review: approved
 
 状态只有 `✅ done`、`▶ next`、`⬜ todo`、`❌ dropped`；至多一行 `▶ next`，且它是第一行非 `✅ done` / `❌ dropped`。只写 Goal 级的问题与退出条件，不写 task；plan 格链接这个 Goal 的每份 feature 文档，多份用顿号隔开。`Mainline Review` 只在 Human Review Gate 写；交接、改表与支线的规则归 `work-planning`。没有这一节的项目只有一个 Goal。
 
-状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。`proposed` 表示还在 Human Review Gate，批准前不执行。**等批准或等资源（GPU、节点、上游产物）期间，先把这个 task可逆、短时的准备做完**：核对数据与权重就位、改好运行所需的脚本、短时 CPU 冒烟、把开跑命令写进 `progress.md`。准备只用已授权的资源，不占所等资源、不花待批预算、不做不可逆操作；冒烟只查能不能跑，不跑实验、不出验收结果。做完就继续等，不反复冒烟、不扩范围。批准与资源都到位后，先按当前 revision 完成 Harness 准入，再执行备好的命令；准备不推进 task 状态，review 改了设计就按新设计改准备。`dropped` 要在行尾链接说明为什么放弃——被否决的候选是长期决定，删掉它下次还会有人重提。
+状态用 `📝 proposed / ⬜ todo / 🔬 doing / 🚧 blocked <id> / ✅ done / ❌ dropped`。`proposed` 表示还在 Human Review Gate，批准前不执行。**等批准或等资源（GPU、节点、上游产物）期间，先把这个 task可逆、短时的准备做完**：核对数据与权重就位、改好运行所需的脚本、短时 CPU 冒烟、把开跑命令写进 `progress.md`。准备只用已授权的资源，不占所等资源、不花待批预算、不做不可逆操作；冒烟只查能不能跑，不跑实验、不出验收结果。做完就继续等，不反复冒烟、不扩范围。批准与资源都到位后，先按当前 revision 完成 Harness 准入，再执行备好的命令；准备不推进 task 状态，review 改了设计就按新设计改准备。`dropped` 要在行尾链接说明为什么放弃——被否决的候选是长期决定，删掉它下次还会有人重提。跑到一半要改别的东西时，先挪 `🔬`（原行转 blocked 并记下挡它的 id）。
 
 **被动等待带截止日期。** task 行或主线行的状态格写「等 <X>」（等自然案例、真实使用、合并、上游产物）时，同一格写`YYYY-MM-DD 前没等到就关`，默认写下当天加 7 天。到期没等到：把该行（主线行即整个 Goal）标 `❌ dropped` 并归档，关闭对应 issue，回报里写一句，不问 human。CLOSE lint 拒绝本 task 写下的、缺这句的等待格，也拒绝任何未关闭行里已过的截止日期。
 
 `✅ done / ❌ dropped` 是 CLOSE 转换时的瞬时状态：结论与 evidence 写回后，把整行移到`archive/tasks.md`。archive 沿用 7 列 `| P | id | rev | task | 验收检查点 | 状态 | 失败 |`，CLOSE 在 P 格写 `—`、补上 rev 与失败数，配置了 reviewer 时由 Harness 写。活跃 `task.md` 最多保留最近一个 closed task 的一行指针；超过 5 条 closed 行说明 consolidation 漏执行，先归档再 SELECT。
 
-task 绑定 plan document 的 `Plan Revision: N`：在它的设计节里写一行 `- rev：rN`。不属于 plan 的维护项没有设计节，也就没有这一行。revision 何时递增、旧 task 怎么改绑（改这一行）归 `work-planning` 的 Human correction。还是 7 列 `| P | id | rev | ... |` 表的项目，`init` 会拒绝，先跑一次 `agent-loop-harness migrate-tasks`：同一张表内按 P 排序，验收格与候选表里的 `P<数字>` 改写成 task id（在本表命中 0 行或多行就报错、不写任何文件），rev 写进设计节，失败数导入 Harness。
-
-doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing 在 `work-planning` Gate 第 6 步。跑到一半要改别的东西时，先挪 `🔬`（原行转 blocked 并记下挡它的 id）。**`🚧` 的个数就是嵌套深度，≥ 2 停下回 `work-planning` 重拆。**
-
-**具体的值不写进 `task.md`。** 远端节点、容器名、checkpoint 路径这类跨会话还要用的常量，归 `agent-memory` 的 `memory/facts.md`——那份就地覆盖，这份记任务状态，两种写法不混。
+task 绑定 plan document 的 `Plan Revision: N`：在它的设计节里写一行 `- rev：rN`。不属于 plan 的维护项没有设计节，也就没有这一行。revision 何时递增、旧 task 怎么改绑（改这一行）归 `work-planning` 的 Human correction。还是 7 列 `| P | id | rev | ... |` 表的项目，`init` 会拒绝，先跑一次 `agent-loop-harness migrate-tasks` 转成 4 列表。
 
 ## 验收检查点：必须同时写 pass 和 fail
 
-**只写「怎样算成功」的检查点是半个检查点。** 成功了做什么是显然的（下一个 task），失败了做什么才是循环能不能自己转下去的关键。
-
-一个合格的检查点满足三条：
+**只写「怎样算成功」的检查点是半个检查点。** 成功了做什么是显然的（下一个 task），失败了做什么才是循环能不能自己转下去的关键。一个合格的检查点满足三条：
 
 1. **可执行或可观测**——一条命令、一个产物、一个数值阈值。「功能正常」「效果变好」不算。
 2. **判据选在哪一层是明确的**——层级怎么选见 `experiment-design` 的「验收门」。
 3. **失败时的去向是已知的**——表里写成「不成 → 去哪」半句，并能按 `when-to-stop`「先自修，再中止」的分类表归类。归不进任何一类的失败，说明这个 task 拆得不对，回 `work-planning` 重拆。
 
-命令、阈值与判据层写在设计节，表里的验收格只留两个去向。
-
-步长（一个 task 最多跨一个未验证假设、活跃表只写最近 1–2 项）归 `work-planning` Gate 第 2、3 步；每项变绿后再生成下一项。
-
-写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。**
-
-写成「重构干净」「跑通」的检查点有双重代价：**既判不出完成，也挡不住漂移**——任何改动都能说自己在往那个方向走（`agent-loop`「改动必须让当前检查点从不通过变成通过」要拿这个检查点当尺子）。
+写不出检查点的 task 不要开工。**这通常不是检查点难写，是这个 task 没想清楚要证明什么。** 写成「重构干净」「跑通」的检查点有双重代价：**既判不出完成，也挡不住漂移**——任何改动都能说自己在往那个方向走（`agent-loop`「改动必须让当前检查点从不通过变成通过」要拿这个检查点当尺子）。
 
 ## 失败计数
 
-失败计数是**这个 task 连续失败了几次**，锁定 verifier 通过后清零。它存在的唯一理由是让`agent-loop` 的自修分流能分辨「第一次失败」和「已经试了三次」——没有计数，每次失败看起来都像第一次，于是要么无限重试，要么第一次就上报。
-
-计数由 Harness 存在 `.harness/failures.json`，不在 `task.md`：自修一次就跑`agent-loop-harness fail --task <id> --note "<试了什么>"`，并在该 task 的实验文档里记一行「试了什么、结果如何」；`status` 输出当前 task 的计数。普通 `exec` 成功不清零；CLOSE 把计数写进归档行后删掉该条。计数触及 `when-to-stop` 的中止条件时才停。
+失败计数是**这个 task 连续失败了几次**，锁定 verifier 通过后清零。它存在的唯一理由是让`agent-loop` 的自修分流能分辨「第一次失败」和「已经试了三次」——没有计数，每次失败看起来都像第一次，于是要么无限重试，要么第一次就上报。计数由 Harness 存在 `.harness/failures.json`，不在 `task.md`：自修一次就跑`agent-loop-harness fail --task <id> --note "<试了什么>"`，并在该 task 的实验文档里记一行「试了什么、结果如何」；`status` 输出当前 task 的计数。普通 `exec` 成功不清零；CLOSE 把计数写进归档行后删掉该条。计数触及 `when-to-stop` 的中止条件时才停。
 
 ## 何时换会话
 
-**task 执行中不换会话；task 关闭后可以换，会话变重才换。** 关闭指验证通过、reviewer 的关闭决定（`continue` / `ask_human` / `stop`）落盘、CLOSE 与交接写完；没配 reviewer 时是验证通过后 CLOSE 跑完 `clean-task` 与 `disable`。`revise`、pause、预算耗尽、未验证通过就 `disable`、挂着等待都不算。没有 active task的会话随时可换。在关闭点上，下面任一条成立就换，否则在本会话接着做下一个 task：
-
-- 已用上下文 ≥ 会话窗口的一半（300k 窗口约 150k，1M 窗口约 500k）；
-- 缓存已冷（距上一轮超过约 5 分钟），且估计冷续比新会话读交接更贵；读数不足时不单凭空闲时长换；
-- 本会话压缩过。
+**task 执行中不换会话；task 关闭后可以换，会话变重才换。** 关闭指验证通过、reviewer 的关闭决定（`continue` / `ask_human` / `stop`）落盘、CLOSE 与交接写完；没配 reviewer 时是验证通过后 CLOSE 跑完 `clean-task` 与 `disable`。`revise`、pause、预算耗尽、未验证通过就 `disable`、挂着等待都不算。没有 active task的会话随时可换。在关闭点上，下面任一条成立就换，否则在本会话接着做下一个 task：已用上下文 ≥ 会话窗口的一半（300k 窗口约 150k，1M 窗口约 500k）；缓存已冷（距上一轮超过约 5 分钟），且估计冷续比新会话读交接更贵，读数不足时不单凭空闲时长换；本会话压缩过。
 
 看得见读数的一方来判：IDE 会话由 human 看上下文指示；会话压缩过时 stop hook 在 task 关闭处提示交接与开新会话。宿主设了 `AGENT_LOOP_SESSION_HOST`（如调度工具）时，每次关闭都写交接并结束这一轮，由宿主判续用还是新开。`verify` 通过时输出里有 `handoff`（有宿主，或本会话压缩过）就照它做，不在同一轮开下一个 task。agent 看不到自己的上下文读数，不凭感觉换。
 
@@ -127,30 +105,20 @@ doing 行数的不变量在 `agent-loop` 硬不变量，批准时谁转 doing �
 | `.agent-loop/progress.md` | 当前唯一接手点、下一步第一条命令 | **覆盖** | 本 skill |
 | `.agent-loop/archive/progress-YYYY-MM.md` | 已失效的接手点 | **追加**，仅按需读取 | 本 skill |
 
-新交接写在 `progress.md` 顶部，一段一个 `## ` 标题。task CLOSE 时 Harness 只留第一段（连同段前的前言），其余原样追加到当月 archive；两次 CLOSE 之间写新段时，删掉旧段里已失效的“下一步第一条命令”，它不能和当前命令同时出现在活跃文件。**具体值仍不要只写进交接笔记**；它们归可验证、可覆盖的 facts。Auto-Stop Report、夜间报告与 `⚠️ 待确认` 项也写进交接笔记，不进 `task.md`；待确认项解决前，每次覆盖都带上。写交接笔记、夜间报告或给 human 的收尾消息前，其中每条「建议修 / 待确认」先过 `when-to-stop`「问 human 之前先自己判断」的五条：全满足的改完再写成「已修」，留下的写明不满足哪条。
-
-交接笔记的格式：
+新交接写在 `progress.md` 顶部，一段一个 `## ` 标题。task CLOSE 时 Harness 只留第一段（连同段前的前言），其余原样追加到当月 archive；两次 CLOSE 之间写新段时，删掉旧段里已失效的“下一步第一条命令”，它不能和当前命令同时出现在活跃文件。**具体值仍不要只写进交接笔记**；它们归可验证、可覆盖的 facts。Auto-Stop Report、夜间报告与 `⚠️ 待确认` 项也写进交接笔记，不进 `task.md`；待确认项解决前，每次覆盖都带上。长跑还要写一份 runbook（setup / smoke / 全量 / 同步 / 清理的确切命令），让新 session 不必重新发现环境怎么搭。交接笔记的格式：
 
 ```markdown
 ## YYYY-MM-DD HH:MM — <task id> <一句话状态>
 
 当前位置：<改了什么 / 跑到哪一步>
 验证：<命令 + 结果，或为什么没跑成>
-下一步第一条命令：<可直接粘贴执行>
+下一步第一条命令：<可直接粘贴执行；「继续调试 Y」等于没写>
 坑：<下一位 agent 会踩但从代码看不出来的>
 ```
 
-**下一步要能直接粘贴执行。** 写「继续调试 Y」等于没写——接手的 agent 会重新探索一遍。
-
-Human 纠偏的 pause → revision → RECONCILE → resume 事务归 `work-planning`；本 skill只执行它给出的行状态变更，不重新定义顺序。
-
-长跑还要写一份 runbook（setup / smoke / 全量 / 同步 / 清理的确切命令），让新 session 不必重新发现环境怎么搭。
-
 ## 新 session 开工
 
-读 `task.md` → 读 `memory/facts.md` 并**验证接下来要用到的那几条**（见 `agent-memory`）→ `git status` 与近期 `git log` → 交接笔记的「下一步第一条命令」→ 跑一次 runbook 里最小的 smoke。
-
-**五步都做完再动手改代码。** 跳过验证与 smoke 是「环境早就坏了但前两小时都在改逻辑」的主要来源。
+读 `task.md` → 读 `memory/facts.md` 并**验证接下来要用到的那几条**（见 `agent-memory`）→ `git status` 与近期 `git log` → 交接笔记的「下一步第一条命令」→ 跑一次 runbook 里最小的 smoke。**五步都做完再动手改代码。** 跳过验证与 smoke 是「环境早就坏了但前两小时都在改逻辑」的主要来源。
 
 ## 完成
 
