@@ -12,6 +12,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Every asset cleanup checks the keep registry in `facts.md` first: registered assets (path, purpose, consumer) are
+  excluded from Warm/Cold cleanup, human-requested cleanups and parent-directory deletes; `when-to-stop` points there.
 - `external-output-boundary` applies its private-material check to the user's own public repositories and their PRs,
   issues and comments; disclosure and GPU renaming still apply only to other people's repositories and public posts.
 - The exps-side group readme opens with one sentence on the series' key result and one row per experiment or round

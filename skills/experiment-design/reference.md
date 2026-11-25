@@ -77,4 +77,4 @@ Harness 指纹只含已跟踪改动和未被 gitignore 的未跟踪文件：文�
 
 ## 六、远端资产去留
 
-本 task 在远端节点上建的资产逐项按三档定去留：Hot（节点清单 `hot_models` 里的基础模型）不清理；Warm（repo 专有 ckpt）`-atime +7`，清理时 `! -name` 排除 Hot；Cold（`.venv` / `build` / `__pycache__` / pip cache）`-mtime +3`。一次性的删除，要留的把路径与用途写进 `facts.md`。公共节点上不用 `docker image prune -a`、`docker system prune -a`、`docker image rm <tag>`。
+本 task 在远端节点上建的资产逐项按三档定去留：Hot（节点清单 `hot_models` 里的基础模型）不清理；Warm（repo 专有 ckpt）`-atime +7`，清理时 `! -name` 排除 Hot；Cold（`.venv` / `build` / `__pycache__` / pip cache）`-mtime +3`。要留的资产先在 `facts.md` 登记路径（含远端节点）、用途和消费者（需要它的 feature 或实验）；任何清理（包括本 task 去留与 human 要求的清理）都须先核对该登记，不删除登记资产，Warm/Cold 的 `find` 除 Hot 外也须排除登记路径及登记目录内的内容，且不得通过删除父目录间接删除登记资产；其余一次性资产按上述规则清理。公共节点上不用 `docker image prune -a`、`docker system prune -a`、`docker image rm <tag>`。

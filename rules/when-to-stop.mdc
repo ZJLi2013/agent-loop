@@ -79,4 +79,4 @@ alwaysApply: true
 4. 超预算（轮数或机时）
 5. Phase 0 假设可能不成立，主线 Goal 其实没被这个问题卡住，或支线超出预算（主线一节见 `task-state`）
 
-另有三类与实验轮次无关、无论何时都要停下等人：**无法先备份或自行缓解的不可逆操作**（删数据、覆盖 checkpoint、强推分支、长时间独占 GPU）、**Goal 说不清**（写不出一句话的「要解决什么问题」）、**reviewer 标给 human 的方案选型**（见「问 human 之前先自己判断，再过 reviewer」）。
+另有三类与实验轮次无关、无论何时都要停下等人：**无法先备份或自行缓解的不可逆操作**（删数据、覆盖 checkpoint、强推分支、长时间独占 GPU）、**Goal 说不清**（写不出一句话的「要解决什么问题」）、**reviewer 标给 human 的方案选型**（见「问 human 之前先自己判断，再过 reviewer」）。任何资产清理前，先按 `experiment-design` reference「六、远端资产去留」核对保留登记。
