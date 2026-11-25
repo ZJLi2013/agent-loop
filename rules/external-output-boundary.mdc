@@ -1,5 +1,5 @@
 ---
-description: 要在他人仓库发 PR / Issue / 评论，或写对外博客、公众号之前读：AI 披露、GPU 型号脱敏、去私料三道检查
+description: 要在他人仓库或自己的公开仓库发 PR / Issue / 评论，或写对外博客、公众号之前读：AI 披露、GPU 型号脱敏、去私料三道检查
 alwaysApply: false
 ---
 
@@ -46,4 +46,4 @@ alwaysApply: false
 
 ## 边界
 
-只管**对外**产物：他人仓库的 PR / Issue / 评论、对外博客、公众号。自己的 repo、实验记录、内部文档不受约束。
+他人仓库的 PR / Issue / 评论、对外博客、公众号适用全部检查；自己的公开 repo 及其 PR / Issue / 评论也适用「三、去私料」；自己的私有 repo、未公开的实验记录与内部文档不受约束。

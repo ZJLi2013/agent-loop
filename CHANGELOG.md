@@ -12,6 +12,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- `external-output-boundary` applies its private-material check to the user's own public repositories and their PRs,
+  issues and comments; disclosure and GPU renaming still apply only to other people's repositories and public posts.
 - The exps-side group readme opens with one sentence on the series' key result and one row per experiment or round
   (what was done, main-metric reading, link to the exp section); the id-to-directory map moves to a closing
   reproduction appendix.
