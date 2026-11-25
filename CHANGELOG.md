@@ -12,6 +12,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- CLOSE self-audit compresses the pre-experiment hypotheses, option comparisons, criteria derivations and estimates of
+  finished experiments in the feature design section to what the current conclusion still needs; design an unfinished
+  experiment needs stays, experiment details stay in exp, and older design stays in git history.
 - After an experiment, task or Goal closes, an unapproved next line (next experiment Gate, next Goal, upstream PR) is
   proposed only once the documents and CLOSE self-audit are done and the human has reviewed the refined conclusion.
 - The scope input table routes only task-lifecycle decision methods to an existing Policy owner; personal workflows on
