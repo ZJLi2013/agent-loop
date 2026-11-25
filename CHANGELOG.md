@@ -12,6 +12,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Answers stay at the level asked: when the question is about principles, directions or collaboration points, the
+  answer lists items at that level and cites existing artifacts (a PR, a dataset, a script) only as evidence.
 - The exps-side group readme opens with one sentence on the series' key result and one row per experiment or round
   (what was done, main-metric reading, link to the exp section); the id-to-directory map moves to a closing
   reproduction appendix.
