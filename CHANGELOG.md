@@ -12,6 +12,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Close-out conclusions, limitations and reproduction gaps of a task, phase or Goal go into the existing feature
+  (current conclusion, applicability bounds, exp for details) and a one-line summary in the existing group readme;
+  no separate summary, outline or diagnostic document is created for the close-out.
 - CLOSE self-audit compresses the pre-experiment hypotheses, option comparisons, criteria derivations and estimates of
   finished experiments in the feature design section to what the current conclusion still needs; design an unfinished
   experiment needs stays, experiment details stay in exp, and older design stays in git history.
