@@ -12,6 +12,8 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- Tables, tiers and categories hold only items that were actually proposed and hold; no filler is added to reach
+  a number of classes or levels, or to answer "is there more X". When there is one real item, the answer has one.
 - The exps-side group readme opens with one sentence on the series' key result and one row per experiment or round
   (what was done, main-metric reading, link to the exp section); the id-to-directory map moves to a closing
   reproduction appendix.
