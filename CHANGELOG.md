@@ -12,6 +12,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- The exps-side group readme opens with one sentence on the series' key result and one row per experiment or round
+  (what was done, main-metric reading, link to the exp section); the id-to-directory map moves to a closing
+  reproduction appendix.
 - Close-out conclusions, limitations and reproduction gaps of a task, phase or Goal go into the existing feature
   (current conclusion, applicability bounds, exp for details) and a one-line summary in the existing group readme;
   no separate summary, outline or diagnostic document is created for the close-out.
