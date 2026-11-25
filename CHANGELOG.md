@@ -12,6 +12,10 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- After an experiment, task or Goal closes, an unapproved next line (next experiment Gate, next Goal, upstream PR) is
+  proposed only once the documents and CLOSE self-audit are done and the human has reviewed the refined conclusion.
+- The scope input table routes only task-lifecycle decision methods to an existing Policy owner; personal workflows on
+  objects outside the lifecycle, such as following up one's own upstream PRs, go to a private pack.
 - `features/` and `exps/` are a pair inside one directory, at the project root or any subdirectory, so a project whose
   subdirectories are independent experiment groups keeps its layout. `init`, CLOSE lint and CLOSE link cleanup accept
   `<group>/features/<feature>.md` with its mirror in `<group>/exps/`; below the root an `exps/` without a `features/`
