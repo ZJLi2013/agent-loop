@@ -77,7 +77,7 @@ human 说「brainstorm / 讨论 <议题>」时开：局外与局内两个 agent 
 CLOSE 分两段：
 
 1. **locked verifier 前**：worker 按 `experiment-design` 的 CLOSE self-audit 回读本 task 完整 diff，精炼文档并处理临时脚本。
-2. **verifier 通过后**：收口结论、归档已闭合记录。
+2. **verifier 通过后**：收口结论、归档已闭合记录。实验、task 或 Goal 收口时（含未用 Harness），文档更新与 CLOSE self-audit 完成、human 对精炼后的当前结论给出 review 反馈后，才提尚未批准的下一条线（下一实验 Gate、下一 Goal、上游 PR），不在收尾消息中同时请批这条线。
 
 verifier 通过后，项目配置了 reviewer 时（谁写脉络行见 `project-docs` 的「脉络」）Harness 自动运行 `harness review`，worker 只做事实核对；prompt 与决策格式见 `harness/prompts/task_review.md`。标 done、删除关闭 task 的标题段、把指向它们的链接改成纯文字由 Harness 在 reviewer 决定落盘后完成，reviewer 与 worker 都不手工删。此外：
 
