@@ -12,6 +12,9 @@ All notable user-facing changes are documented here. This project follows Semant
 
 ### Changed
 
+- `when-to-stop` adds a fourth always-wait class to the hard stops: moving or editing a file the human is viewing or
+  editing without the human's consent, including to make lint or the verifier pass; a reviewer cannot consent for
+  the human.
 - Every asset cleanup checks the keep registry in `facts.md` first: registered assets (path, purpose, consumer) are
   excluded from Warm/Cold cleanup, human-requested cleanups and parent-directory deletes; `when-to-stop` points there.
 - `external-output-boundary` applies its private-material check to the user's own public repositories and their PRs,
